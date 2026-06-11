@@ -272,7 +272,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic finding_detail --out .omo/evidence/prd-remainder-task-13-finding-detail.json`; PASS if artifact includes `get_finding`, evidence JSON keys, and status history. Evidence `.omo/evidence/prd-remainder-task-13-finding-detail.json`.
   Commit: Y | `feat(reports): add report service and finding detail` | Files `src/codescent/services/reports.py`, `src/codescent/mcp/finding_tools.py`, `tests/integration/test_reports.py`
 
-- [ ] 14. Add score explanation
+- [x] 14. Add score explanation
   What to do / Must NOT do: Implement `explain_score` for findings and reports with deterministic ranking inputs, severity/confidence rationale, and next-step guidance.
   Parallelization: Can parallel Y | Wave 4 | Blocks CI/dashboard explanations
   References: `docs/prd.md:609`, `docs/architecture.md:388`

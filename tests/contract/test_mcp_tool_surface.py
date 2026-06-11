@@ -27,6 +27,7 @@ MVP_TOOL_NAMES = {
     "get_smell_report",
     "get_finding_context",
     "get_finding",
+    "explain_score",
     "get_impact",
     "get_next_improvement",
     "plan_refactor",

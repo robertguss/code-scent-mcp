@@ -37,6 +37,17 @@ class FindingDetailPayload(BaseModel):
     score_inputs: dict[str, str | int | float | bool | None]
 
 
+class ScoreExplanationPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    finding_id: str
+    score_inputs: dict[str, str | int | float | bool | None]
+    reasons: tuple[str, ...]
+    next_steps: tuple[str, ...]
+    subjective: bool
+
+
 @pytest.mark.anyio
 async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
     repo = _repo_with_todo(tmp_path)
@@ -112,6 +123,41 @@ async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
     assert detail_payload.score_inputs["confidence"]
     assert rescan_payload.ok is True
     assert source_snapshot(repo) == before
+
+
+@pytest.mark.anyio
+async def test_explain_score_returns_deterministic_ranking_reasons(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_todo(tmp_path)
+    scan_result = await _scan_repo(repo)
+    finding_id = scan_result.finding_ids[0]
+
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "explain_score",
+            {"repo": str(repo), "finding_id": finding_id},
+        )
+
+    explanation = ScoreExplanationPayload.model_validate_json(
+        _text_content(result.content),
+    )
+
+    assert explanation.ok is True
+    assert explanation.finding_id == finding_id
+    assert explanation.score_inputs["confidence"]
+    assert any("severity" in reason for reason in explanation.reasons)
+    assert explanation.next_steps
+    assert explanation.subjective is False
+
+
+async def _scan_repo(repo: Path) -> ScanToolPayload:
+    async with Client(mcp) as client:
+        scan_result = await client.call_tool(
+            "scan_code_health",
+            {"repo": str(repo)},
+        )
+    return ScanToolPayload.model_validate_json(_text_content(scan_result.content))
 
 
 def source_snapshot(repo: Path) -> dict[str, str]:

@@ -80,6 +80,10 @@ FINDING_DETAIL_TOOLS: Final[tuple[str, ...]] = (
     "scan_code_health",
     "get_finding",
 )
+EXPLAIN_SCORE_TOOLS: Final[tuple[str, ...]] = (
+    "scan_code_health",
+    "explain_score",
+)
 EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("full_loop",): FULL_LOOP_TOOLS,
     ("search_expansion",): SEARCH_EXPANSION_TOOLS,
@@ -90,6 +94,7 @@ EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("related_files",): RELATED_FILES_TOOLS,
     ("impact",): IMPACT_TOOLS,
     ("finding_detail",): FINDING_DETAIL_TOOLS,
+    ("explain_score",): EXPLAIN_SCORE_TOOLS,
 }
 
 
@@ -123,6 +128,8 @@ async def _call_tools(repo: str, tools: tuple[str, ...]) -> dict[str, JsonValue]
             if tool_call.name == "get_impact" and current_finding_id is not None:
                 tool_call.arguments["finding_id"] = current_finding_id
             if tool_call.name == "get_finding" and current_finding_id is not None:
+                tool_call.arguments["finding_id"] = current_finding_id
+            if tool_call.name == "explain_score" and current_finding_id is not None:
                 tool_call.arguments["finding_id"] = current_finding_id
             if (
                 tool_call.name

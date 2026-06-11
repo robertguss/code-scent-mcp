@@ -5,7 +5,12 @@ from typing import TYPE_CHECKING, TypedDict
 from codescent.core.models import FindingStatus
 from codescent.services.code_health import CodeHealthScanResult, CodeHealthService
 from codescent.services.findings import FindingsService
-from codescent.services.reports import FindingDetail, JsonObject, ReportService
+from codescent.services.reports import (
+    FindingDetail,
+    JsonObject,
+    ReportService,
+    ScoreExplanation,
+)
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -43,6 +48,15 @@ class FindingDetailToolPayload(TypedDict):
     suggested_action: str
     status_history: tuple[JsonObject, ...]
     score_inputs: JsonObject
+
+
+class ScoreExplanationToolPayload(TypedDict):
+    ok: bool
+    finding_id: str
+    score_inputs: JsonObject
+    reasons: tuple[str, ...]
+    next_steps: tuple[str, ...]
+    subjective: bool
 
 
 class NextImprovementToolPayload(TypedDict):
@@ -90,6 +104,12 @@ def register_finding_tools(mcp: FastMCP) -> None:
     )(get_finding)
     _ = mcp.tool(
         description=(
+            "Use CodeScent to explain deterministic score inputs and ranking "
+            "reasons for a finding. Does not use subjective LLM judgment."
+        ),
+    )(explain_score)
+    _ = mcp.tool(
+        description=(
             "Use CodeScent to choose the next deterministic improvement from "
             "open or regressed findings."
         ),
@@ -124,6 +144,13 @@ def get_smell_report(repo: str = ".") -> SmellReportToolPayload:
 
 def get_finding(finding_id: str, repo: str = ".") -> FindingDetailToolPayload:
     return _detail_payload(ReportService(repo).get_finding(finding_id))
+
+
+def explain_score(
+    finding_id: str,
+    repo: str = ".",
+) -> ScoreExplanationToolPayload:
+    return _score_explanation_payload(ReportService(repo).explain_score(finding_id))
 
 
 def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
@@ -206,4 +233,17 @@ def _detail_payload(detail: FindingDetail) -> FindingDetailToolPayload:
         "suggested_action": detail.suggested_action,
         "status_history": detail.status_history,
         "score_inputs": detail.score_inputs,
+    }
+
+
+def _score_explanation_payload(
+    explanation: ScoreExplanation,
+) -> ScoreExplanationToolPayload:
+    return {
+        "ok": True,
+        "finding_id": explanation.finding_id,
+        "score_inputs": explanation.score_inputs,
+        "reasons": explanation.reasons,
+        "next_steps": explanation.next_steps,
+        "subjective": explanation.subjective,
     }

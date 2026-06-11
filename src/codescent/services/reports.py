@@ -31,6 +31,15 @@ class FindingDetail:
 
 
 @dataclass(frozen=True, slots=True)
+class ScoreExplanation:
+    finding_id: str
+    score_inputs: JsonObject
+    reasons: tuple[str, ...]
+    next_steps: tuple[str, ...]
+    subjective: bool
+
+
+@dataclass(frozen=True, slots=True)
 class ReportService:
     repo_root: Path | str
 
@@ -50,6 +59,19 @@ class ReportService:
             suggested_action=finding.suggested_action,
             status_history=_status_history(finding),
             score_inputs=_score_inputs(finding),
+        )
+
+    def explain_score(self, finding_id: str) -> ScoreExplanation:
+        finding = _repository(self.repo_root).get_finding(finding_id)
+        return ScoreExplanation(
+            finding_id=finding.id,
+            score_inputs=_score_inputs(finding),
+            reasons=_score_reasons(finding),
+            next_steps=(
+                finding.suggested_action,
+                "Use get_finding for evidence before editing source.",
+            ),
+            subjective=False,
         )
 
 
@@ -76,6 +98,14 @@ def _score_inputs(finding: FindingRow) -> JsonObject:
         "status": finding.status.value,
         "rule_id": finding.rule_id,
     }
+
+
+def _score_reasons(finding: FindingRow) -> tuple[str, ...]:
+    return (
+        f"severity={finding.severity} contributes deterministic priority",
+        f"confidence={finding.confidence:.2f} comes from the rule result",
+        f"status={finding.status.value} controls backlog ordering",
+    )
 
 
 def _json_object(raw: str) -> JsonObject:

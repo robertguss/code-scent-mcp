@@ -1,0 +1,64 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "score explanation is a bounded read-only request with no resumable state"
+  },
+  "dirty_worktree": {
+    "note": "unrelated codescent-mcp-test-results.md remains untracked in main repo",
+    "passed": true,
+    "reasons": [
+      "severity=info contributes deterministic priority",
+      "confidence=0.90 comes from the rule result",
+      "status=open controls backlog ordering"
+    ],
+    "subjective": false
+  },
+  "flaky_tests": {
+    "focused_test_exit": 0,
+    "passed": true
+  },
+  "hung_or_long_commands": {
+    "passed": true,
+    "timeout_exit": 0
+  },
+  "malformed_input": {
+    "missing_repo_exit": 1,
+    "output_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:260  \u2502\n\u2502 in main                                                                      \u2502\n\u2502                                                        ",
+    "passed": true
+  },
+  "misleading_success_output": {
+    "passed": true,
+    "score_inputs": {
+      "confidence": 0.9,
+      "rule_id": "python.todo_cluster",
+      "severity": "info",
+      "status": "open"
+    },
+    "source_read_only": {
+      "allowed_runtime_state": ".codescent",
+      "changed_source_paths": [],
+      "source_hashes_unchanged": true
+    },
+    "subjective": false,
+    "tools": [
+      "scan_code_health",
+      "explain_score"
+    ]
+  },
+  "ok": true,
+  "prompt_injection": {
+    "passed": true,
+    "source_hash_after": "4ca8be96d5307432eaea081cc5a45a975f69daf22ada97e073e71658089a3484",
+    "source_hash_before": "4ca8be96d5307432eaea081cc5a45a975f69daf22ada97e073e71658089a3484",
+    "subjective": false
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "no checkpointed or interrupt-resumable score explanation workflow exists"
+  },
+  "stale_state": {
+    "passed": true,
+    "same_payload": true,
+    "subjective": false
+  }
+}
