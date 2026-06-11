@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import json
-from typing import Annotated, NoReturn
+from typing import TYPE_CHECKING, Annotated, NoReturn, TypedDict
 
 import typer
 
@@ -9,9 +11,22 @@ from codescent.core.paths import resolve_repo_root
 from codescent.mcp.server import mcp_available
 from codescent.mcp.server import run as run_mcp
 from codescent.services.code_health import CodeHealthService
+from codescent.services.findings import FindingsService
 from codescent.services.repo_index import RepoIndexService
+from codescent.services.reports import ReportService
 from codescent.services.status import RepoStatusService
 from codescent.storage import initialize_storage
+
+if TYPE_CHECKING:
+    from codescent.storage.repositories import FindingRow
+
+INVALID_FORMAT_MESSAGE = "format must be json or markdown"
+
+
+class CliReportPayload(TypedDict):
+    open_count: int
+    status_counts: dict[str, int]
+    findings: list[dict[str, str | float]]
 
 app = typer.Typer(
     add_completion=False,
@@ -197,6 +212,96 @@ def doctor(
 
 
 @app.command()
+def report(
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    format_name: Annotated[
+        str,
+        typer.Option("--format", help="Output format: json or markdown."),
+    ] = "json",
+) -> None:
+    report_data = FindingsService(repo).get_smell_report()
+    payload: CliReportPayload = {
+        "open_count": report_data.open_count,
+        "status_counts": report_data.status_counts,
+        "findings": [_finding_row_payload(finding) for finding in report_data.findings],
+    }
+    _emit_report_payload(payload, format_name)
+
+
+@app.command()
+def export(
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    format_name: Annotated[
+        str,
+        typer.Option("--format", help="Output format: json or markdown."),
+    ] = "json",
+) -> None:
+    report_data = FindingsService(repo).get_smell_report()
+    payload: CliReportPayload = {
+        "open_count": report_data.open_count,
+        "status_counts": report_data.status_counts,
+        "findings": [_finding_row_payload(finding) for finding in report_data.findings],
+    }
+    _emit_report_payload(payload, format_name)
+
+
+@app.command()
+def findings(
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Print JSON findings."),
+    ] = False,
+) -> None:
+    rows = FindingsService(repo).get_smell_report().findings
+    payload = {"findings": [_finding_row_payload(finding) for finding in rows]}
+    if json_output:
+        typer.echo(json.dumps(payload))
+        return
+    for finding in payload["findings"]:
+        typer.echo(f"{finding['finding_id']} {finding['rule_id']}")
+
+
+@app.command(name="next")
+def next_improvement(
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Print JSON next improvement."),
+    ] = False,
+) -> None:
+    finding = FindingsService(repo).get_next_improvement()
+    payload = None if finding is None else _finding_row_payload(finding)
+    if json_output:
+        typer.echo(json.dumps({"finding": payload}))
+        return
+    typer.echo("No findings" if payload is None else payload["finding_id"])
+
+
+@app.command()
+def explain(
+    finding_id: str,
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Print JSON score explanation."),
+    ] = False,
+) -> None:
+    explanation = ReportService(repo).explain_score(finding_id)
+    payload = {
+        "finding_id": explanation.finding_id,
+        "score_inputs": explanation.score_inputs,
+        "reasons": list(explanation.reasons),
+        "next_steps": list(explanation.next_steps),
+        "subjective": explanation.subjective,
+    }
+    if json_output:
+        typer.echo(json.dumps(payload))
+        return
+    typer.echo("\n".join(explanation.reasons))
+
+
+@app.command()
 def serve() -> None:
     run_mcp()
 
@@ -216,3 +321,36 @@ def _doctor_warnings(*, database_ok: bool, config_ok: bool) -> list[str]:
     if not config_ok:
         warnings.append("codescent config has not been initialized")
     return warnings
+
+
+def _finding_row_payload(finding: FindingRow) -> dict[str, str | float]:
+    return {
+        "finding_id": finding.id,
+        "rule_id": finding.rule_id,
+        "file_path": finding.file_path,
+        "severity": finding.severity,
+        "confidence": finding.confidence,
+        "status": finding.status.value,
+        "suggested_action": finding.suggested_action,
+    }
+
+
+def _emit_report_payload(payload: CliReportPayload, format_name: str) -> None:
+    if format_name == "json":
+        typer.echo(json.dumps(payload))
+        return
+    if format_name == "markdown":
+        typer.echo(_markdown_report(payload))
+        return
+    raise typer.BadParameter(INVALID_FORMAT_MESSAGE)
+
+
+def _markdown_report(payload: CliReportPayload) -> str:
+    lines = ["# CodeScent Report", ""]
+    findings = payload["findings"]
+    lines.append(f"Findings: {len(findings)}")
+    lines.extend(
+        f"- {finding['finding_id']}: {finding['rule_id']}"
+        for finding in findings
+    )
+    return "\n".join(lines)

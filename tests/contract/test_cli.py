@@ -15,6 +15,7 @@ class ScanPayload(BaseModel):
 
     findings_created: int
     rule_ids: tuple[str, ...]
+    finding_ids: tuple[str, ...] = ()
 
 
 class InitPayload(BaseModel):
@@ -120,15 +121,60 @@ def test_init_index_status_doctor_round_trip(tmp_path: Path) -> None:
     assert doctor_payload.checks.config_ok is True
 
 
-def test_report_and_reset_not_exposed() -> None:
+def test_report_findings_next_explain_and_export_commands(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "pkg" / "config.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """STATUS = "pending-review"
+OTHER_STATUS = "pending-review"
+THIRD_STATUS = "pending-review"
+
+
+def load_config() -> str:
+    # TODO: split config
+    # FIXME: preserve compatibility
+    # HACK: keep old queue name
+    return STATUS
+""",
+    )
+    scan_result = RUNNER.invoke(app, ["scan", "--repo", str(repo), "--json"])
+    scan_payload = _scan_payload(scan_result.output)
+    finding_id = scan_payload.finding_ids[0]
+
+    report_result = RUNNER.invoke(
+        app,
+        ["report", "--repo", str(repo), "--format", "json"],
+    )
+    findings_result = RUNNER.invoke(app, ["findings", "--repo", str(repo), "--json"])
+    next_result = RUNNER.invoke(app, ["next", "--repo", str(repo), "--json"])
+    explain_result = RUNNER.invoke(
+        app,
+        ["explain", finding_id, "--repo", str(repo), "--json"],
+    )
+    export_result = RUNNER.invoke(
+        app,
+        ["export", "--repo", str(repo), "--format", "markdown"],
+    )
+
+    assert report_result.exit_code == 0
+    assert findings_result.exit_code == 0
+    assert next_result.exit_code == 0
+    assert explain_result.exit_code == 0
+    assert export_result.exit_code == 0
+    assert "findings" in report_result.output
+    assert finding_id in findings_result.output
+    assert "suggested_action" in next_result.output
+    assert "score_inputs" in explain_result.output
+    assert "# CodeScent Report" in export_result.output
+
+
+def test_reset_not_exposed() -> None:
     help_result = RUNNER.invoke(app, ["--help"])
-    report_result = RUNNER.invoke(app, ["report"])
     reset_result = RUNNER.invoke(app, ["reset"])
 
     assert help_result.exit_code == 0
-    assert "report" not in help_result.output
     assert "reset" not in help_result.output
-    assert report_result.exit_code != 0
     assert reset_result.exit_code != 0
 
 

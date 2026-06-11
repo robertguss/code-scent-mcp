@@ -74,7 +74,7 @@ def test_original_docs_name_python_first_supersession() -> None:
     assert "superseded" in combined
 
 
-def test_tool_docs_list_exact_mvp_tools() -> None:
+def test_tool_docs_keep_mvp_tools_and_stage_post_mvp_surface() -> None:
     text = MCP_TOOLS.read_text()
     tools = {
         line.removeprefix("- `").removesuffix("`")
@@ -82,8 +82,9 @@ def test_tool_docs_list_exact_mvp_tools() -> None:
         if line.startswith("- `")
     }
 
-    assert tools == MVP_TOOLS
-    assert "does not expose post-mvp tools" in text.lower()
+    assert tools >= MVP_TOOLS
+    assert "registered post-mvp mcp tools" in text.lower()
+    assert "locked post-mvp mcp tools" in text.lower()
 
 
 def test_eval_docs_include_deterministic_agent_and_real_smoke() -> None:

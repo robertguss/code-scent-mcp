@@ -288,7 +288,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic backlog_progress --out .omo/evidence/prd-remainder-task-15-backlog.json`; PASS if artifact shows open/resolved/regressed counts across two scans. Evidence `.omo/evidence/prd-remainder-task-15-backlog.json`.
   Commit: Y | `feat(findings): add backlog progress and regressions` | Files `src/codescent/services/findings.py`, `src/codescent/mcp/finding_tools.py`, `tests/integration/test_findings.py`
 
-- [ ] 16. Add report/export CLI commands
+- [x] 16. Add report/export CLI commands
   What to do / Must NOT do: Add `codescent report`, `codescent export --format json|markdown`, `codescent findings`, `codescent next`, and `codescent explain <finding-id>`. Do not add destructive `reset` yet.
   Parallelization: Can parallel N | Wave 4 | Blocks CI/dashboard exports
   References: `docs/prd.md:662`, `docs/prd.md:671`, `docs/prd.md:674`

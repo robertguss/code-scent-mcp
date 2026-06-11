@@ -33,7 +33,6 @@
   "ok": true,
   "tool_surface_ok": true,
   "unchecked_todos": [
-    "- [ ] 16. Add report/export CLI commands",
     "- [ ] 17. Add recommend-only verify_change",
     "- [ ] 18. Add diff-aware risk reports",
     "- [ ] 19. Add workflow prompt resources",
