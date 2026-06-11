@@ -5,10 +5,12 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from codescent.engine.inventory import build_file_inventory
+from codescent.engine.parsers.python import ParsedSymbol, parse_python_file
 from codescent.services.git import detect_git_state
 from codescent.storage import RepositoryStorage, initialize_storage
 
 if TYPE_CHECKING:
+    import sqlite3
     from pathlib import Path
 
 
@@ -19,6 +21,10 @@ class IndexResult:
     file_hashes: dict[str, str]
     git_available: bool
     git_status: str
+
+
+class MissingRowIdError(RuntimeError):
+    pass
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,8 +47,11 @@ class RepoIndexService:
 
         with RepositoryStorage(state).write_transaction() as connection:
             _ = connection.execute("delete from files")
+            _ = connection.execute("delete from symbols")
+            _ = connection.execute("delete from symbol_references")
+            _ = connection.execute("delete from call_edges")
             for item in inventory:
-                _ = connection.execute(
+                cursor = connection.execute(
                     """
                     insert into files (
                         path,
@@ -68,6 +77,14 @@ class RepoIndexService:
                         now,
                     ),
                 )
+                file_id = _lastrowid(cursor)
+                if item.language == "python":
+                    _persist_python_graph(
+                        connection=connection,
+                        repo_root=state.repo_root,
+                        path=item.path,
+                        file_id=file_id,
+                    )
 
         return IndexResult(
             indexed_files=len(inventory),
@@ -76,6 +93,105 @@ class RepoIndexService:
             git_available=git_state.available,
             git_status=git_state.status,
         )
+
+
+def _persist_python_graph(
+    *,
+    connection: sqlite3.Connection,
+    repo_root: Path,
+    path: str,
+    file_id: int,
+) -> None:
+    parsed = parse_python_file(repo_root / path, path)
+    symbol_ids: dict[str, int] = {}
+    for symbol in parsed.symbols:
+        cursor = connection.execute(
+            """
+            insert into symbols (
+                file_id,
+                name,
+                qualified_name,
+                kind,
+                start_line,
+                end_line,
+                confidence
+            ) values (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                file_id,
+                symbol.name,
+                symbol.qualified_name,
+                symbol.kind,
+                symbol.start_line,
+                symbol.end_line,
+                symbol.confidence,
+            ),
+        )
+        symbol_ids[symbol.qualified_name] = _lastrowid(cursor)
+
+    for reference in parsed.references:
+        _ = connection.execute(
+            """
+            insert into symbol_references (
+                source_file_id,
+                target_file_id,
+                reference_text,
+                start_line,
+                end_line,
+                confidence
+            ) values (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                file_id,
+                file_id,
+                reference.name,
+                reference.line,
+                reference.line,
+                reference.confidence,
+            ),
+        )
+        caller_symbol_id = _caller_symbol_id(parsed.symbols, symbol_ids, reference.line)
+        _ = connection.execute(
+            """
+            insert into call_edges (
+                caller_symbol_id,
+                source_file_id,
+                target_file_id,
+                call_text,
+                start_line,
+                confidence
+            ) values (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                caller_symbol_id,
+                file_id,
+                file_id,
+                reference.name,
+                reference.line,
+                reference.confidence,
+            ),
+        )
+
+
+def _caller_symbol_id(
+    symbols: tuple[ParsedSymbol, ...],
+    symbol_ids: dict[str, int],
+    line: int,
+) -> int | None:
+    matching = [
+        symbol for symbol in symbols if symbol.start_line <= line <= symbol.end_line
+    ]
+    if not matching:
+        return None
+    symbol = sorted(matching, key=lambda item: item.start_line, reverse=True)[0]
+    return symbol_ids.get(symbol.qualified_name)
+
+
+def _lastrowid(cursor: sqlite3.Cursor) -> int:
+    row_id = cursor.lastrowid
+    if row_id is None:
+        raise MissingRowIdError
+    return row_id
 
 
 def _load_hashes(storage: RepositoryStorage) -> dict[str, str]:

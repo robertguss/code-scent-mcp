@@ -1,0 +1,45 @@
+{
+  "call_count": 36,
+  "cli": {
+    "changed_files": [
+      "src/acme_tasks/__init__.py",
+      "src/acme_tasks/cli.py",
+      "src/acme_tasks/config.py",
+      "src/acme_tasks/oversized.py",
+      "src/acme_tasks/payroll.py",
+      "src/acme_tasks/report.py",
+      "src/acme_tasks/storage.py",
+      "src/acme_tasks/workflow.py",
+      "tests/test_cli.py",
+      "tests/test_config.py",
+      "tests/test_workflow.py"
+    ],
+    "git_available": false,
+    "git_status": "not_git",
+    "indexed_files": 11
+  },
+  "ok": true,
+  "reference_count": 36,
+  "sample_references": [
+    [
+      "append",
+      0.4
+    ],
+    [
+      "append",
+      0.4
+    ],
+    [
+      "append",
+      0.4
+    ],
+    [
+      "append",
+      0.4
+    ],
+    [
+      "append",
+      0.4
+    ]
+  ]
+}

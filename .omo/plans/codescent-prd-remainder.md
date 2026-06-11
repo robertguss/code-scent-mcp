@@ -232,7 +232,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic search_frecency --out .omo/evidence/prd-remainder-task-8-frecency.json`; PASS if repeated search changes local frecency ranking and remains bounded. Evidence `.omo/evidence/prd-remainder-task-8-frecency.json`.
   Commit: Y | `feat(search): add frecency and pagination` | Files `src/codescent/services/search.py`, `src/codescent/storage/schema.py`, `tests/integration/test_search.py`
 
-- [ ] 9. Persist references and call edges
+- [x] 9. Persist references and call edges
   What to do / Must NOT do: Add reference and call-edge storage with confidence labels. Start with Python support through existing AST adapter. Do not claim low-confidence edges as certain.
   Parallelization: Can parallel Y | Wave 3 | Blocks graph tools
   References: `docs/prd.md:566`, `docs/architecture.md:682`, `docs/architecture.md:692`, `src/codescent/engine/parsers/python.py`

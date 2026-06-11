@@ -4,7 +4,7 @@ from shutil import which
 
 from codescent.services.repo_index import RepoIndexService
 from codescent.services.status import RepoStatusService
-from codescent.storage import initialize_storage
+from codescent.storage import RepositoryStorage, initialize_storage
 
 
 def test_index_persists_files_and_freshness(tmp_path: Path) -> None:
@@ -104,3 +104,42 @@ def test_git_repo_reports_dirty_status(tmp_path: Path) -> None:
     assert clean.git_available is True
     assert clean.git_status == "clean"
     assert dirty.git_status == "dirty"
+
+
+def test_index_persists_references_and_call_edges_with_confidence(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """from helper import send_event
+
+def process_order() -> None:
+    send_event()
+    print("done")
+""",
+    )
+
+    _ = RepoIndexService(repo).index_repo()
+    state = initialize_storage(repo)
+    with RepositoryStorage(state).read_connection() as connection:
+        reference_rows: list[tuple[str, int, float]] = connection.execute(
+            """
+            select reference_text, start_line, confidence
+            from symbol_references
+            order by reference_text
+            """,
+        ).fetchall()
+        call_rows: list[tuple[str, int, float]] = connection.execute(
+            """
+            select call_text, start_line, confidence
+            from call_edges
+            order by call_text
+            """,
+        ).fetchall()
+
+    assert ("print", 5, 0.4) in reference_rows
+    assert ("send_event", 4, 0.4) in reference_rows
+    assert ("print", 5, 0.4) in call_rows
+    assert ("send_event", 4, 0.4) in call_rows
