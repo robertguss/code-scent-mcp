@@ -1,6 +1,11 @@
-# CodeScent MCP Tools
+# CodeScent Public Surface
 
-CodeScent exposes exactly these MVP tools:
+CodeScent currently registers the MVP MCP tools below. Post-MVP tools are
+declared in `codescent.core.public_surface` so docs, contract tests, and plan
+audits can track upcoming public surface without exposing it at runtime before
+its implementation lands.
+
+## Current Registered MCP Tools
 
 - `get_repo_map`
 - `get_repo_status`
@@ -18,9 +23,51 @@ CodeScent exposes exactly these MVP tools:
 - `mark_finding`
 - `rescan`
 
-CodeScent does not expose post-MVP tools in this release. The MVP excludes
-hosted review, dashboard workflows, automatic source edits, CI/PR mode, and
-additional graph tools outside this list.
+The post-MVP plan intentionally does not register future tools until their
+implementation, tests, documentation, and smoke evidence are complete.
+
+## Locked Post-MVP MCP Tools
+
+- `multi_search_content`
+- `search_changed_files`
+- `search_todos`
+- `search_tests`
+- `find_references`
+- `find_callers`
+- `find_callees`
+- `get_related_files`
+- `get_impact`
+- `get_finding`
+- `explain_score`
+- `verify_change`
+- `get_backlog`
+- `get_progress`
+- `get_regressions`
+- `review_diff_risk`
+- `get_changed_file_health`
+
+## Current Registered CLI Commands
+
+- `init`
+- `serve`
+- `index`
+- `scan`
+- `status`
+- `doctor`
+
+## Locked Post-MVP CLI Commands
+
+- `report`
+- `reset`
+- `watch`
+- `findings`
+- `next`
+- `explain`
+- `export`
+- `config`
+- `rules`
+- `ci`
+- `review-diff`
 
 ## Tool Groups
 
@@ -45,3 +92,7 @@ Planning tools:
 All tools are local and source-read-only for analyzed source. Tools may create
 or update `.codescent` state for indexing, scan runs, findings, lifecycle
 events, and telemetry.
+
+Locked post-MVP tools and commands remain unregistered until their stage passes
+contract tests, real-surface QA, source-read-only proof, and the required
+evidence capture.

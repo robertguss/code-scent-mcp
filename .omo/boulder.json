@@ -1,7 +1,17 @@
 {
-  "active_work_id": null,
+  "active_work_id": "codescent-prd-remainder",
   "schema_version": 2,
   "works": {
+    "codescent-prd-remainder": {
+      "active_plan": ".omo/plans/codescent-prd-remainder.md",
+      "plan_name": "codescent-prd-remainder",
+      "session_ids": [
+        "codex:019eb84c-6dab-7ae1-b307-78935f0dcf1b"
+      ],
+      "status": "active",
+      "work_id": "codescent-prd-remainder",
+      "worktree_path": null
+    },
     "codescent-python-mvp": {
       "active_plan": ".omo/plans/codescent-python-mvp.md",
       "plan_name": "codescent-python-mvp",

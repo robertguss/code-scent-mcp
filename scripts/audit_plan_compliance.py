@@ -17,42 +17,25 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Final
+from typing import TYPE_CHECKING, Annotated, Final
 
 import typer
+
+from codescent.core.public_surface import (
+    MVP_MCP_TOOL_NAMES,
+    POST_MVP_CLI_COMMAND_NAMES,
+    POST_MVP_MCP_TOOL_NAMES,
+    PUBLIC_SURFACE,
+    registered_mcp_tool_names,
+)
 
 type JsonValue = (
     None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 )
 
-MVP_TOOLS: Final[frozenset[str]] = frozenset(
-    {
-        "get_repo_map",
-        "get_repo_status",
-        "search_files",
-        "search_content",
-        "find_symbol",
-        "get_file_context",
-        "get_symbol_context",
-        "scan_code_health",
-        "get_smell_report",
-        "get_finding_context",
-        "get_next_improvement",
-        "plan_refactor",
-        "suggest_tests",
-        "mark_finding",
-        "rescan",
-    },
-)
-POST_MVP_TOOLS: Final[frozenset[str]] = frozenset(
-    {
-        "find_references",
-        "get_impact",
-        "verify_change",
-        "report",
-        "reset",
-    },
-)
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
 DECISION_PHRASES: Final[tuple[str, ...]] = (
     "python-first mvp",
     "writes only .codescent",
@@ -82,18 +65,17 @@ class AuditResult:
 def audit(plan: Path, evidence: Path) -> AuditResult:
     plan_text = plan.read_text()
     unchecked_todos = tuple(_unchecked_todos(plan_text))
-    expected_evidence = tuple(f"task-{index}-" for index in range(1, 21))
+    expected_evidence = _expected_evidence_prefixes(plan, plan_text)
     missing_evidence = tuple(
         prefix for prefix in expected_evidence if not list(evidence.glob(f"{prefix}*"))
     )
     tool_surface = _tool_surface()
     decisions = _decision_phrases()
-    ok = (
-        not unchecked_todos
-        and not missing_evidence
-        and tool_surface["ok"] is True
-        and decisions["ok"] is True
-    )
+    completion_ready = not unchecked_todos
+    is_prd_remainder = plan.name == "codescent-prd-remainder.md"
+    ok = not missing_evidence and tool_surface["ok"] is True and decisions["ok"] is True
+    if not is_prd_remainder:
+        ok = ok and completion_ready
     return AuditResult(
         ok=ok,
         unchecked_todos=unchecked_todos,
@@ -111,35 +93,69 @@ def _unchecked_todos(plan_text: str) -> list[str]:
     return [
         line.strip()
         for line in plan_text.splitlines()
-        if re.match(r"^- \[ \] (?:[1-9]|1[0-9]|20)\.", line)
+        if re.match(r"^- \[ \] (?:[1-9]|[1-2][0-9]|3[0-2]|F[1-5])\.", line)
     ]
 
 
+def _checked_todo_numbers(plan_text: str) -> tuple[int, ...]:
+    numbers: list[int] = []
+    for line in plan_text.splitlines():
+        match = re.match(r"^- \[x\] ([1-9]|[1-2][0-9]|3[0-2])\.", line)
+        if match is not None:
+            numbers.append(int(match.group(1)))
+    return tuple(numbers)
+
+
+def _expected_evidence_prefixes(plan: Path, plan_text: str) -> tuple[str, ...]:
+    if plan.name == "codescent-prd-remainder.md":
+        return tuple(
+            f"prd-remainder-task-{number}-"
+            for number in _checked_todo_numbers(plan_text)
+        )
+    return tuple(f"task-{index}-" for index in range(1, 21))
+
+
 def _tool_surface() -> dict[str, JsonValue]:
-    text = Path("docs/mcp-tools.md").read_text()
-    tools = {
-        line.removeprefix("- `").removesuffix("`")
-        for line in text.splitlines()
-        if line.startswith("- `")
-    }
+    registered_tools = registered_mcp_tool_names()
+    post_mvp_tools = frozenset(
+        entry.name for entry in PUBLIC_SURFACE.mcp_tools if not entry.registered
+    )
+    post_mvp_commands = frozenset(
+        entry.name for entry in PUBLIC_SURFACE.cli_commands if not entry.registered
+    )
     return {
-        "ok": tools == MVP_TOOLS and not tools.intersection(POST_MVP_TOOLS),
-        "tool_count": len(tools),
-        "missing": sorted(MVP_TOOLS - tools),
-        "unexpected": sorted(tools - MVP_TOOLS),
-        "post_mvp_exposed": sorted(tools.intersection(POST_MVP_TOOLS)),
+        "ok": (
+            registered_tools == MVP_MCP_TOOL_NAMES
+            and post_mvp_tools >= POST_MVP_MCP_TOOL_NAMES
+            and post_mvp_commands >= POST_MVP_CLI_COMMAND_NAMES
+        ),
+        "tool_count": len(registered_tools),
+        "missing": _json_string_list(sorted(MVP_MCP_TOOL_NAMES - registered_tools)),
+        "unexpected": _json_string_list(sorted(registered_tools - MVP_MCP_TOOL_NAMES)),
+        "post_mvp_declared": _json_string_list(sorted(post_mvp_tools)),
+        "post_mvp_cli_declared": _json_string_list(sorted(post_mvp_commands)),
     }
 
 
 def _decision_phrases() -> dict[str, JsonValue]:
     combined = "\n".join(path.read_text().lower() for path in DOC_PATHS)
     missing = [phrase for phrase in DECISION_PHRASES if phrase not in combined]
-    return {"ok": not missing, "missing": missing}
+    return {"ok": not missing, "missing": _json_string_list(missing)}
+
+
+def _json_string_list(values: Iterable[JsonValue]) -> list[JsonValue]:
+    return list(values)
 
 
 def _write_json(path: Path, payload: dict[str, JsonValue]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     _ = path.write_text(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def _audit_output_name(plan: Path) -> str:
+    if plan.name == "codescent-prd-remainder.md":
+        return "prd-remainder-plan-compliance.json"
+    return "final-plan-compliance.json"
 
 
 def main(
@@ -155,7 +171,7 @@ def main(
         "user_decisions_ok": result.user_decisions_ok,
         "details": result.details,
     }
-    out = evidence / "final-plan-compliance.json"
+    out = evidence / _audit_output_name(plan)
     _write_json(out, payload)
     typer.echo(json.dumps(payload, indent=2, sort_keys=True))
     if not result.ok:
