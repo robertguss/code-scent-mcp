@@ -48,6 +48,14 @@ def register_search_tools(mcp: FastMCP) -> None:
         ),
     )(multi_search_content)
 
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to list changed files from git status and local "
+            "index drift with bounded ranking reasons. This read-only tool "
+            "excludes CodeScent runtime state and generated paths."
+        ),
+    )(search_changed_files)
+
 
 def search_files(
     query: str,
@@ -90,6 +98,20 @@ def multi_search_content(
     return {
         "ok": True,
         "queries": queries,
+        "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
+        "results": results,
+    }
+
+
+def search_changed_files(
+    query: str = "",
+    repo: str = ".",
+    limit: int = SAMPLE_FILE_LIMIT,
+) -> SearchToolPayload:
+    results = SearchService(repo).search_changed_files(query, limit=limit)
+    return {
+        "ok": True,
+        "query": query,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "results": results,
     }

@@ -1,0 +1,54 @@
+{
+  "ok": true,
+  "records": {
+    "cancel_resume": {
+      "note": "not applicable; search_changed_files is a single read-only request with no resumable state",
+      "passed": true
+    },
+    "dirty_worktree": {
+      "passed": true,
+      "paths": [
+        "src/app.py",
+        "src/new.py",
+        "tests/test_app.py"
+      ]
+    },
+    "flaky_tests": {
+      "exit_code": 0,
+      "passed": true
+    },
+    "hung_or_long_commands": {
+      "exit_code": 0,
+      "passed": true
+    },
+    "malformed_input": {
+      "exit_code": 1,
+      "passed": true
+    },
+    "misleading_success_output": {
+      "count": 11,
+      "no_codescent_paths": true,
+      "passed": true,
+      "source_read_only": true
+    },
+    "prompt_injection": {
+      "exit_code": 0,
+      "passed": true,
+      "source_read_only": {
+        "allowed_runtime_state": ".codescent",
+        "changed_source_paths": [],
+        "source_hashes_unchanged": true
+      }
+    },
+    "repeated_interruptions": {
+      "note": "not applicable; no long-running mutable workflow or checkpointed operation",
+      "passed": true
+    },
+    "stale_state": {
+      "passed": true,
+      "paths": [
+        "src/plain.py"
+      ]
+    }
+  }
+}

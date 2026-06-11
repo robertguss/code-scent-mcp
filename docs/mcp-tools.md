@@ -29,10 +29,10 @@ implementation, tests, documentation, and smoke evidence are complete.
 ## Registered Post-MVP MCP Tools
 
 - `multi_search_content`
+- `search_changed_files`
 
 ## Locked Post-MVP MCP Tools
 
-- `search_changed_files`
 - `search_todos`
 - `search_tests`
 - `find_references`

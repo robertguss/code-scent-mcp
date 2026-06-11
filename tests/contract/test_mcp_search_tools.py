@@ -36,6 +36,15 @@ class MultiSearchToolPayload(BaseModel):
     results: tuple[ToolSearchResult, ...]
 
 
+class ChangedSearchToolPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    query: str
+    limit: int = Field(ge=1, le=20)
+    results: tuple[ToolSearchResult, ...]
+
+
 @pytest.mark.anyio
 async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
@@ -57,7 +66,7 @@ async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     tool_names = {tool.name: tool for tool in tools}
     assert {"search_files", "search_content"} <= tool_names.keys()
     assert "multi_search_content" in tool_names
-    assert "search_changed_files" not in tool_names
+    assert "search_changed_files" in tool_names
     assert "search_todos" not in tool_names
     assert "search_tests" not in tool_names
     assert "ranking reasons" in (tool_names["search_files"].description or "")
@@ -110,6 +119,36 @@ async def test_multi_search_content_merges_and_dedupes_bounded_results(
     assert all(item.snippet is not None for item in payload.results)
     assert all("query:TODO" in item.reasons for item in payload.results)
     assert "query:billing" in payload.results[0].reasons
+
+
+@pytest.mark.anyio
+async def test_search_changed_files_returns_bounded_changed_paths(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app.py"
+    ignored = repo / ".codescent" / "state.py"
+    source.parent.mkdir(parents=True)
+    ignored.parent.mkdir()
+    _ = source.write_text("value = 1\n")
+    _ = ignored.write_text("ignored = True\n")
+
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "search_changed_files",
+            {"repo": str(repo), "limit": 99},
+        )
+
+    payload = ChangedSearchToolPayload.model_validate_json(
+        _text_content(result.content),
+    )
+
+    assert payload.ok is True
+    assert payload.query == ""
+    assert payload.limit == 20
+    assert tuple(item.path for item in payload.results) == ("src/app.py",)
+    assert "changed_file" in payload.results[0].reasons
+    assert all(".codescent" not in item.path for item in payload.results)
 
 
 def _text_content(content: list[ContentBlock]) -> str:

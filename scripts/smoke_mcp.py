@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,6 +56,7 @@ FULL_LOOP_TOOLS: Final[tuple[str, ...]] = (
 SEARCH_EXPANSION_TOOLS: Final[tuple[str, ...]] = (
     "multi_search_content:pending-review,workflow",
 )
+SEARCH_CHANGED_TOOLS: Final[tuple[str, ...]] = ("search_changed_files",)
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,7 +179,14 @@ def _expanded_tools(tools: tuple[str, ...]) -> tuple[str, ...]:
         return FULL_LOOP_TOOLS
     if tools == ("search_expansion",):
         return SEARCH_EXPANSION_TOOLS
+    if tools == ("search_changed",):
+        return SEARCH_CHANGED_TOOLS
     return tools
+
+
+def prepare_repo_for_tools(repo: Path, tools: tuple[str, ...]) -> None:
+    if tools == ("search_changed",):
+        shutil.rmtree(repo / ".codescent", ignore_errors=True)
 
 
 def _source_hashes(repo: Path) -> dict[str, str]:
@@ -205,6 +214,7 @@ def main(
     out: Annotated[Path | None, typer.Option()] = None,
 ) -> None:
     repo_path = Path(repo)
+    prepare_repo_for_tools(repo_path, tuple(tools))
     before = _source_hashes(repo_path)
     payload = anyio.run(_call_tools, repo, _expanded_tools(tuple(tools)))
     payload["source_read_only"] = _source_read_only(repo_path, before)

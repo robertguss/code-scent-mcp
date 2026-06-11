@@ -9,6 +9,7 @@ from codescent.core.models import PageOptions
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.search import rank_path
+from codescent.services.git import detect_git_state, git_changed_paths
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -128,6 +129,39 @@ class SearchService:
 
         return tuple(_sort_results(list(merged.values()))[: page.limit])
 
+    def search_changed_files(
+        self,
+        query: str = "",
+        *,
+        limit: int = DEFAULT_LIMIT,
+    ) -> tuple[SearchResultPayload, ...]:
+        repo_root = resolve_repo_root(self.repo_root)
+        page = PageOptions(limit=limit)
+        change_reasons = _changed_file_reasons(repo_root)
+        results: list[SearchResultPayload] = []
+
+        for item in build_file_inventory(repo_root):
+            reasons = change_reasons.get(item.path)
+            if reasons is None:
+                continue
+            score = 100.0
+            if query:
+                rank = rank_path(item.path, query)
+                if rank is None:
+                    continue
+                score = rank.score + CHANGED_FILE_BONUS
+                reasons = _merge_reasons(rank.reasons, reasons)
+            results.append(
+                {
+                    "path": item.path,
+                    "score": score,
+                    "reasons": reasons,
+                    "snippet": None,
+                },
+            )
+
+        return tuple(_sort_results(results)[: page.limit])
+
 
 def _sort_results(
     results: list[SearchResultPayload],
@@ -168,13 +202,43 @@ def _snippet(lines: list[str], line_number: int, line_budget: int) -> str:
 
 
 def _changed_files(repo_root: Path) -> frozenset[str]:
-    database_path = repo_root / ".codescent" / "index.sqlite"
-    if not database_path.exists():
-        return frozenset()
+    return frozenset(_changed_file_reasons(repo_root))
+
+
+def _changed_file_reasons(repo_root: Path) -> dict[str, tuple[str, ...]]:
     inventory_hashes = {
         item.path: item.hash for item in build_file_inventory(repo_root)
     }
+    inventory_paths = frozenset(inventory_hashes)
+    git_paths = git_changed_paths(repo_root) & inventory_paths
+    index_paths = _index_changed_files(
+        repo_root,
+        inventory_hashes,
+        include_unindexed=not detect_git_state(repo_root).available,
+    )
+    reasons: dict[str, tuple[str, ...]] = {}
+    for path in sorted(git_paths | index_paths):
+        path_reasons = ["changed_file"]
+        if path in git_paths:
+            path_reasons.append("git_changed")
+        if path in index_paths:
+            path_reasons.append("index_changed")
+        reasons[path] = tuple(path_reasons)
+    return reasons
+
+
+def _index_changed_files(
+    repo_root: Path,
+    inventory_hashes: dict[str, str],
+    *,
+    include_unindexed: bool,
+) -> frozenset[str]:
+    database_path = repo_root / ".codescent" / "index.sqlite"
+    if not database_path.exists():
+        return frozenset(inventory_hashes) if include_unindexed else frozenset()
     stored_hashes = _stored_hashes(database_path)
+    if not stored_hashes:
+        return frozenset(inventory_hashes) if include_unindexed else frozenset()
     changed = {
         path
         for path, file_hash in inventory_hashes.items()

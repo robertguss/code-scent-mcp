@@ -208,7 +208,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic search_expansion --out .omo/evidence/prd-remainder-task-5-mcp-search.json`; PASS if artifact includes `multi_search_content`, merged unique paths, and bounded snippets. Evidence `.omo/evidence/prd-remainder-task-5-mcp-search.json`.
   Commit: Y | `feat(search): add bounded multi content search` | Files `src/codescent/services/search.py`, `src/codescent/mcp/search_tools.py`, `tests/contract/test_mcp_search_tools.py`, `scripts/smoke_mcp.py`
 
-- [ ] 6. Add changed-file search
+- [x] 6. Add changed-file search
   What to do / Must NOT do: Implement `search_changed_files` over git modified/staged/untracked plus index-detected changes for non-git repos. Do not shell out unsafely or include ignored/generated files.
   Parallelization: Can parallel Y | Wave 2 | Blocks risk/diff features
   References: `docs/prd.md:539`, `docs/prd.md:1071`, `docs/architecture.md:587`
