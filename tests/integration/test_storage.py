@@ -4,6 +4,7 @@ import pytest
 
 from codescent.core.errors import CodeScentError, ErrorCode
 from codescent.storage import RepositoryStorage, initialize_storage
+from codescent.storage.schema import SCHEMA_VERSION
 
 
 def test_init_creates_codescent_state_only(tmp_path: Path) -> None:
@@ -23,7 +24,9 @@ def test_init_creates_codescent_state_only(tmp_path: Path) -> None:
         "src/app.py",
     ]
     assert state.database_path.is_file()
-    assert state.config_path.read_text() == "[project]\nschema_version = 2\n"
+    assert state.config_path.read_text() == (
+        f"[project]\nschema_version = {SCHEMA_VERSION}\n"
+    )
 
 
 def test_schema_migration_idempotent(tmp_path: Path) -> None:

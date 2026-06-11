@@ -1,9 +1,9 @@
 import sqlite3
 from typing import Final
 
-SCHEMA_VERSION: Final = 2
+SCHEMA_VERSION: Final = 3
 
-TABLE_STATEMENTS: Final[tuple[str, ...]] = (
+BASE_TABLE_STATEMENTS: Final[tuple[str, ...]] = (
     "create table if not exists schema_version (version integer not null)",
     """
     create table if not exists files (
@@ -135,13 +135,62 @@ TABLE_STATEMENTS: Final[tuple[str, ...]] = (
     """,
 )
 
+MIGRATION_STATEMENTS: Final[dict[int, tuple[str, ...]]] = {
+    3: (
+        """
+        create table if not exists symbol_references (
+            id integer primary key,
+            source_file_id integer not null references files(id) on delete cascade,
+            source_symbol_id integer references symbols(id) on delete set null,
+            target_file_id integer references files(id) on delete set null,
+            target_symbol_id integer references symbols(id) on delete set null,
+            reference_text text not null,
+            start_line integer not null,
+            end_line integer not null,
+            confidence real not null
+        )
+        """,
+        """
+        create table if not exists call_edges (
+            id integer primary key,
+            caller_symbol_id integer references symbols(id) on delete cascade,
+            callee_symbol_id integer references symbols(id) on delete set null,
+            source_file_id integer not null references files(id) on delete cascade,
+            target_file_id integer references files(id) on delete set null,
+            call_text text not null,
+            start_line integer not null,
+            confidence real not null
+        )
+        """,
+    ),
+}
+
 
 def migrate(connection: sqlite3.Connection) -> None:
-    for statement in TABLE_STATEMENTS:
+    for statement in BASE_TABLE_STATEMENTS:
         _ = connection.execute(statement)
+    current_version = _current_schema_version(connection)
+    for version in range(current_version + 1, SCHEMA_VERSION + 1):
+        for statement in MIGRATION_STATEMENTS.get(version, ()):
+            _ = connection.execute(statement)
     _ = connection.execute(f"pragma user_version = {SCHEMA_VERSION}")
     _ = connection.execute("delete from schema_version")
     _ = connection.execute(
         "insert into schema_version (version) values (?)",
         (SCHEMA_VERSION,),
     )
+
+
+def _current_schema_version(connection: sqlite3.Connection) -> int:
+    user_version_rows: list[tuple[int]] = connection.execute(
+        "pragma user_version",
+    ).fetchall()
+    if user_version_rows and user_version_rows[0][0] > 0:
+        return user_version_rows[0][0]
+
+    schema_rows: list[tuple[int]] = connection.execute(
+        "select version from schema_version order by version desc limit 1",
+    ).fetchall()
+    if schema_rows:
+        return schema_rows[0][0]
+    return 0

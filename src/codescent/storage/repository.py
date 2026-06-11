@@ -31,8 +31,6 @@ def initialize_storage(root: Path | str) -> StorageState:
     repo_root = resolve_repo_root(root)
     state = _state_for(repo_root)
     state.state_dir.mkdir(exist_ok=True)
-    if not state.config_path.exists():
-        _ = state.config_path.write_text(CONFIG_TEXT)
 
     storage = RepositoryStorage(state)
     try:
@@ -53,6 +51,7 @@ def initialize_storage(root: Path | str) -> StorageState:
             details={"database": str(state.database_path)},
         ) from exc
 
+    _write_config_schema_version(state.config_path)
     return state
 
 
@@ -105,6 +104,25 @@ def _state_for(repo_root: Path) -> StorageState:
         database_path=state_dir / "index.sqlite",
         config_path=state_dir / "config.toml",
     )
+
+
+def _write_config_schema_version(config_path: Path) -> None:
+    if not config_path.exists():
+        _ = config_path.write_text(CONFIG_TEXT)
+        return
+
+    lines = config_path.read_text().splitlines()
+    updated_lines: list[str] = []
+    found = False
+    for line in lines:
+        if line.startswith("schema_version = "):
+            updated_lines.append(f"schema_version = {SCHEMA_VERSION}")
+            found = True
+        else:
+            updated_lines.append(line)
+    if not found:
+        updated_lines.append(f"schema_version = {SCHEMA_VERSION}")
+    _ = config_path.write_text("\n".join(updated_lines) + "\n")
 
 
 def _connect(database_path: Path) -> sqlite3.Connection:

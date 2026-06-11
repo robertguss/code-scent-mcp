@@ -176,7 +176,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-1 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run python scripts/audit_plan_compliance.py --plan .omo/plans/codescent-prd-remainder.md --evidence .omo/evidence'`; PASS if JSON reports the declared public surface and no missing evidence. Evidence `.omo/evidence/prd-remainder-task-1-public-surface.json`.
   Commit: Y | `docs(surface): declare post-mvp public surface` | Files `docs/mcp-tools.md`, `src/codescent/core/public_surface.py`, `tests/contract/test_public_surface_registry.py`, `scripts/audit_plan_compliance.py`
 
-- [ ] 2. Add schema migration framework for post-MVP storage
+- [x] 2. Add schema migration framework for post-MVP storage
   What to do / Must NOT do: Extend storage migrations beyond schema version 2 and add MVP database fixture migration tests. Do not drop existing tables or break current MVP `.codescent/index.sqlite` files.
   Parallelization: Can parallel Y | Wave 1 | Blocks storage-affecting tasks
   References: `src/codescent/storage/schema.py:4`, `docs/architecture.md:612`, `docs/prd.md:684`
