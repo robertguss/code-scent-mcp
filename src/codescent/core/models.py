@@ -3,6 +3,8 @@ from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+MAX_PAGE_LIMIT = 100
+
 
 class ConfigSource(StrEnum):
     DEFAULTS = "defaults"
@@ -130,16 +132,25 @@ class ContextPack(BaseModel):
     options: ContextOptions = Field(default_factory=ContextOptions)
 
 
-class SearchOptions(BaseModel):
+class PageOptions(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
-    limit: int = Field(default=20, ge=1)
-    max_limit: int = 100
+    limit: int = 20
+    offset: int = 0
 
     @field_validator("limit", mode="after")
     @classmethod
     def clamp_limit(cls, value: int) -> int:
-        return min(value, 100)
+        return min(max(value, 1), MAX_PAGE_LIMIT)
+
+    @field_validator("offset", mode="after")
+    @classmethod
+    def clamp_offset(cls, value: int) -> int:
+        return max(value, 0)
+
+
+class SearchOptions(PageOptions):
+    pass
 
 
 class RefactorPlan(BaseModel):

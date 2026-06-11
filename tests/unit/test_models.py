@@ -10,6 +10,7 @@ from codescent.core.models import (
     EvalResult,
     Finding,
     IndexedFile,
+    PageOptions,
     RefactorPlan,
     RepoConfig,
     RepoStatus,
@@ -49,6 +50,14 @@ def test_search_options_reject_unbounded_limits() -> None:
     assert options.limit == 100
 
 
+def test_pagination_bounds_are_enforced() -> None:
+    options = PageOptions.model_validate({"limit": 999, "offset": -5})
+
+    assert options.limit == 100
+    assert options.offset == 0
+    assert options.model_dump() == {"limit": 100, "offset": 0}
+
+
 def test_config_source_orders_from_defaults_to_tool_args() -> None:
     assert list(ConfigSource) == [
         ConfigSource.DEFAULTS,
@@ -66,6 +75,7 @@ def test_core_model_inventory_is_available() -> None:
         Finding,
         ScanRun,
         RepoStatus,
+        PageOptions,
         SearchResult,
         ContextPack,
         RefactorPlan,
@@ -80,6 +90,7 @@ def test_core_model_inventory_is_available() -> None:
         "Finding",
         "ScanRun",
         "RepoStatus",
+        "PageOptions",
         "SearchResult",
         "ContextPack",
         "RefactorPlan",

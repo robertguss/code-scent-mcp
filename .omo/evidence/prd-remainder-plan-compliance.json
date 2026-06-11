@@ -47,7 +47,6 @@
   "ok": true,
   "tool_surface_ok": true,
   "unchecked_todos": [
-    "- [ ] 3. Add shared result pagination and bounds contracts",
     "- [ ] 4. Add one-writer/many-reader storage concurrency guard",
     "- [ ] 5. Add multi-search content tool",
     "- [ ] 6. Add changed-file search",

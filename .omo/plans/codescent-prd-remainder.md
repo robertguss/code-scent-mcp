@@ -184,7 +184,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-2 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent status --repo tests/fixtures/python-basic --json'`; PASS if status exits 0 after migration and `database_ok` is true. Evidence `.omo/evidence/prd-remainder-task-2-migration.txt`.
   Commit: Y | `feat(storage): add post-mvp schema migrations` | Files `src/codescent/storage/schema.py`, `src/codescent/storage/repository.py`, `tests/fixtures/storage/**`, `tests/integration/test_storage_migrations.py`
 
-- [ ] 3. Add shared result pagination and bounds contracts
+- [x] 3. Add shared result pagination and bounds contracts
   What to do / Must NOT do: Add typed pagination/bounds models reused by search, reports, backlog, and dashboard APIs. Do not return whole files or unbounded result sets.
   Parallelization: Can parallel Y | Wave 1 | Blocks search/report/backlog/dashboard
   References: `docs/prd.md:246`, `docs/prd.md:1064`, `docs/architecture.md:752`
