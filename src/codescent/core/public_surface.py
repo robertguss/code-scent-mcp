@@ -40,6 +40,15 @@ def _post_mvp_entry(name: str, group: str) -> SurfaceEntry:
     )
 
 
+def _registered_post_mvp_entry(name: str, group: str) -> SurfaceEntry:
+    return SurfaceEntry(
+        name=name,
+        stage=SurfaceStage.POST_MVP,
+        group=group,
+        registered=True,
+    )
+
+
 MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
     {
         "get_repo_map",
@@ -82,6 +91,18 @@ POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
     },
 )
 
+REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
+    {"multi_search_content"},
+)
+
+REGISTERED_MCP_TOOL_NAMES: Final[frozenset[str]] = (
+    MVP_MCP_TOOL_NAMES | REGISTERED_POST_MVP_MCP_TOOL_NAMES
+)
+
+LOCKED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = (
+    POST_MVP_MCP_TOOL_NAMES - REGISTERED_POST_MVP_MCP_TOOL_NAMES
+)
+
 MVP_CLI_COMMAND_NAMES: Final[frozenset[str]] = frozenset(
     {"init", "serve", "index", "scan", "status", "doctor"},
 )
@@ -119,7 +140,7 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _mvp_entry("suggest_tests", "planning"),
         _mvp_entry("mark_finding", "health"),
         _mvp_entry("rescan", "health"),
-        _post_mvp_entry("multi_search_content", "search"),
+        _registered_post_mvp_entry("multi_search_content", "search"),
         _post_mvp_entry("search_changed_files", "search"),
         _post_mvp_entry("search_todos", "search"),
         _post_mvp_entry("search_tests", "search"),

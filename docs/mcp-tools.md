@@ -26,9 +26,12 @@ its implementation lands.
 The post-MVP plan intentionally does not register future tools until their
 implementation, tests, documentation, and smoke evidence are complete.
 
-## Locked Post-MVP MCP Tools
+## Registered Post-MVP MCP Tools
 
 - `multi_search_content`
+
+## Locked Post-MVP MCP Tools
+
 - `search_changed_files`
 - `search_todos`
 - `search_tests`

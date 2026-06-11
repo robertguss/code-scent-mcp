@@ -5,6 +5,7 @@ from contextlib import closing
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, TypedDict
 
+from codescent.core.models import PageOptions
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.search import rank_path
@@ -92,6 +93,41 @@ class SearchService:
 
         return tuple(_sort_results(results)[: _clamp_limit(limit)])
 
+    def multi_search_content(
+        self,
+        queries: tuple[str, ...],
+        *,
+        limit: int = DEFAULT_LIMIT,
+        line_budget: int = DEFAULT_LINE_BUDGET,
+    ) -> tuple[SearchResultPayload, ...]:
+        page = PageOptions(limit=limit)
+        merged: dict[str, SearchResultPayload] = {}
+        for query in queries:
+            for result in self.search_content(
+                query,
+                limit=MAX_LIMIT,
+                line_budget=line_budget,
+            ):
+                existing = merged.get(result["path"])
+                query_reason = f"query:{query}"
+                reasons = _merge_reasons(result["reasons"], (query_reason,))
+                if existing is None:
+                    merged[result["path"]] = {
+                        "path": result["path"],
+                        "score": result["score"],
+                        "reasons": reasons,
+                        "snippet": result["snippet"],
+                    }
+                    continue
+                merged[result["path"]] = {
+                    "path": existing["path"],
+                    "score": max(existing["score"], result["score"]),
+                    "reasons": _merge_reasons(existing["reasons"], reasons),
+                    "snippet": existing["snippet"] or result["snippet"],
+                }
+
+        return tuple(_sort_results(list(merged.values()))[: page.limit])
+
 
 def _sort_results(
     results: list[SearchResultPayload],
@@ -101,6 +137,13 @@ def _sort_results(
 
 def _clamp_limit(limit: int) -> int:
     return min(max(limit, 1), MAX_LIMIT)
+
+
+def _merge_reasons(
+    current: tuple[str, ...],
+    incoming: tuple[str, ...],
+) -> tuple[str, ...]:
+    return tuple(dict.fromkeys((*current, *incoming)))
 
 
 def _clamp_line_budget(line_budget: int) -> int:

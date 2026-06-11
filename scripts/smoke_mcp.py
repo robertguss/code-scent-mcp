@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import anyio
 import typer
 from fastmcp import Client
+from pydantic import TypeAdapter
 
 from codescent.engine.inventory import build_file_inventory
 from codescent.mcp.server import mcp
@@ -40,6 +41,7 @@ from codescent.mcp.server import mcp
 type JsonValue = (
     None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 )
+JSON_VALUE_ADAPTER: Final[TypeAdapter[JsonValue]] = TypeAdapter(JsonValue)
 
 FULL_LOOP_TOOLS: Final[tuple[str, ...]] = (
     "scan_code_health",
@@ -50,16 +52,19 @@ FULL_LOOP_TOOLS: Final[tuple[str, ...]] = (
     "rescan",
     "mark_finding",
 )
+SEARCH_EXPANSION_TOOLS: Final[tuple[str, ...]] = (
+    "multi_search_content:pending-review,workflow",
+)
 
 
 @dataclass(frozen=True, slots=True)
 class ToolCall:
     name: str
-    arguments: dict[str, str]
+    arguments: dict[str, JsonValue]
 
 
 async def _call_tools(repo: str, tools: tuple[str, ...]) -> dict[str, JsonValue]:
-    transcript: list[dict[str, str | JsonValue]] = []
+    transcript: list[JsonValue] = []
     current_finding_id: str | None = None
     async with Client(mcp) as client:
         for tool in tools:
@@ -68,7 +73,11 @@ async def _call_tools(repo: str, tools: tuple[str, ...]) -> dict[str, JsonValue]
                 transcript.append(
                     {
                         "tool": "list_tools",
-                        "data": {"tools": sorted(item.name for item in listed)},
+                        "data": {
+                            "tools": _to_json_value(
+                                sorted(item.name for item in listed),
+                            ),
+                        },
                     },
                 )
                 continue
@@ -86,7 +95,7 @@ async def _call_tools(repo: str, tools: tuple[str, ...]) -> dict[str, JsonValue]
             ):
                 tool_call.arguments["finding_id"] = current_finding_id
             result = await client.call_tool(tool_call.name, tool_call.arguments)
-            data = result.structured_content or vars(result.data)
+            data = _to_json_value(result.structured_content or {})
             current_finding_id = _next_finding_id(
                 tool_call.name,
                 data,
@@ -105,6 +114,12 @@ def _parse_tool_call(raw_tool: str, repo: str) -> ToolCall:
     if ":" not in raw_tool:
         return _tool_call_without_arg(raw_tool, repo)
     tool_name, query = raw_tool.split(":", maxsplit=1)
+    if tool_name == "multi_search_content":
+        queries = [item.strip() for item in query.split(",") if item.strip()]
+        return ToolCall(
+            name=tool_name,
+            arguments={"repo": repo, "queries": _to_json_value(queries)},
+        )
     if tool_name == "get_file_context":
         return ToolCall(name=tool_name, arguments={"repo": repo, "path": query})
     if tool_name == "get_symbol_context":
@@ -153,9 +168,15 @@ def _next_finding_id(
     return fallback
 
 
+def _to_json_value(value: object) -> JsonValue:
+    return JSON_VALUE_ADAPTER.validate_python(value)
+
+
 def _expanded_tools(tools: tuple[str, ...]) -> tuple[str, ...]:
     if tools == ("full_loop",):
         return FULL_LOOP_TOOLS
+    if tools == ("search_expansion",):
+        return SEARCH_EXPANSION_TOOLS
     return tools
 
 
@@ -173,7 +194,7 @@ def _source_read_only(repo: Path, before: dict[str, str]) -> dict[str, JsonValue
     )
     return {
         "source_hashes_unchanged": before == after,
-        "changed_source_paths": changed_paths,
+        "changed_source_paths": _to_json_value(changed_paths),
         "allowed_runtime_state": ".codescent",
     }
 

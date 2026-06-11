@@ -27,6 +27,15 @@ class SearchToolPayload(BaseModel):
     results: tuple[ToolSearchResult, ...]
 
 
+class MultiSearchToolPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    queries: tuple[str, ...]
+    limit: int = Field(ge=1, le=20)
+    results: tuple[ToolSearchResult, ...]
+
+
 @pytest.mark.anyio
 async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
@@ -47,7 +56,7 @@ async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
 
     tool_names = {tool.name: tool for tool in tools}
     assert {"search_files", "search_content"} <= tool_names.keys()
-    assert "multi_search_content" not in tool_names
+    assert "multi_search_content" in tool_names
     assert "search_changed_files" not in tool_names
     assert "search_todos" not in tool_names
     assert "search_tests" not in tool_names
@@ -68,6 +77,39 @@ async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     assert content_payload.results[0].path == "src/app.py"
     assert "content_match" in content_payload.results[0].reasons
     assert content_payload.results[0].snippet == "# TODO: handle billing"
+
+
+@pytest.mark.anyio
+async def test_multi_search_content_merges_and_dedupes_bounded_results(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    billing = repo / "src" / "billing.py"
+    workflow = repo / "src" / "workflow.py"
+    billing.parent.mkdir(parents=True)
+    _ = billing.write_text("TODO: reconcile billing\nbilling_total = 10\n")
+    _ = workflow.write_text("TODO: route workflow\nworkflow_state = 'billing'\n")
+
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "multi_search_content",
+            {
+                "repo": str(repo),
+                "queries": ["TODO", "billing"],
+                "limit": 5,
+            },
+        )
+
+    payload = MultiSearchToolPayload.model_validate_json(_text_content(result.content))
+    paths = tuple(item.path for item in payload.results)
+
+    assert payload.ok is True
+    assert payload.queries == ("TODO", "billing")
+    assert paths == tuple(dict.fromkeys(paths))
+    assert set(paths) == {"src/billing.py", "src/workflow.py"}
+    assert all(item.snippet is not None for item in payload.results)
+    assert all("query:TODO" in item.reasons for item in payload.results)
+    assert "query:billing" in payload.results[0].reasons
 
 
 def _text_content(content: list[ContentBlock]) -> str:

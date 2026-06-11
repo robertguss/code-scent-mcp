@@ -17,6 +17,13 @@ class SearchToolPayload(TypedDict):
     results: tuple[SearchResultPayload, ...]
 
 
+class MultiSearchToolPayload(TypedDict):
+    ok: bool
+    queries: tuple[str, ...]
+    limit: int
+    results: tuple[SearchResultPayload, ...]
+
+
 def register_search_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
@@ -33,6 +40,13 @@ def register_search_tools(mcp: FastMCP) -> None:
             "returns capped snippets instead of full source files."
         ),
     )(search_content)
+
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to search multiple content queries with bounded, "
+            "deduped snippets and query-level ranking reasons."
+        ),
+    )(multi_search_content)
 
 
 def search_files(
@@ -58,6 +72,24 @@ def search_content(
     return {
         "ok": True,
         "query": query,
+        "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
+        "results": results,
+    }
+
+
+def multi_search_content(
+    queries: tuple[str, ...],
+    repo: str = ".",
+    limit: int = SAMPLE_FILE_LIMIT,
+) -> MultiSearchToolPayload:
+    results = SearchService(repo).multi_search_content(
+        queries,
+        limit=limit,
+        line_budget=1,
+    )
+    return {
+        "ok": True,
+        "queries": queries,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "results": results,
     }

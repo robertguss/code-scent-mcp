@@ -1,0 +1,67 @@
+{
+  "calls": [
+    {
+      "data": {
+        "limit": 20,
+        "ok": true,
+        "queries": [
+          "pending-review",
+          "workflow"
+        ],
+        "results": [
+          {
+            "path": "src/acme_tasks/cli.py",
+            "reasons": [
+              "content_match",
+              "query:workflow"
+            ],
+            "score": 100.0,
+            "snippet": "from acme_tasks.workflow import build_daily_plan"
+          },
+          {
+            "path": "src/acme_tasks/config.py",
+            "reasons": [
+              "content_match",
+              "query:pending-review"
+            ],
+            "score": 100.0,
+            "snippet": "DEFAULT_STATUS = \"pending-review\""
+          },
+          {
+            "path": "src/acme_tasks/report.py",
+            "reasons": [
+              "content_match",
+              "query:pending-review"
+            ],
+            "score": 100.0,
+            "snippet": "status = \"pending-review\""
+          },
+          {
+            "path": "src/acme_tasks/workflow.py",
+            "reasons": [
+              "content_match",
+              "query:pending-review"
+            ],
+            "score": 100.0,
+            "snippet": "plan.append(f\"{user}: review pending-review queue\")"
+          },
+          {
+            "path": "tests/test_workflow.py",
+            "reasons": [
+              "content_match",
+              "query:workflow"
+            ],
+            "score": 100.0,
+            "snippet": "from acme_tasks.workflow import build_daily_plan"
+          }
+        ]
+      },
+      "tool": "multi_search_content"
+    }
+  ],
+  "source_read_only": {
+    "allowed_runtime_state": ".codescent",
+    "changed_source_paths": [],
+    "source_hashes_unchanged": true
+  }
+}

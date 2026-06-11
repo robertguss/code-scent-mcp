@@ -200,7 +200,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-4 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-basic --out .omo/evidence/prd-remainder-task-4-read-only.json'`; PASS if JSON has `ok: true`, `changed_paths: []`, and `network_attempts: 0`. Evidence `.omo/evidence/prd-remainder-task-4-read-only.json`.
   Commit: Y | `feat(storage): guard concurrent codescent state access` | Files `src/codescent/storage/repository.py`, `tests/integration/test_storage_concurrency.py`
 
-- [ ] 5. Add multi-search content tool
+- [x] 5. Add multi-search content tool
   What to do / Must NOT do: Implement `multi_search_content` with bounded merged/deduped results, query-level reasons, pagination, and no full-file dumps.
   Parallelization: Can parallel Y | Wave 2 | Blocks broader search QA
   References: `docs/prd.md:535`, `docs/prd.md:1079`, `src/codescent/services/search.py`

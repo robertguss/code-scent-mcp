@@ -22,10 +22,10 @@ from typing import TYPE_CHECKING, Annotated, Final
 import typer
 
 from codescent.core.public_surface import (
-    MVP_MCP_TOOL_NAMES,
+    LOCKED_POST_MVP_MCP_TOOL_NAMES,
     POST_MVP_CLI_COMMAND_NAMES,
-    POST_MVP_MCP_TOOL_NAMES,
     PUBLIC_SURFACE,
+    REGISTERED_MCP_TOOL_NAMES,
     registered_mcp_tool_names,
 )
 
@@ -125,13 +125,17 @@ def _tool_surface() -> dict[str, JsonValue]:
     )
     return {
         "ok": (
-            registered_tools == MVP_MCP_TOOL_NAMES
-            and post_mvp_tools >= POST_MVP_MCP_TOOL_NAMES
+            registered_tools == REGISTERED_MCP_TOOL_NAMES
+            and post_mvp_tools >= LOCKED_POST_MVP_MCP_TOOL_NAMES
             and post_mvp_commands >= POST_MVP_CLI_COMMAND_NAMES
         ),
         "tool_count": len(registered_tools),
-        "missing": _json_string_list(sorted(MVP_MCP_TOOL_NAMES - registered_tools)),
-        "unexpected": _json_string_list(sorted(registered_tools - MVP_MCP_TOOL_NAMES)),
+        "missing": _json_string_list(
+            sorted(REGISTERED_MCP_TOOL_NAMES - registered_tools),
+        ),
+        "unexpected": _json_string_list(
+            sorted(registered_tools - REGISTERED_MCP_TOOL_NAMES),
+        ),
         "post_mvp_declared": _json_string_list(sorted(post_mvp_tools)),
         "post_mvp_cli_declared": _json_string_list(sorted(post_mvp_commands)),
     }

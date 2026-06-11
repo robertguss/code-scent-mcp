@@ -1,12 +1,14 @@
 from codescent.core.public_surface import (
+    LOCKED_POST_MVP_MCP_TOOL_NAMES,
     MVP_MCP_TOOL_NAMES,
     POST_MVP_MCP_TOOL_NAMES,
     PUBLIC_SURFACE,
+    REGISTERED_POST_MVP_MCP_TOOL_NAMES,
     SurfaceStage,
 )
 
 
-def test_post_mvp_surface_is_declared_but_not_registered() -> None:
+def test_post_mvp_surface_tracks_registered_and_locked_tools() -> None:
     # Given: the public surface registry is the source of truth for docs and tests.
     registered_mvp = {
         entry.name
@@ -23,6 +25,16 @@ def test_post_mvp_surface_is_declared_but_not_registered() -> None:
     # Then: MVP runtime tools stay stable while post-MVP tools are declared.
     assert registered_mvp == MVP_MCP_TOOL_NAMES
     assert declared_post_mvp >= POST_MVP_MCP_TOOL_NAMES
+    assert {
+        entry.name
+        for entry in PUBLIC_SURFACE.mcp_tools
+        if entry.stage is SurfaceStage.POST_MVP and entry.registered
+    } == REGISTERED_POST_MVP_MCP_TOOL_NAMES
+    assert {
+        entry.name
+        for entry in PUBLIC_SURFACE.mcp_tools
+        if entry.stage is SurfaceStage.POST_MVP and not entry.registered
+    } == LOCKED_POST_MVP_MCP_TOOL_NAMES
     assert registered_mvp.isdisjoint(declared_post_mvp)
 
 
