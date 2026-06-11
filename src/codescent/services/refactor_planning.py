@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING, ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
-from codescent.services.context import ContextService
+from codescent.core.paths import resolve_repo_root
+from codescent.services.context import ContextService, RelatedFilePayload
+from codescent.services.git import git_changed_paths
 from codescent.services.verification import SuggestedTests, VerificationService
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import FindingRepository, FindingRow
@@ -26,6 +28,9 @@ class EvidencePayload(BaseModel):
     depth: int | None = None
     verb_count: int | None = None
     marker_count: int | None = None
+
+
+LOW_IMPACT_CONFIDENCE_THRESHOLD = 0.6
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +59,16 @@ class SafeRefactorPlan:
     fallback: str
     expected_behavior_preservation: tuple[str, ...]
     verification_recommendations: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ImpactReport:
+    target_type: str
+    target: str
+    affected_files: tuple[str, ...]
+    likely_tests: tuple[str, ...]
+    risk_notes: tuple[str, ...]
+    confidence: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +128,48 @@ class RefactorPlanningService:
         finding = _repository(self.repo_root).get_finding(finding_id)
         return VerificationService(self.repo_root).suggest_tests(finding.file_path)
 
+    def get_impact(
+        self,
+        *,
+        target: str | None = None,
+        target_type: str = "file",
+        finding_id: str | None = None,
+    ) -> ImpactReport:
+        resolved_type = target_type
+        resolved_target = target or ""
+        file_path = target or ""
+        if finding_id is not None:
+            finding = _repository(self.repo_root).get_finding(finding_id)
+            resolved_type = "finding"
+            resolved_target = finding.id
+            file_path = finding.file_path
+        elif target_type == "symbol" and target is not None:
+            symbol = ContextService(self.repo_root).find_symbol(target, limit=1)[0]
+            file_path = symbol["path"]
+
+        file_context = ContextService(self.repo_root).get_file_context(file_path)
+        related = ContextService(self.repo_root).get_related_files(file_path, limit=10)
+        related_files = tuple(item["path"] for item in related["results"])
+        likely_tests = _dedupe(
+            (
+                *file_context["likely_tests"],
+                *tuple(path for path in related_files if path.startswith("tests/")),
+            ),
+        )
+        affected_files = _dedupe((file_path, *related_files))
+        risk_notes = _impact_risk_notes(
+            related["results"],
+            git_changed_paths(resolve_repo_root(self.repo_root)),
+        )
+        return ImpactReport(
+            target_type=resolved_type,
+            target=resolved_target,
+            affected_files=affected_files,
+            likely_tests=likely_tests,
+            risk_notes=risk_notes,
+            confidence=_impact_confidence(related["results"]),
+        )
+
 
 def _repository(repo_root: Path | str) -> FindingRepository:
     state = initialize_storage(repo_root)
@@ -144,3 +201,29 @@ def _risk(rule_id: str) -> str:
     if rule_id in {"python.large_function", "python.large_class", "python.large_file"}:
         return "medium"
     return "low"
+
+
+def _dedupe(items: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(item for item in items if item))
+
+
+def _impact_risk_notes(
+    related_files: tuple[RelatedFilePayload, ...],
+    changed_paths: frozenset[str],
+) -> tuple[str, ...]:
+    notes = ["confidence is bounded by deterministic local graph signals"]
+    if changed_paths:
+        notes.append(f"changed files in worktree: {len(changed_paths)}")
+    if any(
+        item["confidence"] < LOW_IMPACT_CONFIDENCE_THRESHOLD
+        for item in related_files
+    ):
+        notes.append("some related files are low-confidence candidates")
+    return tuple(notes)
+
+
+def _impact_confidence(related_files: tuple[RelatedFilePayload, ...]) -> float:
+    if not related_files:
+        return 0.5
+    confidence_values = tuple(float(item["confidence"]) for item in related_files)
+    return min(sum(confidence_values) / len(confidence_values), 0.95)

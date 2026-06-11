@@ -256,7 +256,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic related_files --out .omo/evidence/prd-remainder-task-11-related-files.json`; PASS if reasons include at least `test_match` and `import_graph`. Evidence `.omo/evidence/prd-remainder-task-11-related-files.json`.
   Commit: Y | `feat(context): add related file detection` | Files `src/codescent/services/context.py`, `src/codescent/mcp/context_tools.py`, `tests/integration/test_context.py`
 
-- [ ] 12. Add impact analysis
+- [x] 12. Add impact analysis
   What to do / Must NOT do: Implement `get_impact` for file/symbol/finding inputs using references, callers, related files, changed-file status, and likely tests. Keep it bounded and confidence-labeled.
   Parallelization: Can parallel N | Wave 3 | Blocks verification/risk
   References: `docs/prd.md:583`, `docs/prd.md:1198`, `docs/prd.md:1254`

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from codescent.services.refactor_planning import (
     FindingContext,
+    ImpactReport,
     RefactorPlanningService,
     SafeRefactorPlan,
 )
@@ -49,6 +50,16 @@ class SuggestedTestsToolPayload(TypedDict):
     executes_in_v1: bool
 
 
+class ImpactToolPayload(TypedDict):
+    ok: bool
+    target_type: str
+    target: str
+    affected_files: tuple[str, ...]
+    likely_tests: tuple[str, ...]
+    risk_notes: tuple[str, ...]
+    confidence: float
+
+
 def register_planning_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
@@ -68,6 +79,12 @@ def register_planning_tools(mcp: FastMCP) -> None:
             "does not execute target project tests in V1."
         ),
     )(suggest_tests)
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to estimate local blast radius for a file, symbol, "
+            "or finding with bounded confidence-labeled evidence."
+        ),
+    )(get_impact)
 
 
 def get_finding_context(
@@ -91,6 +108,21 @@ def suggest_tests(
     repo: str = ".",
 ) -> SuggestedTestsToolPayload:
     return _tests_payload(RefactorPlanningService(repo).suggest_tests(finding_id))
+
+
+def get_impact(
+    repo: str = ".",
+    target: str | None = None,
+    target_type: str = "file",
+    finding_id: str | None = None,
+) -> ImpactToolPayload:
+    return _impact_payload(
+        RefactorPlanningService(repo).get_impact(
+            target=target,
+            target_type=target_type,
+            finding_id=finding_id,
+        ),
+    )
 
 
 def _context_payload(context: FindingContext) -> FindingContextToolPayload:
@@ -131,4 +163,16 @@ def _tests_payload(suggested: SuggestedTests) -> SuggestedTestsToolPayload:
         "commands": suggested.commands,
         "likely_tests": suggested.likely_tests,
         "executes_in_v1": suggested.executes_in_v1,
+    }
+
+
+def _impact_payload(impact: ImpactReport) -> ImpactToolPayload:
+    return {
+        "ok": True,
+        "target_type": impact.target_type,
+        "target": impact.target,
+        "affected_files": impact.affected_files,
+        "likely_tests": impact.likely_tests,
+        "risk_notes": impact.risk_notes,
+        "confidence": impact.confidence,
     }

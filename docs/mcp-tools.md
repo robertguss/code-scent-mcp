@@ -36,10 +36,10 @@ implementation, tests, documentation, and smoke evidence are complete.
 - `find_callers`
 - `find_callees`
 - `get_related_files`
+- `get_impact`
 
 ## Locked Post-MVP MCP Tools
 
-- `get_impact`
 - `get_finding`
 - `explain_score`
 - `verify_change`
@@ -91,7 +91,7 @@ Code health and finding lifecycle tools:
 
 Planning tools:
 
-`get_finding_context`, `plan_refactor`, `suggest_tests`
+`get_finding_context`, `plan_refactor`, `suggest_tests`, `get_impact`
 
 All tools are local and source-read-only for analyzed source. Tools may create
 or update `.codescent` state for indexing, scan runs, findings, lifecycle

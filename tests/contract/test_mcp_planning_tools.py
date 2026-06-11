@@ -40,6 +40,18 @@ class SuggestedTestsPayload(BaseModel):
     executes_in_v1: bool
 
 
+class ImpactPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    target_type: str
+    target: str
+    affected_files: tuple[str, ...]
+    likely_tests: tuple[str, ...]
+    risk_notes: tuple[str, ...]
+    confidence: float
+
+
 @pytest.mark.anyio
 async def test_planning_tools_are_bounded_and_do_not_execute(tmp_path: Path) -> None:
     repo = _repo_with_smell(tmp_path)
@@ -86,6 +98,34 @@ async def test_planning_tools_are_bounded_and_do_not_execute(tmp_path: Path) -> 
     assert suggested.ok is True
     assert suggested.executes_in_v1 is False
     assert not (repo / ".pytest_cache").exists()
+
+
+@pytest.mark.anyio
+async def test_get_impact_reports_blast_radius_without_false_certainty(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_smell(tmp_path)
+    scan = CodeHealthService(repo).scan()
+    finding_id = next(
+        item for item in scan.finding_ids if item.startswith("python.todo_cluster")
+    )
+
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "get_impact",
+            {"repo": str(repo), "finding_id": finding_id},
+        )
+
+    impact = ImpactPayload.model_validate_json(_text_content(result.content))
+
+    assert impact.ok is True
+    assert impact.target_type == "finding"
+    assert impact.target == finding_id
+    assert "src/pkg/config.py" in impact.affected_files
+    assert impact.likely_tests == ("tests/test_config.py",)
+    assert any("confidence" in note for note in impact.risk_notes)
+    assert 0 < impact.confidence < 1
+    assert "SECRET_SENTINEL" not in impact.model_dump_json()
 
 
 def _repo_with_smell(tmp_path: Path) -> Path:

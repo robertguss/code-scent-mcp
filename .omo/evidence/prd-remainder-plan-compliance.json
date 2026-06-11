@@ -21,13 +21,12 @@
         "get_backlog",
         "get_changed_file_health",
         "get_finding",
-        "get_impact",
         "get_progress",
         "get_regressions",
         "review_diff_risk",
         "verify_change"
       ],
-      "tool_count": 23,
+      "tool_count": 24,
       "unexpected": []
     },
     "user_decisions": {
@@ -39,7 +38,6 @@
   "ok": true,
   "tool_surface_ok": true,
   "unchecked_todos": [
-    "- [ ] 12. Add impact analysis",
     "- [ ] 13. Add ReportService and structured finding detail",
     "- [ ] 14. Add score explanation",
     "- [ ] 15. Add backlog, progress, and regression tools",
