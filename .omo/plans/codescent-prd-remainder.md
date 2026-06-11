@@ -280,7 +280,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic explain_score --out .omo/evidence/prd-remainder-task-14-explain-score.json`; PASS if artifact includes score inputs and no subjective claims. Evidence `.omo/evidence/prd-remainder-task-14-explain-score.json`.
   Commit: Y | `feat(health): explain deterministic scores` | Files `src/codescent/services/reports.py`, `src/codescent/mcp/finding_tools.py`, `tests/contract/test_mcp_finding_tools.py`
 
-- [ ] 15. Add backlog, progress, and regression tools
+- [x] 15. Add backlog, progress, and regression tools
   What to do / Must NOT do: Implement `get_backlog`, `get_progress`, and `get_regressions` plus richer lifecycle states. Preserve existing IDs across rescans.
   Parallelization: Can parallel N | Wave 4 | Blocks dashboard progress
   References: `docs/prd.md:1215`, `docs/prd.md:1231`, `docs/architecture.md:408`

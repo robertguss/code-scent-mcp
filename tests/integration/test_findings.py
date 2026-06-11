@@ -105,6 +105,26 @@ def test_rescan_preserves_file_paths_for_existing_findings(tmp_path: Path) -> No
     assert todo.file_path == "src/pkg/config.py"
 
 
+def test_backlog_progress_and_regressions_survive_rescan(tmp_path: Path) -> None:
+    repo = _repo_with_todo(tmp_path)
+    scan = CodeHealthService(repo).scan()
+    finding_id = scan.finding_ids[0]
+    service = FindingsService(repo)
+
+    _ = service.mark_finding(finding_id, FindingStatus.RESOLVED, note="fixed")
+    rescan = service.rescan()
+    backlog = service.get_backlog()
+    progress = service.get_progress()
+    regressions = service.get_regressions()
+
+    assert finding_id in rescan.regressed_finding_ids
+    assert finding_id in regressions.finding_ids
+    assert backlog.status_counts[FindingStatus.REGRESSED.value] == 1
+    assert progress.total_findings == scan.findings_created
+    assert progress.resolved_count == 1
+    assert progress.regressed_count == 1
+
+
 def _repo_with_todo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     source = repo / "src" / "pkg" / "config.py"

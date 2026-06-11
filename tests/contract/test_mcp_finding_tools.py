@@ -73,6 +73,9 @@ async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
         "scan_code_health",
         "get_smell_report",
         "get_next_improvement",
+        "get_backlog",
+        "get_progress",
+        "get_regressions",
         "mark_finding",
         "rescan",
     } <= tool_names

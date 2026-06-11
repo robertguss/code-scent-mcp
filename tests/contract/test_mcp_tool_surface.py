@@ -28,6 +28,9 @@ MVP_TOOL_NAMES = {
     "get_finding_context",
     "get_finding",
     "explain_score",
+    "get_backlog",
+    "get_progress",
+    "get_regressions",
     "get_impact",
     "get_next_improvement",
     "plan_refactor",
@@ -78,7 +81,9 @@ async def test_no_post_mvp_tools_exposed() -> None:
     assert "get_related_files" in tool_names
     assert "get_impact" in tool_names
     assert "verify_change" not in tool_names
-    assert "get_backlog" not in tool_names
+    assert "get_backlog" in tool_names
+    assert "get_progress" in tool_names
+    assert "get_regressions" in tool_names
     assert "report" not in tool_names
     assert "reset" not in tool_names
 

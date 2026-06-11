@@ -24,6 +24,28 @@ class SmellReport:
 
 
 @dataclass(frozen=True, slots=True)
+class BacklogReport:
+    open_count: int
+    status_counts: dict[str, int]
+    finding_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ProgressReport:
+    total_findings: int
+    open_count: int
+    resolved_count: int
+    regressed_count: int
+    status_counts: dict[str, int]
+
+
+@dataclass(frozen=True, slots=True)
+class RegressionReport:
+    finding_ids: tuple[str, ...]
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
 class RescanResult:
     status: str
     scan: CodeHealthScanResult
@@ -59,6 +81,44 @@ class FindingsService:
                 if finding.status is status:
                     return finding
         return None
+
+    def get_backlog(self) -> BacklogReport:
+        report = self.get_smell_report()
+        actionable_statuses = {
+            FindingStatus.OPEN,
+            FindingStatus.IN_PROGRESS,
+            FindingStatus.NEEDS_REVIEW,
+            FindingStatus.REGRESSED,
+        }
+        finding_ids = tuple(
+            finding.id
+            for finding in report.findings
+            if finding.status in actionable_statuses
+        )
+        return BacklogReport(
+            open_count=len(finding_ids),
+            status_counts=report.status_counts,
+            finding_ids=finding_ids,
+        )
+
+    def get_progress(self) -> ProgressReport:
+        report = self.get_smell_report()
+        return ProgressReport(
+            total_findings=len(report.findings),
+            open_count=report.status_counts.get(FindingStatus.OPEN.value, 0),
+            resolved_count=report.status_counts.get(FindingStatus.RESOLVED.value, 0),
+            regressed_count=report.status_counts.get(FindingStatus.REGRESSED.value, 0),
+            status_counts=report.status_counts,
+        )
+
+    def get_regressions(self) -> RegressionReport:
+        report = self.get_smell_report()
+        finding_ids = tuple(
+            finding.id
+            for finding in report.findings
+            if finding.status is FindingStatus.REGRESSED
+        )
+        return RegressionReport(finding_ids=finding_ids, count=len(finding_ids))
 
     def mark_finding(
         self,

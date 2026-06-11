@@ -84,6 +84,14 @@ EXPLAIN_SCORE_TOOLS: Final[tuple[str, ...]] = (
     "scan_code_health",
     "explain_score",
 )
+BACKLOG_PROGRESS_TOOLS: Final[tuple[str, ...]] = (
+    "scan_code_health",
+    "get_backlog",
+    "mark_finding_resolved",
+    "rescan",
+    "get_progress",
+    "get_regressions",
+)
 EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("full_loop",): FULL_LOOP_TOOLS,
     ("search_expansion",): SEARCH_EXPANSION_TOOLS,
@@ -95,6 +103,7 @@ EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("impact",): IMPACT_TOOLS,
     ("finding_detail",): FINDING_DETAIL_TOOLS,
     ("explain_score",): EXPLAIN_SCORE_TOOLS,
+    ("backlog_progress",): BACKLOG_PROGRESS_TOOLS,
 }
 
 
@@ -183,6 +192,15 @@ def _parse_tool_call(raw_tool: str, repo: str) -> ToolCall:
 
 
 def _tool_call_without_arg(raw_tool: str, repo: str) -> ToolCall:
+    if raw_tool == "mark_finding_resolved":
+        return ToolCall(
+            name="mark_finding",
+            arguments={
+                "repo": repo,
+                "status": "resolved",
+                "note": "smoke marked fixed before regression rescan",
+            },
+        )
     if raw_tool == "mark_finding":
         return ToolCall(
             name=raw_tool,
@@ -200,7 +218,7 @@ def _next_finding_id(
     data: JsonValue,
     fallback: str | None,
 ) -> str | None:
-    if tool_name == "rescan":
+    if tool_name in {"get_backlog", "get_regressions", "rescan"}:
         return fallback
     if not isinstance(data, dict):
         return fallback

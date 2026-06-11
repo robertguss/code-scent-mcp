@@ -1,0 +1,67 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "backlog/progress reads are bounded local state requests with no resumable state"
+  },
+  "dirty_worktree": {
+    "note": "unrelated codescent-mcp-test-results.md remains untracked in main repo",
+    "open_count": 3,
+    "passed": true,
+    "total_findings": 3
+  },
+  "flaky_tests": {
+    "focused_test_exit": 0,
+    "passed": true
+  },
+  "hung_or_long_commands": {
+    "passed": true,
+    "timeout_exit": 0
+  },
+  "malformed_input": {
+    "missing_repo_exit": 1,
+    "output_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:278  \u2502\n\u2502 in main                                                                      \u2502\n\u2502                                                        ",
+    "passed": true
+  },
+  "misleading_success_output": {
+    "passed": true,
+    "progress": {
+      "ok": true,
+      "open_count": 12,
+      "regressed_count": 1,
+      "resolved_count": 5,
+      "status_counts": {
+        "open": 12,
+        "regressed": 1,
+        "resolved": 5
+      },
+      "total_findings": 18
+    },
+    "regressions": {
+      "count": 1,
+      "finding_ids": [
+        "python.todo_cluster:ef36e5854db8"
+      ],
+      "ok": true
+    },
+    "source_read_only": {
+      "allowed_runtime_state": ".codescent",
+      "changed_source_paths": [],
+      "source_hashes_unchanged": true
+    }
+  },
+  "ok": true,
+  "prompt_injection": {
+    "passed": true,
+    "source_hash_after": "4b4a44685e15e260f8d3a9024f3efe4aa8f9134e88e1ac328a1a721f45d4d68f",
+    "source_hash_before": "4b4a44685e15e260f8d3a9024f3efe4aa8f9134e88e1ac328a1a721f45d4d68f"
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "no checkpointed or interrupt-resumable backlog workflow exists"
+  },
+  "stale_state": {
+    "passed": true,
+    "regression_count": 1,
+    "same_payload": true
+  }
+}

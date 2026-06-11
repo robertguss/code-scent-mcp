@@ -67,6 +67,28 @@ class NextImprovementToolPayload(TypedDict):
     suggested_action: str | None
 
 
+class BacklogToolPayload(TypedDict):
+    ok: bool
+    open_count: int
+    status_counts: dict[str, int]
+    finding_ids: tuple[str, ...]
+
+
+class ProgressToolPayload(TypedDict):
+    ok: bool
+    total_findings: int
+    open_count: int
+    resolved_count: int
+    regressed_count: int
+    status_counts: dict[str, int]
+
+
+class RegressionsToolPayload(TypedDict):
+    ok: bool
+    count: int
+    finding_ids: tuple[str, ...]
+
+
 class MarkFindingToolPayload(TypedDict):
     ok: bool
     finding_id: str
@@ -114,6 +136,15 @@ def register_finding_tools(mcp: FastMCP) -> None:
             "open or regressed findings."
         ),
     )(get_next_improvement)
+    _ = mcp.tool(
+        description="Use CodeScent to read the deterministic finding backlog.",
+    )(get_backlog)
+    _ = mcp.tool(
+        description="Use CodeScent to read deterministic finding progress counts.",
+    )(get_progress)
+    _ = mcp.tool(
+        description="Use CodeScent to read regressed finding IDs after rescans.",
+    )(get_regressions)
     _ = mcp.tool(
         description=(
             "Use CodeScent to update finding lifecycle status in .codescent. "
@@ -169,6 +200,37 @@ def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
         "rule_id": finding.rule_id,
         "file_path": finding.file_path,
         "suggested_action": finding.suggested_action,
+    }
+
+
+def get_backlog(repo: str = ".") -> BacklogToolPayload:
+    backlog = FindingsService(repo).get_backlog()
+    return {
+        "ok": True,
+        "open_count": backlog.open_count,
+        "status_counts": backlog.status_counts,
+        "finding_ids": backlog.finding_ids,
+    }
+
+
+def get_progress(repo: str = ".") -> ProgressToolPayload:
+    progress = FindingsService(repo).get_progress()
+    return {
+        "ok": True,
+        "total_findings": progress.total_findings,
+        "open_count": progress.open_count,
+        "resolved_count": progress.resolved_count,
+        "regressed_count": progress.regressed_count,
+        "status_counts": progress.status_counts,
+    }
+
+
+def get_regressions(repo: str = ".") -> RegressionsToolPayload:
+    regressions = FindingsService(repo).get_regressions()
+    return {
+        "ok": True,
+        "count": regressions.count,
+        "finding_ids": regressions.finding_ids,
     }
 
 

@@ -39,13 +39,13 @@ implementation, tests, documentation, and smoke evidence are complete.
 - `get_impact`
 - `get_finding`
 - `explain_score`
+- `get_backlog`
+- `get_progress`
+- `get_regressions`
 
 ## Locked Post-MVP MCP Tools
 
 - `verify_change`
-- `get_backlog`
-- `get_progress`
-- `get_regressions`
 - `review_diff_risk`
 - `get_changed_file_health`
 
@@ -87,7 +87,8 @@ Search and context tools:
 Code health and finding lifecycle tools:
 
 `scan_code_health`, `get_smell_report`, `get_next_improvement`,
-`mark_finding`, `rescan`, `get_finding`, `explain_score`
+`mark_finding`, `rescan`, `get_finding`, `explain_score`, `get_backlog`,
+`get_progress`, `get_regressions`
 
 Planning tools:
 
