@@ -1,0 +1,28 @@
+
+==================================== ERRORS ====================================
+__________________ ERROR collecting tests/unit/test_models.py __________________
+ImportError while importing test module '/Users/robertguss/Projects/startups/code-scent-mcp/tests/unit/test_models.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_models.py:3: in <module>
+    from codescent.core.models import ConfigSource, ContextOptions, SearchOptions
+E   ModuleNotFoundError: No module named 'codescent.core.models'
+__________________ ERROR collecting tests/unit/test_errors.py __________________
+ImportError while importing test module '/Users/robertguss/Projects/startups/code-scent-mcp/tests/unit/test_errors.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_errors.py:3: in <module>
+    from codescent.core.errors import CodeScentError, ErrorCode, ErrorSeverity
+E   ModuleNotFoundError: No module named 'codescent.core.errors'
+=========================== short test summary info ============================
+ERROR tests/unit/test_models.py
+ERROR tests/unit/test_errors.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+2 errors in 0.04s
+exit=2

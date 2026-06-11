@@ -1,0 +1,19 @@
+$ uv run pytest tests/unit/test_models.py tests/unit/test_errors.py
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.13.0
+collected 9 items
+
+tests/unit/test_models.py .......                                        [ 77%]
+tests/unit/test_errors.py ..                                             [100%]
+
+============================== 9 passed in 0.04s ===============================
+$ uv run ruff check .
+All checks passed!
+$ uv run ruff format --check .
+13 files already formatted
+$ uv run basedpyright
+0 errors, 0 warnings, 0 notes
+exit=0

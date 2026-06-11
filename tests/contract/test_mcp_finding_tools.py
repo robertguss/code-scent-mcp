@@ -1,0 +1,124 @@
+from pathlib import Path
+from typing import ClassVar
+
+import pytest
+from fastmcp import Client
+from mcp.types import ContentBlock, TextContent
+from pydantic import BaseModel, ConfigDict, Field
+
+from codescent.mcp.server import mcp
+
+
+class ScanToolPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    status: str
+    findings_created: int = Field(ge=0)
+    rule_ids: tuple[str, ...]
+    finding_ids: tuple[str, ...]
+
+
+class MarkToolPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    finding_id: str
+    status: str
+
+
+@pytest.mark.anyio
+async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
+    repo = _repo_with_todo(tmp_path)
+    before = source_snapshot(repo)
+
+    async with Client(mcp) as client:
+        tools = await client.list_tools()
+        scan_result = await client.call_tool(
+            "scan_code_health",
+            {"repo": str(repo)},
+        )
+        report_result = await client.call_tool(
+            "get_smell_report",
+            {"repo": str(repo)},
+        )
+        next_result = await client.call_tool(
+            "get_next_improvement",
+            {"repo": str(repo)},
+        )
+
+    tool_names = {tool.name for tool in tools}
+    assert {
+        "scan_code_health",
+        "get_smell_report",
+        "get_next_improvement",
+        "mark_finding",
+        "rescan",
+    } <= tool_names
+    assert source_snapshot(repo) == before
+
+    scan_payload = ScanToolPayload.model_validate_json(
+        _text_content(scan_result.content),
+    )
+    assert scan_payload.ok is True
+    assert scan_payload.findings_created >= 2
+    assert "python.todo_cluster" in scan_payload.rule_ids
+    assert "finding_id" in _text_content(report_result.content)
+    assert "finding_id" in _text_content(next_result.content)
+
+    async with Client(mcp) as client:
+        mark_result = await client.call_tool(
+            "mark_finding",
+            {
+                "repo": str(repo),
+                "finding_id": scan_payload.finding_ids[0],
+                "status": "in_progress",
+            },
+        )
+        rescan_result = await client.call_tool("rescan", {"repo": str(repo)})
+
+    mark_payload = MarkToolPayload.model_validate_json(
+        _text_content(mark_result.content),
+    )
+    rescan_payload = ScanToolPayload.model_validate_json(
+        _text_content(rescan_result.content),
+    )
+    assert mark_payload.ok is True
+    assert mark_payload.status == "in_progress"
+    assert rescan_payload.ok is True
+    assert source_snapshot(repo) == before
+
+
+def source_snapshot(repo: Path) -> dict[str, str]:
+    return {
+        path.relative_to(repo).as_posix(): path.read_text()
+        for path in repo.rglob("*.py")
+        if ".codescent" not in path.parts
+    }
+
+
+def _repo_with_todo(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "pkg" / "config.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """STATUS = "pending-review"
+OTHER_STATUS = "pending-review"
+THIRD_STATUS = "pending-review"
+
+
+def load_config() -> str:
+    # TODO: split config
+    # FIXME: preserve compatibility
+    # HACK: keep old queue name
+    return STATUS
+""",
+    )
+    return repo
+
+
+def _text_content(content: list[ContentBlock]) -> str:
+    assert len(content) == 1
+    first = content[0]
+    assert isinstance(first, TextContent)
+    return first.text

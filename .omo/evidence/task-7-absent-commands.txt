@@ -1,0 +1,14 @@
+Usage: codescent [OPTIONS] COMMAND [ARGS]...
+Try 'codescent --help' for help.
+╭─ Error ──────────────────────────────────────────────────────────────────────╮
+│ No such command 'report'.                                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+report_exit=2
+Usage: codescent [OPTIONS] COMMAND [ARGS]...
+Try 'codescent --help' for help.
+╭─ Error ──────────────────────────────────────────────────────────────────────╮
+│ No such command 'reset'.                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+reset_exit=2

@@ -1,0 +1,11 @@
+/Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/engine/rules/python.py
+  /Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/engine/rules/python.py:11:40 - error: Import "build_file_inventory" is not accessed (reportUnusedImport)
+/Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_scan_code_health.py
+  /Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_scan_code_health.py:30:5 - error: Type of "payload" is Any (reportAny)
+  /Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_scan_code_health.py:37:9 - error: Type of "scan_runs" is Any (reportAny)
+  /Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_scan_code_health.py:43:24 - error: Type of "row" is Any (reportAny)
+  /Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_scan_code_health.py:47:27 - error: Type of "row" is Any (reportAny)
+  /Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_scan_code_health.py:48:27 - error: Argument type is Any
+    Argument corresponds to parameter "s" in function "loads" (reportAny)
+  /Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_scan_code_health.py:48:39 - error: Type of "row" is Any (reportAny)
+7 errors, 0 warnings, 0 notes

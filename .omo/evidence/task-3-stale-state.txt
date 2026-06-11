@@ -1,0 +1,3 @@
+source_count=10
+test_count=3
+manifest=True

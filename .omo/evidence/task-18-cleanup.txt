@@ -1,0 +1,4 @@
+task 18 reviewer .codescent removed
+lx .codescent removed
+.pytest_cache removed
+.ruff_cache removed

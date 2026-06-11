@@ -1,0 +1,6 @@
+RED command: pytest tests/test_package_metadata.py -q
+Expected failure reason before scaffold: pyproject.toml missing.
+Captured output from initial RED run:
+FF                                                                       [100%]
+FAILED tests/test_package_metadata.py::test_codescent_cli_registered - FileNotFoundError: [Errno 2] No such file or directory: '/Users/robertguss/Projects/startups/code-scent-mcp/pyproject.toml'
+FAILED tests/test_package_metadata.py::test_python_version_and_license_metadata - FileNotFoundError: [Errno 2] No such file or directory: '/Users/robertguss/Projects/startups/code-scent-mcp/pyproject.toml'

@@ -1,0 +1,17 @@
+$ uv run pytest tests/smoke/test_lx_data_lake_smoke_config.py
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.13.0
+collected 1 item
+
+tests/smoke/test_lx_data_lake_smoke_config.py .                          [100%]
+
+============================== 1 passed in 0.39s ===============================
+$ uv run ruff check scripts/smoke_lx_data_lake.py src/codescent/smoke tests/smoke/test_lx_data_lake_smoke_config.py tests/smoke/__init__.py pyproject.toml
+All checks passed!
+$ uv run basedpyright
+0 errors, 0 warnings, 0 notes
+$ uv run python scripts/smoke_lx_data_lake.py --repo /Users/robertguss/Projects/wts-lx/lx_data_lake --out .omo/evidence/task-18-lx-smoke.json
+{"ok": true, "dry_run": false}

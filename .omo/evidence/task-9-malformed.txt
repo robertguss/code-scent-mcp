@@ -1,0 +1,154 @@
+[06/11/26 11:03:17] Error calling tool 'search_files'                           
+                    ╭─────────── Traceback (most recent call last) ────────────╮
+                    │ /Users/robertguss/Projects/startups/code-scent-mcp/.venv │
+                    │ /lib/python3.13/site-packages/fastmcp/server/server.py:1 │
+                    │ 282 in call_tool                                         │
+                    │                                                          │
+                    │ /Users/robertguss/Projects/startups/code-scent-mcp/.venv │
+                    │ /lib/python3.13/site-packages/fastmcp/tools/base.py:392  │
+                    │ in _run                                                  │
+                    │                                                          │
+                    │                 ... 7 frames hidden ...                  │
+                    │                                                          │
+                    │ /Users/robertguss/Projects/startups/code-scent-mcp/src/c │
+                    │ odescent/services/search.py:39 in search_files           │
+                    │                                                          │
+                    │    36 │   │   *,                                         │
+                    │    37 │   │   limit: int = DEFAULT_LIMIT,                │
+                    │    38 │   ) -> tuple[SearchResultPayload, ...]:          │
+                    │ ❱  39 │   │   repo_root = resolve_repo_root(self.repo_ro │
+                    │    40 │   │   changed_files = _changed_files(repo_root)  │
+                    │    41 │   │   results: list[SearchResultPayload] = []    │
+                    │    42                                                    │
+                    │                                                          │
+                    │ /Users/robertguss/Projects/startups/code-scent-mcp/src/c │
+                    │ odescent/core/paths.py:10 in resolve_repo_root           │
+                    │                                                          │
+                    │    7 │   path = Path(root).expanduser()                  │
+                    │    8 │   resolved = path.resolve()                       │
+                    │    9 │   if not resolved.is_dir():                       │
+                    │ ❱ 10 │   │   raise CodeScentError(                       │
+                    │   11 │   │   │   code=ErrorCode.INVALID_REPO_ROOT,       │
+                    │   12 │   │   │   message="Repository root must be an exi │
+                    │   13 │   │   │   severity=ErrorSeverity.ERROR,           │
+                    ╰──────────────────────────────────────────────────────────╯
+                    CodeScentError: invalid_repo_root: Repository root must be  
+                    an existing directory.                                      
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:70   │
+│ in main                                                                      │
+│                                                                              │
+│   67 │   repo: Annotated[str, typer.Option()],                               │
+│   68 │   tools: Annotated[list[str], typer.Argument()],                      │
+│   69 ) -> None:                                                              │
+│ ❱ 70 │   anyio.run(_call_tools, repo, tuple(tools))                          │
+│   71                                                                         │
+│   72                                                                         │
+│   73 if __name__ == "__main__":                                              │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/anyio/_core/_eventloop.py:77 in run                                │
+│                                                                              │
+│    74 │                                                                      │
+│    75 │   try:                                                               │
+│    76 │   │   backend_options = backend_options or {}                        │
+│ ❱  77 │   │   return async_backend.run(func, args, {}, backend_options)      │
+│    78 │   finally:                                                           │
+│    79 │   │   reset_current_async_library(token)                             │
+│    80                                                                        │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/anyio/_backends/_asyncio.py:2358 in run                            │
+│                                                                              │
+│   2355 │   │   │   │   loop_factory = winloop.new_event_loop                 │
+│   2356 │   │                                                                 │
+│   2357 │   │   with Runner(debug=debug, loop_factory=loop_factory) as        │
+│        runner:                                                               │
+│ ❱ 2358 │   │   │   return runner.run(wrapper())                              │
+│   2359 │                                                                     │
+│   2360 │   @classmethod                                                      │
+│   2361 │   def current_token(cls) -> object:                                 │
+│                                                                              │
+│ /Users/robertguss/.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/l │
+│ ib/python3.13/asyncio/runners.py:118 in run                                  │
+│                                                                              │
+│   115 │   │                                                                  │
+│   116 │   │   self._interrupt_count = 0                                      │
+│   117 │   │   try:                                                           │
+│ ❱ 118 │   │   │   return self._loop.run_until_complete(task)                 │
+│   119 │   │   except exceptions.CancelledError:                              │
+│   120 │   │   │   if self._interrupt_count > 0:                              │
+│   121 │   │   │   │   uncancel = getattr(task, "uncancel", None)             │
+│                                                                              │
+│ /Users/robertguss/.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/l │
+│ ib/python3.13/asyncio/base_events.py:725 in run_until_complete               │
+│                                                                              │
+│    722 │   │   if not future.done():                                         │
+│    723 │   │   │   raise RuntimeError('Event loop stopped before Future      │
+│        completed.')                                                          │
+│    724 │   │                                                                 │
+│ ❱  725 │   │   return future.result()                                        │
+│    726 │                                                                     │
+│    727 │   def stop(self):                                                   │
+│    728 │   │   """Stop running the event loop.                               │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/anyio/_backends/_asyncio.py:2341 in wrapper                        │
+│                                                                              │
+│   2338 │   │   │   _task_states[task] = TaskState(None, None)                │
+│   2339 │   │   │                                                             │
+│   2340 │   │   │   try:                                                      │
+│ ❱ 2341 │   │   │   │   return await func(*args)                              │
+│   2342 │   │   │   finally:                                                  │
+│   2343 │   │   │   │   del _task_states[task]                                │
+│   2344                                                                       │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:49   │
+│ in _call_tools                                                               │
+│                                                                              │
+│   46 │   async with Client(mcp) as client:                                   │
+│   47 │   │   for tool in tools:                                              │
+│   48 │   │   │   tool_call = _parse_tool_call(tool, repo)                    │
+│ ❱ 49 │   │   │   result = await client.call_tool(tool_call.name,             │
+│      tool_call.arguments)                                                    │
+│   50 │   │   │   transcript.append(                                          │
+│   51 │   │   │   │   {                                                       │
+│   52 │   │   │   │   │   "tool": tool_call.name,                             │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/fastmcp/client/mixins/tools.py:312 in call_tool                    │
+│                                                                              │
+│   309 │   │   │   progress_handler=progress_handler,                         │
+│   310 │   │   │   meta=request_meta or None,                                 │
+│   311 │   │   )                                                              │
+│ ❱ 312 │   │   return await self._parse_call_tool_result(                     │
+│   313 │   │   │   name, result, raise_on_error=raise_on_error                │
+│   314 │   │   )                                                              │
+│   315                                                                        │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/fastmcp/client/mixins/tools.py:201 in _parse_call_tool_result      │
+│                                                                              │
+│   198 │   │   │   CallToolResult: Parsed result with structured data         │
+│   199 │   │   """                                                            │
+│   200 │   │                                                                  │
+│ ❱ 201 │   │   return await _parse_call_tool_result(                          │
+│   202 │   │   │   name=name,                                                 │
+│   203 │   │   │   result=result,                                             │
+│   204 │   │   │   tool_output_schemas=self.session._tool_output_schemas,     │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/fastmcp/client/mixins/tools.py:426 in _parse_call_tool_result      │
+│                                                                              │
+│   423 │   │   │   msg = result.content[0].text                               │
+│   424 │   │   else:                                                          │
+│   425 │   │   │   msg = f"Tool '{name}' returned an error"                   │
+│ ❱ 426 │   │   raise ToolError(msg)                                           │
+│   427 │   elif result.structuredContent and not result.isError:              │
+│   428 │   │   try:                                                           │
+│   429 │   │   │   raw_fastmcp_meta = (result.meta or {}).get("fastmcp")      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ToolError: Error calling tool 'search_files': invalid_repo_root: Repository root
+must be an existing directory.
+
+EXPECTED_FAILURE

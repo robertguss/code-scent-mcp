@@ -1,0 +1,31 @@
+{
+  "calls": [
+    {
+      "data": {
+        "limit": 20,
+        "ok": true,
+        "query": "TODO",
+        "results": [
+          {
+            "path": "src/acme_tasks/config.py",
+            "reasons": [
+              "content_match"
+            ],
+            "score": 100.0,
+            "snippet": "# TODO: split staging and local credentials."
+          },
+          {
+            "path": "src/acme_tasks/config.py",
+            "reasons": [
+              "content_match"
+            ],
+            "score": 100.0,
+            "snippet": "# TODO: move queue names into deployment config."
+          }
+        ]
+      },
+      "tool": "search_content"
+    }
+  ]
+}
+NO_SOURCE_LEAK

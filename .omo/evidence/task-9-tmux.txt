@@ -1,0 +1,51 @@
+{
+  "calls": [
+    {
+      "data": {
+        "limit": 20,
+        "ok": true,
+        "query": "payrol",
+        "results": [
+          {
+            "path": "src/acme_tasks/payroll.py",
+            "reasons": [
+              "exact_path"
+            ],
+            "score": 100.0,
+            "snippet": null
+          }
+        ]
+      },
+      "tool": "search_files"
+    },
+    {
+      "data": {
+        "limit": 20,
+        "ok": true,
+        "query": "TODO",
+        "results": [
+          {
+            "path": "src/acme_tasks/config.py",
+            "reasons": [
+              "content_match"
+            ],
+            "score": 100.0,
+            "snippet": "# TODO: split staging and local credentials."
+          },
+          {
+            "path": "src/acme_tasks/config.py",
+            "reasons": [
+              "content_match"
+            ],
+            "score": 100.0,
+            "snippet": "# TODO: move queue names into deployment config."
+          }
+        ]
+      },
+      "tool": "search_content"
+    }
+  ]
+}
+
+EXIT:0
+

@@ -1,0 +1,4 @@
+task 19 reviewer artifacts cleaned
+fixture .codescent removed
+.pytest_cache removed
+.ruff_cache removed

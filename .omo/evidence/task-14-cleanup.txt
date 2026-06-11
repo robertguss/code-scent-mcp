@@ -1,0 +1,19 @@
+tmux ulw-qa-14 already stopped
+src/codescent/core/__pycache__
+src/codescent/mcp/__pycache__
+src/codescent/__pycache__
+src/codescent/cli/__pycache__
+src/codescent/storage/repositories/__pycache__
+src/codescent/storage/__pycache__
+src/codescent/engine/parsers/__pycache__
+src/codescent/engine/context/__pycache__
+src/codescent/engine/__pycache__
+src/codescent/engine/search/__pycache__
+src/codescent/engine/rules/__pycache__
+src/codescent/services/__pycache__
+tests/unit/__pycache__
+tests/contract/__pycache__
+tests/integration/__pycache__
+tests/__pycache__
+tests/fixtures/__pycache__
+fixture .codescent removed

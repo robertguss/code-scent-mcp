@@ -1,0 +1,23 @@
+{
+  "calls": [
+    {
+      "data": {
+        "limit": 20,
+        "ok": true,
+        "query": "app",
+        "results": [
+          {
+            "path": "src/pkg/app.py",
+            "reasons": [
+              "exact_path",
+              "changed_file"
+            ],
+            "score": 125.0,
+            "snippet": null
+          }
+        ]
+      },
+      "tool": "search_files"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "imports": [],
+  "is_test": false,
+  "module": "dynamic",
+  "path": "dynamic.py",
+  "references": [
+    {
+      "confidence": 0.4,
+      "line": 2,
+      "name": "globals"
+    },
+    {
+      "confidence": 0.4,
+      "line": 3,
+      "name": "handler"
+    }
+  ],
+  "symbols": [
+    {
+      "confidence": 1.0,
+      "end_line": 3,
+      "kind": "function",
+      "name": "dispatch",
+      "qualified_name": "dynamic.dispatch",
+      "start_line": 1
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+stale_state=plan_and_scaffold_present

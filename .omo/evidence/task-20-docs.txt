@@ -1,0 +1,212 @@
+# CodeScent
+
+CodeScent is a local, MCP-first codebase improvement server for AI coding
+agents. This repository implements the Python-first MVP: Python indexing,
+search, context, deterministic code-health findings, refactor planning,
+suggested verification commands, finding lifecycle, and evals.
+
+CodeScent is local stdio only in this MVP. It writes only .codescent state in
+the analyzed repository and does not edit analyzed source files. The runtime no-
+network
+model applies to indexing, scanning, searching, context building, and eval
+execution.
+
+## Install
+
+```bash
+uv sync
+uv run codescent --help
+```
+
+## CLI Workflow
+
+```bash
+uv run codescent init --repo tests/fixtures/python-basic
+uv run codescent index --repo tests/fixtures/python-basic --json
+uv run codescent status --repo tests/fixtures/python-basic --json
+uv run codescent scan --repo tests/fixtures/python-basic --json
+uv run codescent doctor --repo tests/fixtures/python-basic --json
+```
+
+`doctor` runs CodeScent internal diagnostics only. Suggested verification
+commands are recommendations; CodeScent does not execute target project
+test/lint/build commands in V1.
+
+## MCP Stdio
+
+Connect an MCP client to the local stdio server:
+
+```bash
+uv run codescent serve --repo tests/fixtures/python-basic
+```
+
+The first-run loop is:
+
+1. `init`
+2. `index`
+3. `scan`
+4. use MCP tools for repo map, bounded search, finding context, refactor plan,
+   suggested tests, and rescan
+5. mark findings only after the user or agent has separate verification evidence
+
+See [docs/mcp-tools.md](docs/mcp-tools.md) for the exact MVP tool list.
+
+## Evals And Smoke
+
+Run the deterministic offline eval:
+
+```bash
+uv run python evals/run_deterministic.py --repo tests/fixtures/python-basic --ex
+pected evals/fixtures/python-basic.expected.json --out .omo/evidence/task-16-det
+erministic-eval.json
+```
+
+Run the real repo smoke target:
+
+```bash
+uv run python scripts/smoke_lx_data_lake.py --repo /Users/robertguss/Projects/wt
+s-lx/lx_data_lake --out .omo/evidence/task-18-lx-smoke.json
+```
+
+Run the source-read-only proof:
+
+```bash
+uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-bas
+ic --out .omo/evidence/task-19-read-only.json
+```
+
+See [docs/evals.md](docs/evals.md) for deterministic, agent-in-the-loop, real
+smoke, and safety eval details.
+
+## Out Of Scope
+
+- additional language support
+- dashboard UI or hosted service
+- HTTP/SSE MCP transport or auth
+- CI/PR review mode
+- subjective LLM review
+- automatic source edits
+- broad impact/reference/caller graph tools beyond the approved MVP surface
+
+## Development
+
+```bash
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+uv run basedpyright
+```
+# CodeScent Evals
+
+CodeScent measures the Python-first MVP with deterministic offline evals,
+agent-in-the-loop evals, real repo smoke, and source-read-only safety proofs.
+These gates are local and do not require network access at runtime.
+
+## Deterministic Offline Eval
+
+Run:
+
+```bash
+uv run python evals/run_deterministic.py --repo tests/fixtures/python-basic --ex
+pected evals/fixtures/python-basic.expected.json --out .omo/evidence/task-16-det
+erministic-eval.json
+```
+
+The deterministic offline eval measures:
+
+- retrieval top-k for file and content search;
+- bounded context ranges;
+- finding precision against expected fixture findings;
+- stable finding IDs;
+- workflow success for finding context, refactor plan, and suggested tests;
+- source-read-only behavior;
+- timing telemetry.
+
+The command exits nonzero when the eval score does not pass.
+
+## Agent-In-The-Loop Eval
+
+Run the transcript gate described in `evals/agent_task.md` and
+`scripts/run_agent_eval.md`.
+
+The agent-in-the-loop eval requires a local agent or human-driven transcript to
+use CodeScent tools to select one fixture finding, retrieve finding context,
+produce a safe plan, call `suggest_tests`, rescan, and mark the finding with an
+artifact-backed transcript. Broad shell grep cannot be the primary discovery
+mechanism.
+
+## Real Repo Smoke
+
+Run:
+
+```bash
+uv run python scripts/smoke_lx_data_lake.py --repo /Users/robertguss/Projects/wt
+s-lx/lx_data_lake --out .omo/evidence/task-18-lx-smoke.json
+```
+
+The real smoke validates exclusions, tool calls, findings, telemetry,
+source-read-only proof, and filtered git status stability on
+`/Users/robertguss/Projects/wts-lx/lx_data_lake`.
+
+## Source-Read-Only Safety
+
+Run:
+
+```bash
+uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-bas
+ic --out .omo/evidence/task-19-read-only.json
+```
+
+The source-read-only proof snapshots indexed source hashes before and after the
+MCP/CLI loop, blocks network socket creation, confirms `network_attempts` is
+zero, and records that only `.codescent` state is allowed to change.
+# CodeScent MCP Tools
+
+CodeScent exposes exactly these MVP tools:
+
+- `get_repo_map`
+- `get_repo_status`
+- `search_files`
+- `search_content`
+- `find_symbol`
+- `get_file_context`
+- `get_symbol_context`
+- `scan_code_health`
+- `get_smell_report`
+- `get_finding_context`
+- `get_next_improvement`
+- `plan_refactor`
+- `suggest_tests`
+- `mark_finding`
+- `rescan`
+
+CodeScent does not expose post-MVP tools in this release. The MVP excludes
+hosted review, dashboard workflows, automatic source edits, CI/PR mode, and
+additional graph tools outside this list.
+
+## Tool Groups
+
+Repository tools:
+
+`get_repo_map`, `get_repo_status`
+
+Search and context tools:
+
+`search_files`, `search_content`, `find_symbol`, `get_file_context`,
+`get_symbol_context`
+
+Code health and finding lifecycle tools:
+
+`scan_code_health`, `get_smell_report`, `get_next_improvement`,
+`mark_finding`, `rescan`
+
+Planning tools:
+
+`get_finding_context`, `plan_refactor`, `suggest_tests`
+
+All tools are local and source-read-only for analyzed source. Tools may create
+or update `.codescent` state for indexing, scan runs, findings, lifecycle
+events, and telemetry.
+
+EXIT:0
+

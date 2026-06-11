@@ -1,0 +1,38 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.13.0
+collected 2 items
+
+tests/contract/test_mcp_repo_tools.py .F                                 [100%]
+
+=================================== FAILURES ===================================
+______________ test_get_repo_map_and_status_are_bounded[asyncio] _______________
+
+tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-robertguss/pytest-80/test_get_repo_map_and_status_a0')
+
+    @pytest.mark.anyio
+    async def test_get_repo_map_and_status_are_bounded(tmp_path: Path) -> None:
+        repo = tmp_path / "repo"
+        source = repo / "src" / "acme" / "cli.py"
+        test_file = repo / "tests" / "test_cli.py"
+        source.parent.mkdir(parents=True)
+        test_file.parent.mkdir()
+        _ = source.write_text("SECRET_SENTINEL = 'do not leak source'\n")
+        _ = test_file.write_text("def test_cli() -> None:\n    assert True\n")
+    
+        async with Client(mcp) as client:
+            map_result = await client.call_tool("get_repo_map", {"repo": str(repo)})
+            status_result = await client.call_tool("get_repo_status", {"repo": str(repo)})
+    
+>       repo_map = RepoMapPayload.model_validate(map_result.data)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for RepoMapPayload
+E         Input should be a valid dictionary or instance of RepoMapPayload [type=model_type, input_value=Root(ok=True, read_only=T...', 'tests/test_cli.py']), input_type=Root]
+E           For further information visit https://errors.pydantic.dev/2.13/v/model_type
+
+tests/contract/test_mcp_repo_tools.py:67: ValidationError
+=========================== short test summary info ============================
+FAILED tests/contract/test_mcp_repo_tools.py::test_get_repo_map_and_status_are_bounded[asyncio]
+========================= 1 failed, 1 passed in 0.46s ==========================

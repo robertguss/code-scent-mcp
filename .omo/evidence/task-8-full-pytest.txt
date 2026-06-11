@@ -1,0 +1,19 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, anyio-4.13.0
+collected 33 items
+
+tests/contract/test_cli.py .......                                       [ 21%]
+tests/contract/test_mcp_repo_tools.py ..                                 [ 27%]
+tests/fixtures/test_python_basic_fixture.py .                            [ 30%]
+tests/integration/test_repo_index.py .....                               [ 45%]
+tests/integration/test_storage.py ....                                   [ 57%]
+tests/test_package_metadata.py ..                                        [ 63%]
+tests/unit/test_errors.py ..                                             [ 69%]
+tests/unit/test_inventory.py ...                                         [ 78%]
+tests/unit/test_models.py .......                                        [100%]
+
+============================== 33 passed in 0.71s ==============================

@@ -1,0 +1,38 @@
+## malformed input: missing repo path
+{"code": "invalid_repo_root", "message": "Repository root must be an existing directory.", "severity": "error", "details": {"root": "/tmp/codescent-missing-repo"}}
+## prompt injection source text is inert
+complete
+source_hashes_unchanged True
+all_stable_keys True
+rule_ids python.changed_source_without_related_test,python.missing_nearby_test
+## stale state: first scan sees changed files, second scan remains complete
+complete complete
+first_has_changed_rule True
+second_complete True
+stable_rule_subset True
+## dirty worktree: scan still source-read-only
+?? .omo/
+?? .prettierrc
+?? LICENSE
+?? README.md
+?? docs/
+?? evals/
+?? pyproject.toml
+?? scripts/
+?? src/
+?? tests/
+?? uv.lock
+complete
+11
+source_hashes_unchanged True
+## hung command safety: timeout wrapper completes
+timeout_exit:0
+## flaky repeatability: focused tests twice
+...                                                                      [100%]
+3 passed in 0.39s
+...                                                                      [100%]
+3 passed in 0.41s
+## misleading success output: json parse and required fields
+required_fields_present True
+complete True
+all_stable_keys True

@@ -1,0 +1,2 @@
+created_files=['.codescent/config.toml', '.codescent/index.sqlite']
+state_dir=.codescent

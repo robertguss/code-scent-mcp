@@ -1,0 +1,1 @@
+{"code": "invalid_repo_root", "message": "Repository root must be an existing directory.", "severity": "error", "details": {"root": "/definitely/missing"}}

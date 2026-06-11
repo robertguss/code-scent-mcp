@@ -1,0 +1,32 @@
+{
+  "files": [
+    {
+      "imports": [],
+      "is_test": false,
+      "module": "pkg.broken",
+      "parse_error": "invalid syntax at line 1, column 12",
+      "path": "src/pkg/broken.py",
+      "references": [],
+      "symbols": []
+    },
+    {
+      "imports": [],
+      "is_test": false,
+      "module": "pkg.ok",
+      "parse_error": null,
+      "path": "src/pkg/ok.py",
+      "references": [],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 2,
+          "kind": "function",
+          "name": "ok",
+          "qualified_name": "pkg.ok.ok",
+          "start_line": 1
+        }
+      ]
+    }
+  ]
+}
+GRACEFUL_PARSE_ERROR

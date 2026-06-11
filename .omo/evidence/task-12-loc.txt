@@ -1,0 +1,9 @@
+src/codescent/engine/rules/__init__.py        2
+src/codescent/engine/rules/model.py       57
+src/codescent/engine/rules/python.py      161
+src/codescent/engine/rules/python_patterns.py      172
+src/codescent/services/code_health.py      149
+src/codescent/cli/main.py      197
+tests/fixtures/python-basic/src/acme_tasks/oversized.py      180
+tests/unit/test_rules_python.py       38
+tests/integration/test_scan_code_health.py       43

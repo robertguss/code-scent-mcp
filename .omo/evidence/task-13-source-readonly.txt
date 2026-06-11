@@ -1,0 +1,6 @@
+## source read-only MCP lifecycle smoke on temp fixture copy
+tools scan_code_health,get_smell_report,get_next_improvement,mark_finding,rescan
+mark_status in_progress
+rescan_status complete
+source_hashes_unchanged True
+codescent_files ['config.toml', 'index.sqlite']

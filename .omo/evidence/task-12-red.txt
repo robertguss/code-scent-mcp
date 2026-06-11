@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.13.0
+collected 1 item / 1 error
+
+==================================== ERRORS ====================================
+_______________ ERROR collecting tests/unit/test_rules_python.py _______________
+ImportError while importing test module '/Users/robertguss/Projects/startups/code-scent-mcp/tests/unit/test_rules_python.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_rules_python.py:3: in <module>
+    from codescent.engine.rules.python import scan_python_health
+E   ModuleNotFoundError: No module named 'codescent.engine.rules'
+=========================== short test summary info ============================
+ERROR tests/unit/test_rules_python.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 0.44s ===============================

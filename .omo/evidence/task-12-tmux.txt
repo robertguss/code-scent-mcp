@@ -1,0 +1,109 @@
+{"status": "complete", "scan_id": "082c05a378104dd3bfaa6d1a890cd977", "files_sca
+nned": 11, "findings_created": 18, "findings_resolved": 0, "finding_ids": ["pyth
+on.todo_cluster:ef36e5854db8", "python.duplicate_literal:b29ed1690518", "python.
+large_file:f0bcaad685b4", "python.large_class:43f2ea73dd26", "python.too_many_im
+ports:314b3d828483", "python.deep_nesting:ba977cbdee86", "python.missing_nearby_
+test:d50cc4d1bc8a", "python.mixed_responsibilities:832ee49bfe6a", "python.suspic
+ious_slop_candidate:5846e60c03db", "python.missing_nearby_test:40f6b76cf57f", "p
+ython.missing_nearby_test:6a5072411e5c", "python.missing_nearby_test:267db4cb7a3
+9", "python.large_function:51a81f47dacc", "python.changed_source_without_related
+_test:77efbecf23af", "python.changed_source_without_related_test:ee0d42dd72fb",
+"python.changed_source_without_related_test:ef5be28c6ea8", "python.changed_sourc
+e_without_related_test:c443f18095af", "python.changed_source_without_related_tes
+t:ab54f1b6a991"], "rule_ids": ["python.changed_source_without_related_test", "py
+thon.deep_nesting", "python.duplicate_literal", "python.large_class", "python.la
+rge_file", "python.large_function", "python.missing_nearby_test", "python.mixed_
+responsibilities", "python.suspicious_slop_candidate", "python.todo_cluster", "p
+ython.too_many_imports"], "findings": [{"id": "python.todo_cluster:ef36e5854db8"
+, "stable_key": "python.todo_cluster:ef36e5854db8", "rule_id": "python.todo_clus
+ter", "file_path": "src/acme_tasks/config.py", "symbol": null, "severity": "info
+", "confidence": 0.9, "evidence": {"count": 3, "threshold": 3}, "suggested_actio
+n": "Resolve or split the TODO cluster into tracked work."}, {"id": "python.dupl
+icate_literal:b29ed1690518", "stable_key": "python.duplicate_literal:b29ed169051
+8", "rule_id": "python.duplicate_literal", "file_path": "src/acme_tasks/config.p
+y", "symbol": null, "severity": "info", "confidence": 0.85, "evidence": {"litera
+l": "pending-review", "count": 3}, "suggested_action": "Name the repeated litera
+l once and reuse it."}, {"id": "python.large_file:f0bcaad685b4", "stable_key": "
+python.large_file:f0bcaad685b4", "rule_id": "python.large_file", "file_path": "s
+rc/acme_tasks/oversized.py", "symbol": null, "severity": "warning", "confidence"
+: 0.9, "evidence": {"line_count": 201, "threshold": 70}, "suggested_action": "Sp
+lit cohesive responsibilities into smaller modules."}, {"id": "python.large_clas
+s:43f2ea73dd26", "stable_key": "python.large_class:43f2ea73dd26", "rule_id": "py
+thon.large_class", "file_path": "src/acme_tasks/oversized.py", "symbol": "acme_t
+asks.oversized.LegacyExportMapper", "severity": "warning", "confidence": 0.85, "
+evidence": {"line_count": 65, "threshold": 60}, "suggested_action": "Extract sma
+ller classes or collaborators."}, {"id": "python.too_many_imports:314b3d828483",
+ "stable_key": "python.too_many_imports:314b3d828483", "rule_id": "python.too_ma
+ny_imports", "file_path": "src/acme_tasks/oversized.py", "symbol": null, "severi
+ty": "info", "confidence": 0.75, "evidence": {"import_count": 14, "threshold": 1
+2}, "suggested_action": "Review whether this module has too many responsibilitie
+s."}, {"id": "python.deep_nesting:ba977cbdee86", "stable_key": "python.deep_nest
+ing:ba977cbdee86", "rule_id": "python.deep_nesting", "file_path": "src/acme_task
+s/oversized.py", "symbol": null, "severity": "warning", "confidence": 0.75, "evi
+dence": {"depth": 6, "threshold": 4}, "suggested_action": "Flatten control flow
+or extract guard clauses."}, {"id": "python.missing_nearby_test:d50cc4d1bc8a", "
+stable_key": "python.missing_nearby_test:d50cc4d1bc8a", "rule_id": "python.missi
+ng_nearby_test", "file_path": "src/acme_tasks/oversized.py", "symbol": "acme_tas
+ks.oversized.export_field_names", "severity": "info", "confidence": 0.65, "evide
+nce": {"expected_test": "tests/test_oversized.py"}, "suggested_action": "Add or
+link a focused nearby test for this module."}, {"id": "python.mixed_responsibili
+ties:832ee49bfe6a", "stable_key": "python.mixed_responsibilities:832ee49bfe6a",
+"rule_id": "python.mixed_responsibilities", "file_path": "src/acme_tasks/oversiz
+ed.py", "symbol": null, "severity": "info", "confidence": 0.55, "evidence": {"ve
+rb_count": 6}, "suggested_action": "Group related responsibilities into separate
+ modules."}, {"id": "python.suspicious_slop_candidate:5846e60c03db", "stable_key
+": "python.suspicious_slop_candidate:5846e60c03db", "rule_id": "python.suspiciou
+s_slop_candidate", "file_path": "src/acme_tasks/oversized.py", "symbol": null, "
+severity": "info", "confidence": 0.5, "evidence": {"marker_count": 1}, "suggeste
+d_action": "Review whether this code is intentional and maintained."}, {"id": "p
+ython.missing_nearby_test:40f6b76cf57f", "stable_key": "python.missing_nearby_te
+st:40f6b76cf57f", "rule_id": "python.missing_nearby_test", "file_path": "src/acm
+e_tasks/payroll.py", "symbol": "acme_tasks.payroll.summarize_payroll_run", "seve
+rity": "info", "confidence": 0.65, "evidence": {"expected_test": "tests/test_pay
+roll.py"}, "suggested_action": "Add or link a focused nearby test for this modul
+e."}, {"id": "python.missing_nearby_test:6a5072411e5c", "stable_key": "python.mi
+ssing_nearby_test:6a5072411e5c", "rule_id": "python.missing_nearby_test", "file_
+path": "src/acme_tasks/report.py", "symbol": "acme_tasks.report.render_priority_
+report", "severity": "info", "confidence": 0.65, "evidence": {"expected_test": "
+tests/test_report.py"}, "suggested_action": "Add or link a focused nearby test f
+or this module."}, {"id": "python.missing_nearby_test:267db4cb7a39", "stable_key
+": "python.missing_nearby_test:267db4cb7a39", "rule_id": "python.missing_nearby_
+test", "file_path": "src/acme_tasks/storage.py", "symbol": "acme_tasks.storage.s
+ave_plan", "severity": "info", "confidence": 0.65, "evidence": {"expected_test":
+ "tests/test_storage.py"}, "suggested_action": "Add or link a focused nearby tes
+t for this module."}, {"id": "python.large_function:51a81f47dacc", "stable_key":
+ "python.large_function:51a81f47dacc", "rule_id": "python.large_function", "file
+_path": "src/acme_tasks/workflow.py", "symbol": "acme_tasks.workflow.build_daily
+_plan", "severity": "warning", "confidence": 0.9, "evidence": {"line_count": 27,
+ "threshold": 25}, "suggested_action": "Extract named steps while preserving beh
+avior."}, {"id": "python.changed_source_without_related_test:77efbecf23af", "sta
+ble_key": "python.changed_source_without_related_test:77efbecf23af", "rule_id":
+"python.changed_source_without_related_test", "file_path": "src/acme_tasks/__ini
+t__.py", "symbol": null, "severity": "info", "confidence": 0.6, "evidence": {"ex
+pected_test": "tests/test___init__.py"}, "suggested_action": "Add or update the
+related test before changing behavior."}, {"id": "python.changed_source_without_
+related_test:ee0d42dd72fb", "stable_key": "python.changed_source_without_related
+_test:ee0d42dd72fb", "rule_id": "python.changed_source_without_related_test", "f
+ile_path": "src/acme_tasks/oversized.py", "symbol": null, "severity": "info", "c
+onfidence": 0.6, "evidence": {"expected_test": "tests/test_oversized.py"}, "sugg
+ested_action": "Add or update the related test before changing behavior."}, {"id
+": "python.changed_source_without_related_test:ef5be28c6ea8", "stable_key": "pyt
+hon.changed_source_without_related_test:ef5be28c6ea8", "rule_id": "python.change
+d_source_without_related_test", "file_path": "src/acme_tasks/payroll.py", "symbo
+l": null, "severity": "info", "confidence": 0.6, "evidence": {"expected_test": "
+tests/test_payroll.py"}, "suggested_action": "Add or update the related test bef
+ore changing behavior."}, {"id": "python.changed_source_without_related_test:c44
+3f18095af", "stable_key": "python.changed_source_without_related_test:c443f18095
+af", "rule_id": "python.changed_source_without_related_test", "file_path": "src/
+acme_tasks/report.py", "symbol": null, "severity": "info", "confidence": 0.6, "e
+vidence": {"expected_test": "tests/test_report.py"}, "suggested_action": "Add or
+ update the related test before changing behavior."}, {"id": "python.changed_sou
+rce_without_related_test:ab54f1b6a991", "stable_key": "python.changed_source_wit
+hout_related_test:ab54f1b6a991", "rule_id": "python.changed_source_without_relat
+ed_test", "file_path": "src/acme_tasks/storage.py", "symbol": null, "severity":
+"info", "confidence": 0.6, "evidence": {"expected_test": "tests/test_storage.py"
+}, "suggested_action": "Add or update the related test before changing behavior.
+"}]}
+
+EXIT:0
+

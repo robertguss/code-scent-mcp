@@ -1,0 +1,32 @@
+$ uv sync
+Resolved 84 packages in 4ms
+Checked 79 packages in 1ms
+$ uv run pytest tests/test_package_metadata.py
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.13.0
+collected 2 items
+
+tests/test_package_metadata.py ..                                        [100%]
+
+============================== 2 passed in 0.04s ===============================
+$ uv run codescent --help
+                                                                                
+ Usage: codescent [OPTIONS] COMMAND [ARGS]...                                   
+                                                                                
+ Local MCP-first codebase improvement server.                                   
+                                                                                
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --version          Print the CodeScent version and exit.                     │
+│ --help             Show this message and exit.                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+$ uv run ruff check .
+All checks passed!
+$ uv run ruff format --check .
+7 files already formatted
+$ uv run basedpyright
+0 errors, 0 warnings, 0 notes
+exit=0

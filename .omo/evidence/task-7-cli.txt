@@ -1,0 +1,24 @@
+
+ Usage: codescent [OPTIONS] COMMAND [ARGS]...
+
+ Local MCP-first codebase improvement server.
+
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --version          Print the CodeScent version and exit.                     │
+│ --help             Show this message and exit.                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ───────────────────────────────────────────────────────────────────╮
+│ init                                                                         │
+│ index                                                                        │
+│ status                                                                       │
+│ scan                                                                         │
+│ doctor                                                                       │
+│ serve                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+---DOCTOR---
+{"ok": false, "checks": {"database_ok": false, "config_ok": false, "exclusions_o
+k": true, "mcp_available": true}, "warnings": ["codescent database has not been
+initialized", "codescent config has not been initialized"]}
+

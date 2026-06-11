@@ -1,0 +1,83 @@
+import shutil
+import socket
+import subprocess
+from pathlib import Path
+
+import pytest
+from pydantic import TypeAdapter
+from scripts.prove_source_read_only import prove_source_read_only
+
+from codescent.mcp.finding_tools import get_smell_report, scan_code_health
+from codescent.mcp.planning_tools import suggest_tests
+from codescent.mcp.search_tools import search_content, search_files
+from codescent.smoke.lx_data_lake_contract import JsonValue
+
+JSON_PAYLOAD = TypeAdapter(dict[str, JsonValue])
+
+
+def test_mcp_tools_do_not_modify_source(tmp_path: Path) -> None:
+    out = tmp_path / "read-only.json"
+
+    payload = prove_source_read_only(
+        repo=Path("tests/fixtures/python-basic"),
+        out=out,
+    )
+    written = JSON_PAYLOAD.validate_json(out.read_text())
+
+    assert payload["source_hashes_unchanged"] is True
+    assert payload["changed_paths"] == []
+    assert written["allowed_changed_root"] == ".codescent"
+    assert written["network_attempts"] == 0
+
+
+def test_core_scan_makes_no_network_requests(monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts: list[str] = []
+
+    def blocked_socket(*args: object, **kwargs: object) -> socket.socket:
+        _ = args, kwargs
+        attempts.append("socket")
+        message = "network disabled"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(socket, "socket", blocked_socket)
+
+    repo = "tests/fixtures/python-basic"
+    shutil.rmtree(Path(repo) / ".codescent", ignore_errors=True)
+    scan = scan_code_health(repo)
+    files = search_files("workflow", repo=repo)
+    content = search_content("pending-review", repo=repo)
+
+    assert scan["ok"] is True
+    assert files["results"]
+    assert content["results"]
+    assert attempts == []
+
+
+def test_verification_commands_are_recommended_not_executed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = "tests/fixtures/python-basic"
+    shutil.rmtree(Path(repo) / ".codescent", ignore_errors=True)
+    _ = scan_code_health(repo)
+    report = get_smell_report(repo)
+    selected = next(
+        finding["finding_id"]
+        for finding in report["findings"]
+        if finding["file_path"] == "src/acme_tasks/workflow.py"
+    )
+    assert isinstance(selected, str)
+
+    def fail_if_subprocess_runs(
+        *args: object,
+        **kwargs: object,
+    ) -> subprocess.CompletedProcess[str]:
+        _ = args, kwargs
+        message = "target verification command executed"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(subprocess, "run", fail_if_subprocess_runs)
+
+    suggested = suggest_tests(selected, repo=repo)
+
+    assert suggested["commands"]
+    assert suggested["executes_in_v1"] is False

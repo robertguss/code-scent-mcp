@@ -1,0 +1,20 @@
+{
+  "details": {
+    "tool_surface": {
+      "missing": [],
+      "ok": true,
+      "post_mvp_exposed": [],
+      "tool_count": 15,
+      "unexpected": []
+    },
+    "user_decisions": {
+      "missing": [],
+      "ok": true
+    }
+  },
+  "missing_evidence": [],
+  "ok": true,
+  "tool_surface_ok": true,
+  "unchecked_todos": [],
+  "user_decisions_ok": true
+}

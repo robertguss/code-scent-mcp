@@ -1,0 +1,24 @@
+## malformed input: docs tests enforce missing files and exact tool list
+docs_tests=uv run pytest tests/docs/test_docs.py
+## prompt injection: docs do not add hosted/cloud requirements
+{'hosted_llm_claim': False}
+## stale state: docs read checked-in files directly
+{'readme': 2679, 'evals': 2057, 'tools': 1120}
+## dirty worktree: current repo status recorded
+?? .omo/
+?? .prettierrc
+?? LICENSE
+?? README.md
+?? docs/
+?? evals/
+?? pyproject.toml
+?? scripts/
+?? src/
+?? tests/
+?? uv.lock
+## hung command safety: docs test is focused
+timeout_not_required_for_static_docs_test
+## flaky repeatability: docs exact tool assertions are deterministic
+{'mvp_tool_lines': 15}
+## misleading success output: post-mvp claims absent
+{'typescript support': False, 'react support': False, 'source autofix': False}

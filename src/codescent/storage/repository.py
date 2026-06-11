@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+import sqlite3
+import threading
+from contextlib import contextmanager
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Final
+
+from codescent.core.errors import CodeScentError, ErrorCode, ErrorSeverity
+from codescent.core.paths import resolve_repo_root
+from codescent.storage.schema import SCHEMA_VERSION, migrate
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from pathlib import Path
+
+ACTIVE_WRITERS: Final[set[Path]] = set()
+ACTIVE_WRITERS_GUARD: Final = threading.Lock()
+CONFIG_TEXT: Final = f"[project]\nschema_version = {SCHEMA_VERSION}\n"
+
+
+@dataclass(frozen=True, slots=True)
+class StorageState:
+    repo_root: Path
+    state_dir: Path
+    database_path: Path
+    config_path: Path
+
+
+def initialize_storage(root: Path | str) -> StorageState:
+    repo_root = resolve_repo_root(root)
+    state = _state_for(repo_root)
+    state.state_dir.mkdir(exist_ok=True)
+    if not state.config_path.exists():
+        _ = state.config_path.write_text(CONFIG_TEXT)
+
+    storage = RepositoryStorage(state)
+    try:
+        with storage.write_transaction() as connection:
+            migrate(connection)
+            quick_check_cursor: sqlite3.Cursor = connection.execute(
+                "pragma quick_check",
+            )
+            quick_check_cursor.close()
+    except sqlite3.DatabaseError as exc:
+        raise CodeScentError(
+            code=ErrorCode.CORRUPT_DATABASE,
+            message=(
+                "CodeScent database is corrupt; delete "
+                ".codescent/index.sqlite to rebuild."
+            ),
+            severity=ErrorSeverity.ERROR,
+            details={"database": str(state.database_path)},
+        ) from exc
+
+    return state
+
+
+@dataclass(frozen=True, slots=True)
+class RepositoryStorage:
+    state: StorageState
+
+    @contextmanager
+    def read_connection(self) -> Generator[sqlite3.Connection, None, None]:
+        connection = _connect(self.state.database_path)
+        try:
+            yield connection
+        finally:
+            connection.close()
+
+    @contextmanager
+    def write_transaction(self) -> Generator[sqlite3.Connection, None, None]:
+        self._claim_writer()
+        connection = _connect(self.state.database_path)
+        try:
+            _ = connection.execute("begin immediate")
+            yield connection
+            connection.commit()
+        except sqlite3.OperationalError as exc:
+            connection.rollback()
+            raise _concurrent_write_error(self.state.database_path) from exc
+        except sqlite3.DatabaseError:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+            self._release_writer()
+
+    def _claim_writer(self) -> None:
+        with ACTIVE_WRITERS_GUARD:
+            if self.state.database_path in ACTIVE_WRITERS:
+                raise _concurrent_write_error(self.state.database_path)
+            ACTIVE_WRITERS.add(self.state.database_path)
+
+    def _release_writer(self) -> None:
+        with ACTIVE_WRITERS_GUARD:
+            ACTIVE_WRITERS.discard(self.state.database_path)
+
+
+def _state_for(repo_root: Path) -> StorageState:
+    state_dir = repo_root / ".codescent"
+    return StorageState(
+        repo_root=repo_root,
+        state_dir=state_dir,
+        database_path=state_dir / "index.sqlite",
+        config_path=state_dir / "config.toml",
+    )
+
+
+def _connect(database_path: Path) -> sqlite3.Connection:
+    connection = sqlite3.connect(database_path, timeout=5.0)
+    _ = connection.execute("pragma foreign_keys = on")
+    _ = connection.execute("pragma busy_timeout = 5000")
+    return connection
+
+
+def _concurrent_write_error(database_path: Path) -> CodeScentError:
+    return CodeScentError(
+        code=ErrorCode.CONCURRENT_WRITE,
+        message="Another CodeScent write transaction is already active.",
+        severity=ErrorSeverity.ERROR,
+        details={"database": str(database_path)},
+    )

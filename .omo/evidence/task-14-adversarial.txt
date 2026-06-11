@@ -1,0 +1,32 @@
+## malformed input: missing finding id fails closed
+## prompt injection: finding note remains inert in planning context
+Address python.todo_cluster in src/acme_tasks/config.py.
+('pytest tests/test_config.py',)
+## source read-only and no test execution
+source_hashes_unchanged:true
+pytest_cache_absent:true
+## stale state: planning reflects marked finding status without source mutation
+in_progress
+## dirty worktree: current repo status recorded
+?? .omo/
+?? .prettierrc
+?? LICENSE
+?? README.md
+?? docs/
+?? evals/
+?? pyproject.toml
+?? scripts/
+?? src/
+?? tests/
+?? uv.lock
+## hung command safety: planning smoke completes under timeout
+timeout_exit:0
+## flaky repeatability: focused task 14 tests twice
+....                                                                     [100%]
+4 passed in 0.43s
+....                                                                     [100%]
+4 passed in 0.43s
+## misleading success output: parse smoke JSON and assert no execution
+calls_present ['get_finding_context', 'get_next_improvement', 'plan_refactor', 'suggest_tests']
+plan_has_non_goals True
+suggest_tests_no_execute True

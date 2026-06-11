@@ -1,0 +1,3 @@
+task 17 verifier caches removed
+.pytest_cache removed
+.ruff_cache removed

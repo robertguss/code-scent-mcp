@@ -1,0 +1,40 @@
+$ uv run ruff check .
+All checks passed!
+$ uv run ruff format --check .
+80 files already formatted
+$ uv run basedpyright
+0 errors, 0 warnings, 0 notes
+$ uv run pytest
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, anyio-4.13.0
+collected 64 items
+
+tests/contract/test_cli.py .......                                       [ 10%]
+tests/contract/test_mcp_context_tools.py .                               [ 12%]
+tests/contract/test_mcp_finding_tools.py .                               [ 14%]
+tests/contract/test_mcp_planning_tools.py .                              [ 15%]
+tests/contract/test_mcp_repo_tools.py ..                                 [ 18%]
+tests/contract/test_mcp_search_tools.py .                                [ 20%]
+tests/contract/test_mcp_tool_surface.py ...                              [ 25%]
+tests/evals/test_agent_eval_spec.py .                                    [ 26%]
+tests/evals/test_deterministic_eval.py ......                            [ 35%]
+tests/fixtures/test_python_basic_fixture.py .                            [ 37%]
+tests/integration/test_context.py ..                                     [ 40%]
+tests/integration/test_findings.py ...                                   [ 45%]
+tests/integration/test_refactor_planning.py ...                          [ 50%]
+tests/integration/test_repo_index.py .....                               [ 57%]
+tests/integration/test_scan_code_health.py .                             [ 59%]
+tests/integration/test_search.py ...                                     [ 64%]
+tests/integration/test_storage.py ....                                   [ 70%]
+tests/test_package_metadata.py ..                                        [ 73%]
+tests/unit/test_errors.py ..                                             [ 76%]
+tests/unit/test_inventory.py ...                                         [ 81%]
+tests/unit/test_models.py .......                                        [ 92%]
+tests/unit/test_python_parser.py ...                                     [ 96%]
+tests/unit/test_rules_python.py ..                                       [100%]
+
+============================== 64 passed in 1.12s ==============================

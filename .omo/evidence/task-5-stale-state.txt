@@ -1,0 +1,8 @@
+database_exists=True
+config_exists=True
+select 1 from files limit 0 -> True
+select 1 from symbols limit 0 -> True
+select 1 from findings limit 0 -> True
+select 1 from scan_runs limit 0 -> True
+select 1 from eval_runs limit 0 -> True
+select 1 from telemetry limit 0 -> True

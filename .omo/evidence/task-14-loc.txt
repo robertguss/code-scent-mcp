@@ -1,0 +1,8 @@
+src/codescent/services/refactor_planning.py      122
+src/codescent/services/verification.py       23
+src/codescent/mcp/planning_tools.py      110
+scripts/smoke_mcp.py       89
+tests/integration/test_refactor_planning.py       64
+tests/contract/test_mcp_planning_tools.py       98
+src/codescent/services/findings.py       83
+src/codescent/services/code_health.py      237

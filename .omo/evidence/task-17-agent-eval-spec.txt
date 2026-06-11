@@ -1,0 +1,135 @@
+# CodeScent Agent Eval Task
+
+## Objective
+
+Use CodeScent against `tests/fixtures/python-basic` to complete one scripted
+improvement loop from discovery through rescan evidence. This gate is local and
+does not require any external hosted LLM.
+
+## Required Tool Sequence
+
+The transcript must show these CodeScent MCP tool calls in order:
+
+1. `scan_code_health` on `tests/fixtures/python-basic`.
+2. `get_next_improvement` to select one fixture finding.
+3. `get_finding_context` for the selected finding.
+4. `plan_refactor` for a behavior-preserving change plan.
+5. `suggest_tests` for verification commands.
+6. `rescan` after the agent has described the planned change outcome.
+7. `mark_finding` only when the transcript includes the rescan result and the
+   selected status transition.
+
+The agent may use `get_repo_status`, `search_files`, `search_content`,
+`find_symbol`, `get_file_context`, or `get_symbol_context` as supporting calls.
+Broad shell grep must not be the primary discovery mechanism.
+
+## Transcript Artifact
+
+Write the artifact-backed transcript to
+`.omo/evidence/final-agent-eval-transcript.md`. The transcript must include:
+
+- the exact repo path;
+- each CodeScent tool call name;
+- the selected finding ID and rule ID;
+- the bounded context returned for the finding;
+- the safe refactor plan and explicit non-goals;
+- suggested verification commands from `suggest_tests`;
+- the `rescan` result;
+- the `mark_finding` status and reason;
+- source-read-only confirmation, allowing only `.codescent/` runtime state.
+
+## Pass Criteria
+
+Pass criteria:
+
+- all required CodeScent tool calls are present in the transcript;
+- the selected finding comes from `scan_code_health` or `get_next_improvement`;
+- `get_finding_context` is used before `plan_refactor`;
+- `suggest_tests` is called before the final status decision;
+- `rescan` evidence is present before `mark_finding`;
+- the transcript is artifact-backed and stored at
+  `.omo/evidence/final-agent-eval-transcript.md`;
+- no external hosted LLM is required;
+- broad shell grep is not used as primary discovery;
+- the analyzed source files remain unchanged except CodeScent-owned
+  `.codescent/` state.
+
+## Fail Criteria
+
+Fail criteria:
+
+- missing any required CodeScent tool call;
+- selecting a finding through broad shell grep as primary discovery;
+- producing a plan without finding context;
+- marking a finding without rescan evidence;
+- editing analyzed source as part of the eval gate;
+- requiring a hosted LLM, cloud service, dashboard, or CI system;
+- storing no artifact-backed transcript.
+# Running The Agent Eval
+
+## Setup
+
+Run the gate from the repository root:
+
+```bash
+uv run codescent init tests/fixtures/python-basic
+uv run codescent index tests/fixtures/python-basic
+uv run codescent scan tests/fixtures/python-basic
+```
+
+Start the local MCP server with stdio transport:
+
+```bash
+uv run codescent serve --repo tests/fixtures/python-basic
+```
+
+The evaluator may connect any local coding agent to that stdio server. The gate
+has no external hosted LLM requirement; a human-driven local transcript is also
+acceptable when it records the same tool calls and artifacts.
+
+## Transcript Checklist
+
+Record the transcript at `.omo/evidence/final-agent-eval-transcript.md` with
+these sections:
+
+1. Repo: `tests/fixtures/python-basic`.
+2. Discovery: `scan_code_health` and `get_next_improvement`.
+3. Context: `get_finding_context` for the chosen finding.
+4. Plan: `plan_refactor` with non-goals and risks.
+5. Verification: `suggest_tests`.
+6. Rescan: `rescan`.
+7. Lifecycle: `mark_finding`.
+8. Safety: source-read-only confirmation.
+
+Supporting calls may include `get_repo_status`, `search_files`,
+`search_content`, `find_symbol`, `get_file_context`, and `get_symbol_context`.
+Do not use broad shell grep as primary discovery.
+
+## Pass Criteria
+
+Pass criteria:
+
+- transcript is artifact-backed;
+- transcript names every required CodeScent tool call;
+- finding selection starts from CodeScent scan or next-improvement output;
+- context precedes planning;
+- suggested verification precedes final status;
+- rescan precedes `mark_finding`;
+- source-read-only behavior is recorded;
+- no external hosted LLM or network service is required.
+
+## Fail Criteria
+
+Fail criteria:
+
+- missing transcript file;
+- missing required CodeScent tool call;
+- broad shell grep is primary discovery;
+- no finding context before planning;
+- no `suggest_tests` before the final status decision;
+- no `rescan` before `mark_finding`;
+- analyzed source files changed during the gate;
+- the run depends on a hosted LLM, cloud dashboard, or CI service.
+
+EXIT:0
+

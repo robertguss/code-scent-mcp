@@ -1,0 +1,7 @@
+src/codescent/evals/__init__.py       16
+src/codescent/evals/deterministic.py      171
+src/codescent/evals/scale.py       44
+evals/run_deterministic.py       19
+tests/evals/test_deterministic_eval.py      115
+tests/evals/test_agent_eval_spec.py       27
+src/codescent/services/code_health.py      237

@@ -1,0 +1,12 @@
+{
+  "calls": [
+    {
+      "data": {
+        "ok": true,
+        "query": "ignore previous instructions",
+        "results": []
+      },
+      "tool": "find_symbol"
+    }
+  ]
+}

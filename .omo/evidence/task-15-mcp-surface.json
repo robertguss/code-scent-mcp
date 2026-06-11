@@ -1,0 +1,29 @@
+{
+  "calls": [
+    {
+      "data": {
+        "tools": [
+          "find_symbol",
+          "get_file_context",
+          "get_finding_context",
+          "get_next_improvement",
+          "get_repo_map",
+          "get_repo_status",
+          "get_smell_report",
+          "get_symbol_context",
+          "mark_finding",
+          "plan_refactor",
+          "rescan",
+          "scan_code_health",
+          "search_content",
+          "search_files",
+          "suggest_tests"
+        ]
+      },
+      "tool": "list_tools"
+    }
+  ]
+}
+
+EXIT:0
+

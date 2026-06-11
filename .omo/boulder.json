@@ -1,0 +1,16 @@
+{
+  "active_work_id": null,
+  "schema_version": 2,
+  "works": {
+    "codescent-python-mvp": {
+      "active_plan": ".omo/plans/codescent-python-mvp.md",
+      "plan_name": "codescent-python-mvp",
+      "session_ids": [
+        "codex:019eb68e-8b68-7152-93e3-45fc33aee7de"
+      ],
+      "status": "completed",
+      "work_id": "codescent-python-mvp",
+      "worktree_path": null
+    }
+  }
+}

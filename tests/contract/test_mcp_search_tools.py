@@ -1,0 +1,77 @@
+from pathlib import Path
+from typing import ClassVar
+
+import pytest
+from fastmcp import Client
+from mcp.types import ContentBlock, TextContent
+from pydantic import BaseModel, ConfigDict, Field
+
+from codescent.mcp.server import mcp
+
+
+class ToolSearchResult(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    path: str
+    score: float = Field(ge=0)
+    reasons: tuple[str, ...]
+    snippet: str | None = None
+
+
+class SearchToolPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    query: str
+    limit: int = Field(ge=1, le=20)
+    results: tuple[ToolSearchResult, ...]
+
+
+@pytest.mark.anyio
+async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("def run() -> None:\n    # TODO: handle billing\n    pass\n")
+
+    async with Client(mcp) as client:
+        tools = await client.list_tools()
+        file_result = await client.call_tool(
+            "search_files",
+            {"repo": str(repo), "query": "ap", "limit": 20},
+        )
+        content_result = await client.call_tool(
+            "search_content",
+            {"repo": str(repo), "query": "TODO", "limit": 20},
+        )
+
+    tool_names = {tool.name: tool for tool in tools}
+    assert {"search_files", "search_content"} <= tool_names.keys()
+    assert "multi_search_content" not in tool_names
+    assert "search_changed_files" not in tool_names
+    assert "search_todos" not in tool_names
+    assert "search_tests" not in tool_names
+    assert "ranking reasons" in (tool_names["search_files"].description or "")
+    assert "bounded" in (tool_names["search_content"].description or "")
+
+    file_payload = SearchToolPayload.model_validate_json(
+        _text_content(file_result.content),
+    )
+    content_payload = SearchToolPayload.model_validate_json(
+        _text_content(content_result.content),
+    )
+
+    assert file_payload.ok is True
+    assert file_payload.results[0].path == "src/app.py"
+    assert file_payload.results[0].reasons
+    assert content_payload.ok is True
+    assert content_payload.results[0].path == "src/app.py"
+    assert "content_match" in content_payload.results[0].reasons
+    assert content_payload.results[0].snippet == "# TODO: handle billing"
+
+
+def _text_content(content: list[ContentBlock]) -> str:
+    assert len(content) == 1
+    first = content[0]
+    assert isinstance(first, TextContent)
+    return first.text

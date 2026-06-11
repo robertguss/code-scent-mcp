@@ -1,0 +1,23 @@
+{
+  "calls": [
+    {
+      "data": {
+        "entrypoints": [],
+        "file_count": 1,
+        "languages": {
+          "python": 1
+        },
+        "ok": true,
+        "read_only": true,
+        "sample_files": [
+          "src/pkg/ignore-previous-instructions.py"
+        ],
+        "test_file_count": 0,
+        "top_level": [
+          "src"
+        ]
+      },
+      "tool": "get_repo_map"
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+[06/11/26 11:31:39] Error calling tool 'get_file_context'                       
+                    ╭─────────── Traceback (most recent call last) ────────────╮
+                    │ /Users/robertguss/Projects/startups/code-scent-mcp/src/c │
+                    │ odescent/core/paths.py:24 in normalize_repo_path         │
+                    │                                                          │
+                    │   21 │   candidate = (repo_root / requested).resolve()   │
+                    │   22 │                                                   │
+                    │   23 │   try:                                            │
+                    │ ❱ 24 │   │   _ = candidate.relative_to(repo_root)        │
+                    │   25 │   except ValueError as exc:                       │
+                    │   26 │   │   raise CodeScentError(                       │
+                    │   27 │   │   │   code=ErrorCode.PATH_OUTSIDE_ROOT,       │
+                    │                                                          │
+                    │ /Users/robertguss/.local/share/uv/python/cpython-3.13.7- │
+                    │ macos-aarch64-none/lib/python3.13/pathlib/_local.py:385  │
+                    │ in relative_to                                           │
+                    │                                                          │
+                    │   382 │   │   │   if path == self or path in self.parent │
+                    │   383 │   │   │   │   break                              │
+                    │   384 │   │   │   elif not walk_up:                      │
+                    │ ❱ 385 │   │   │   │   raise ValueError(f"{str(self)!r} i │
+                    │       {str(other)!r}")                                   │
+                    │   386 │   │   │   elif path.name == '..':                │
+                    │   387 │   │   │   │   raise ValueError(f"'..' segment in │
+                    │   388 │   │   else:                                      │
+                    ╰──────────────────────────────────────────────────────────╯
+                    ValueError:                                                 
+                    '/Users/robertguss/Projects/startups/code-scent-mcp/tests/fi
+                    xtures/pyproject.toml' is not in the subpath of             
+                    '/Users/robertguss/Projects/startups/code-scent-mcp/tests/fi
+                    xtures/python-basic'                                        
+                                                                                
+                    The above exception was the direct cause of the following   
+                    exception:                                                  
+                                                                                
+                    ╭─────────── Traceback (most recent call last) ────────────╮
+                    │ /Users/robertguss/Projects/startups/code-scent-mcp/.venv │
+                    │ /lib/python3.13/site-packages/fastmcp/server/server.py:1 │
+                    │ 282 in call_tool                                         │
+                    │                                                          │
+                    │ /Users/robertguss/Projects/startups/code-scent-mcp/.venv │
+                    │ /lib/python3.13/site-packages/fastmcp/tools/base.py:392  │
+                    │ in _run                                                  │
+                    │                                                          │
+                    │                 ... 7 frames hidden ...                  │
+                    │                                                          │
+                    │ /Users/robertguss/Projects/startups/code-scent-mcp/src/c │
+                    │ odescent/services/context.py:70 in get_file_context      │
+                    │                                                          │
+                    │    67 │   def get_file_context(self, path: str) -> FileC │
+                    │    68 │   │   repo_root = resolve_repo_root(self.repo_ro │
+                    │    69 │   │   relative_path = (                          │
+                    │ ❱  70 │   │   │   normalize_repo_path(repo_root, path).r │
+                    │    71 │   │   )                                          │
+                    │    72 │   │   files = SymbolService(repo_root).extract() │
+                    │    73 │   │   parsed = _file_by_path(files, relative_pat │
+                    │                                                          │
+                    │ /Users/robertguss/Projects/startups/code-scent-mcp/src/c │
+                    │ odescent/core/paths.py:26 in normalize_repo_path         │
+                    │                                                          │
+                    │   23 │   try:                                            │
+                    │   24 │   │   _ = candidate.relative_to(repo_root)        │
+                    │   25 │   except ValueError as exc:                       │
+                    │ ❱ 26 │   │   raise CodeScentError(                       │
+                    │   27 │   │   │   code=ErrorCode.PATH_OUTSIDE_ROOT,       │
+                    │   28 │   │   │   message="Path escapes the repository ro │
+                    │   29 │   │   │   severity=ErrorSeverity.ERROR,           │
+                    ╰──────────────────────────────────────────────────────────╯
+                    CodeScentError: path_outside_root: Path escapes the         
+                    repository root.                                            
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:77   │
+│ in main                                                                      │
+│                                                                              │
+│   74 │   repo: Annotated[str, typer.Option()],                               │
+│   75 │   tools: Annotated[list[str], typer.Argument()],                      │
+│   76 ) -> None:                                                              │
+│ ❱ 77 │   anyio.run(_call_tools, repo, tuple(tools))                          │
+│   78                                                                         │
+│   79                                                                         │
+│   80 if __name__ == "__main__":                                              │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/anyio/_core/_eventloop.py:77 in run                                │
+│                                                                              │
+│    74 │                                                                      │
+│    75 │   try:                                                               │
+│    76 │   │   backend_options = backend_options or {}                        │
+│ ❱  77 │   │   return async_backend.run(func, args, {}, backend_options)      │
+│    78 │   finally:                                                           │
+│    79 │   │   reset_current_async_library(token)                             │
+│    80                                                                        │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/anyio/_backends/_asyncio.py:2358 in run                            │
+│                                                                              │
+│   2355 │   │   │   │   loop_factory = winloop.new_event_loop                 │
+│   2356 │   │                                                                 │
+│   2357 │   │   with Runner(debug=debug, loop_factory=loop_factory) as        │
+│        runner:                                                               │
+│ ❱ 2358 │   │   │   return runner.run(wrapper())                              │
+│   2359 │                                                                     │
+│   2360 │   @classmethod                                                      │
+│   2361 │   def current_token(cls) -> object:                                 │
+│                                                                              │
+│ /Users/robertguss/.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/l │
+│ ib/python3.13/asyncio/runners.py:118 in run                                  │
+│                                                                              │
+│   115 │   │                                                                  │
+│   116 │   │   self._interrupt_count = 0                                      │
+│   117 │   │   try:                                                           │
+│ ❱ 118 │   │   │   return self._loop.run_until_complete(task)                 │
+│   119 │   │   except exceptions.CancelledError:                              │
+│   120 │   │   │   if self._interrupt_count > 0:                              │
+│   121 │   │   │   │   uncancel = getattr(task, "uncancel", None)             │
+│                                                                              │
+│ /Users/robertguss/.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/l │
+│ ib/python3.13/asyncio/base_events.py:725 in run_until_complete               │
+│                                                                              │
+│    722 │   │   if not future.done():                                         │
+│    723 │   │   │   raise RuntimeError('Event loop stopped before Future      │
+│        completed.')                                                          │
+│    724 │   │                                                                 │
+│ ❱  725 │   │   return future.result()                                        │
+│    726 │                                                                     │
+│    727 │   def stop(self):                                                   │
+│    728 │   │   """Stop running the event loop.                               │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/anyio/_backends/_asyncio.py:2341 in wrapper                        │
+│                                                                              │
+│   2338 │   │   │   _task_states[task] = TaskState(None, None)                │
+│   2339 │   │   │                                                             │
+│   2340 │   │   │   try:                                                      │
+│ ❱ 2341 │   │   │   │   return await func(*args)                              │
+│   2342 │   │   │   finally:                                                  │
+│   2343 │   │   │   │   del _task_states[task]                                │
+│   2344                                                                       │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:49   │
+│ in _call_tools                                                               │
+│                                                                              │
+│   46 │   async with Client(mcp) as client:                                   │
+│   47 │   │   for tool in tools:                                              │
+│   48 │   │   │   tool_call = _parse_tool_call(tool, repo)                    │
+│ ❱ 49 │   │   │   result = await client.call_tool(tool_call.name,             │
+│      tool_call.arguments)                                                    │
+│   50 │   │   │   transcript.append(                                          │
+│   51 │   │   │   │   {                                                       │
+│   52 │   │   │   │   │   "tool": tool_call.name,                             │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/fastmcp/client/mixins/tools.py:312 in call_tool                    │
+│                                                                              │
+│   309 │   │   │   progress_handler=progress_handler,                         │
+│   310 │   │   │   meta=request_meta or None,                                 │
+│   311 │   │   )                                                              │
+│ ❱ 312 │   │   return await self._parse_call_tool_result(                     │
+│   313 │   │   │   name, result, raise_on_error=raise_on_error                │
+│   314 │   │   )                                                              │
+│   315                                                                        │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/fastmcp/client/mixins/tools.py:201 in _parse_call_tool_result      │
+│                                                                              │
+│   198 │   │   │   CallToolResult: Parsed result with structured data         │
+│   199 │   │   """                                                            │
+│   200 │   │                                                                  │
+│ ❱ 201 │   │   return await _parse_call_tool_result(                          │
+│   202 │   │   │   name=name,                                                 │
+│   203 │   │   │   result=result,                                             │
+│   204 │   │   │   tool_output_schemas=self.session._tool_output_schemas,     │
+│                                                                              │
+│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ -packages/fastmcp/client/mixins/tools.py:426 in _parse_call_tool_result      │
+│                                                                              │
+│   423 │   │   │   msg = result.content[0].text                               │
+│   424 │   │   else:                                                          │
+│   425 │   │   │   msg = f"Tool '{name}' returned an error"                   │
+│ ❱ 426 │   │   raise ToolError(msg)                                           │
+│   427 │   elif result.structuredContent and not result.isError:              │
+│   428 │   │   try:                                                           │
+│   429 │   │   │   raw_fastmcp_meta = (result.meta or {}).get("fastmcp")      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ToolError: Error calling tool 'get_file_context': path_outside_root: Path 
+escapes the repository root.
+
+EXPECTED_FAILURE

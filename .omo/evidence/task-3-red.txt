@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.13.0
+collected 1 item
+
+tests/fixtures/test_python_basic_fixture.py F                            [100%]
+
+=================================== FAILURES ===================================
+____________________ test_fixture_contains_expected_smells _____________________
+
+    def test_fixture_contains_expected_smells() -> None:
+>       assert FIXTURE_ROOT.is_dir()
+E       AssertionError: assert False
+E        +  where False = is_dir()
+E        +    where is_dir = PosixPath('/Users/robertguss/Projects/startups/code-scent-mcp/tests/fixtures/python-basic').is_dir
+
+tests/fixtures/test_python_basic_fixture.py:13: AssertionError
+=========================== short test summary info ============================
+FAILED tests/fixtures/test_python_basic_fixture.py::test_fixture_contains_expected_smells
+============================== 1 failed in 0.02s ===============================

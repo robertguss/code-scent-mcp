@@ -1,0 +1,1 @@
+{'index_fresh': True, 'indexed_files': 1, 'changed_files': [], 'finding_count': 0, 'database_ok': True, 'git_available': False, 'git_status': 'not_git'}

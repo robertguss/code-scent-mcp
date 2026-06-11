@@ -1,0 +1,4 @@
+tmux_session=absent
+fixture_state=absent
+pycache_count=0
+pytest_cache=absent

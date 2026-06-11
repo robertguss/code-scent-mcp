@@ -1,0 +1,20 @@
+{
+  "calls": [
+    {
+      "data": {
+        "changed_files": [
+          "src/pkg/cli.py"
+        ],
+        "database_ok": true,
+        "finding_count": 0,
+        "git_available": false,
+        "git_status": "not_git",
+        "index_fresh": false,
+        "indexed_files": 1,
+        "ok": true,
+        "read_only": true
+      },
+      "tool": "get_repo_status"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+## malformed input: missing repo fails
+{"exit_code": 1, "stderr_nonempty": true}
+## prompt injection: dry-run treats repo argument as path data
+{"dry_run": true, "exit_code": 0}
+## stale state: existing .codescent marker is reset before smoke
+{"changed_paths": [], "exit_code": 0, "git_status_unchanged_except_codescent": true, "marker_removed": true, "source_hashes_unchanged": true}
+## dirty worktree: lx status recorded without .codescent
+M justfile
+ M src/lx_data_lake/pipelines/instructor_performance/transforms.py
+ M src/lx_data_lake/reports/instructor_performance.py
+ M src/lx_data_lake/verify/checks.py
+ M tests/lake_helpers.py
+ M tests/reports/test_instructor_performance.py
+ M tests/verify/test_checks.py
+?? .codescent/
+?? .codex/
+?? .omo/
+?? src/lx_data_lake/pipelines/instructor_performance/report_marts.py
+?? src/lx_data_lake/reports/instructor_history_views.py
+?? src/lx_data_lake/reports/instructor_self_views.py
+?? tests/pipelines/instructor_performance/test_report_marts.py
+## hung command safety: real smoke completes under timeout
+{"exit_code": 0, "stdout": "{\"ok\": true, \"dry_run\": false}"}
+## flaky repeatability: dry-run twice
+{"first_exit": 0, "second_exit": 0}
+## misleading success output: parse JSON requirements
+{"exclusions_all_true": true, "git_status_unchanged_except_codescent": true, "ok": true, "required_tools_present": true, "source_hashes_unchanged": true}

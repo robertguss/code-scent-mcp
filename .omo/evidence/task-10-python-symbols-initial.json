@@ -1,0 +1,427 @@
+{
+  "files": [
+    {
+      "imports": [],
+      "is_test": false,
+      "module": "src.acme_tasks",
+      "path": "src/acme_tasks/__init__.py",
+      "references": [],
+      "symbols": []
+    },
+    {
+      "imports": [
+        {
+          "confidence": 1.0,
+          "line": 1,
+          "module": "__future__",
+          "name": "annotations"
+        },
+        {
+          "confidence": 1.0,
+          "line": 3,
+          "module": "acme_tasks.workflow",
+          "name": "build_daily_plan"
+        }
+      ],
+      "is_test": false,
+      "module": "src.acme_tasks.cli",
+      "path": "src/acme_tasks/cli.py",
+      "references": [
+        {
+          "confidence": 0.4,
+          "line": 8,
+          "name": "print"
+        },
+        {
+          "confidence": 0.4,
+          "line": 11,
+          "name": "build_daily_plan"
+        },
+        {
+          "confidence": 0.4,
+          "line": 12,
+          "name": "print"
+        },
+        {
+          "confidence": 0.4,
+          "line": 12,
+          "name": "join"
+        }
+      ],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 13,
+          "kind": "function",
+          "name": "main",
+          "qualified_name": "src.acme_tasks.cli.main",
+          "start_line": 6
+        }
+      ]
+    },
+    {
+      "imports": [
+        {
+          "confidence": 1.0,
+          "line": 1,
+          "module": "__future__",
+          "name": "annotations"
+        }
+      ],
+      "is_test": false,
+      "module": "src.acme_tasks.config",
+      "path": "src/acme_tasks/config.py",
+      "references": [],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 19,
+          "kind": "function",
+          "name": "load_config",
+          "qualified_name": "src.acme_tasks.config.load_config",
+          "start_line": 9
+        }
+      ]
+    },
+    {
+      "imports": [
+        {
+          "confidence": 1.0,
+          "line": 1,
+          "module": "__future__",
+          "name": "annotations"
+        }
+      ],
+      "is_test": false,
+      "module": "src.acme_tasks.oversized",
+      "path": "src/acme_tasks/oversized.py",
+      "references": [],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 73,
+          "kind": "function",
+          "name": "export_field_names",
+          "qualified_name": "src.acme_tasks.oversized.export_field_names",
+          "start_line": 72
+        }
+      ]
+    },
+    {
+      "imports": [
+        {
+          "confidence": 1.0,
+          "line": 1,
+          "module": "__future__",
+          "name": "annotations"
+        }
+      ],
+      "is_test": false,
+      "module": "src.acme_tasks.payroll",
+      "path": "src/acme_tasks/payroll.py",
+      "references": [],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 5,
+          "kind": "function",
+          "name": "summarize_payroll_run",
+          "qualified_name": "src.acme_tasks.payroll.summarize_payroll_run",
+          "start_line": 4
+        }
+      ]
+    },
+    {
+      "imports": [
+        {
+          "confidence": 1.0,
+          "line": 1,
+          "module": "__future__",
+          "name": "annotations"
+        }
+      ],
+      "is_test": false,
+      "module": "src.acme_tasks.report",
+      "path": "src/acme_tasks/report.py",
+      "references": [],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 6,
+          "kind": "function",
+          "name": "render_priority_report",
+          "qualified_name": "src.acme_tasks.report.render_priority_report",
+          "start_line": 4
+        }
+      ]
+    },
+    {
+      "imports": [
+        {
+          "confidence": 1.0,
+          "line": 1,
+          "module": "__future__",
+          "name": "annotations"
+        }
+      ],
+      "is_test": false,
+      "module": "src.acme_tasks.storage",
+      "path": "src/acme_tasks/storage.py",
+      "references": [
+        {
+          "confidence": 0.4,
+          "line": 5,
+          "name": "list"
+        }
+      ],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 5,
+          "kind": "function",
+          "name": "save_plan",
+          "qualified_name": "src.acme_tasks.storage.save_plan",
+          "start_line": 4
+        }
+      ]
+    },
+    {
+      "imports": [
+        {
+          "confidence": 1.0,
+          "line": 1,
+          "module": "__future__",
+          "name": "annotations"
+        }
+      ],
+      "is_test": false,
+      "module": "src.acme_tasks.workflow",
+      "path": "src/acme_tasks/workflow.py",
+      "references": [
+        {
+          "confidence": 0.4,
+          "line": 6,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 7,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 8,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 9,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 10,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 11,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 12,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 13,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 14,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 15,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 16,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 17,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 18,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 19,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 20,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 21,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 22,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 23,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 24,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 25,
+          "name": "append"
+        },
+        {
+          "confidence": 0.4,
+          "line": 28,
+          "name": "append"
+        }
+      ],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 30,
+          "kind": "function",
+          "name": "build_daily_plan",
+          "qualified_name": "src.acme_tasks.workflow.build_daily_plan",
+          "start_line": 4
+        }
+      ]
+    },
+    {
+      "imports": [
+        {
+          "confidence": 1.0,
+          "line": 1,
+          "module": "__future__",
+          "name": "annotations"
+        },
+        {
+          "confidence": 1.0,
+          "line": 3,
+          "module": "acme_tasks.cli",
+          "name": "main"
+        }
+      ],
+      "is_test": true,
+      "module": "tests.test_cli",
+      "path": "tests/test_cli.py",
+      "references": [
+        {
+          "confidence": 0.4,
+          "line": 7,
+          "name": "main"
+        }
+      ],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 7,
+          "kind": "function",
+          "name": "test_main_requires_user",
+          "qualified_name": "tests.test_cli.test_main_requires_user",
+          "start_line": 6
+        }
+      ]
+    },
+    {
+      "imports": [
+        {
+          "confidence": 1.0,
+          "line": 1,
+          "module": "__future__",
+          "name": "annotations"
+        },
+        {
+          "confidence": 1.0,
+          "line": 3,
+          "module": "acme_tasks.config",
+          "name": "load_config"
+        }
+      ],
+      "is_test": true,
+      "module": "tests.test_config",
+      "path": "tests/test_config.py",
+      "references": [
+        {
+          "confidence": 0.4,
+          "line": 7,
+          "name": "load_config"
+        }
+      ],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 7,
+          "kind": "function",
+          "name": "test_load_config_sets_environment",
+          "qualified_name": "tests.test_config.test_load_config_sets_environment",
+          "start_line": 6
+        }
+      ]
+    },
+    {
+      "imports": [
+        {
+          "confidence": 1.0,
+          "line": 1,
+          "module": "__future__",
+          "name": "annotations"
+        },
+        {
+          "confidence": 1.0,
+          "line": 3,
+          "module": "acme_tasks.workflow",
+          "name": "build_daily_plan"
+        }
+      ],
+      "is_test": true,
+      "module": "tests.test_workflow",
+      "path": "tests/test_workflow.py",
+      "references": [
+        {
+          "confidence": 0.4,
+          "line": 7,
+          "name": "build_daily_plan"
+        }
+      ],
+      "symbols": [
+        {
+          "confidence": 1.0,
+          "end_line": 9,
+          "kind": "function",
+          "name": "test_build_daily_plan_includes_sources",
+          "qualified_name": "tests.test_workflow.test_build_daily_plan_includes_sources",
+          "start_line": 6
+        }
+      ]
+    }
+  ]
+}

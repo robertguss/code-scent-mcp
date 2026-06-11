@@ -1,0 +1,10 @@
+tests/contract/test_mcp_tool_surface.py       86
+scripts/smoke_mcp.py       98
+src/codescent/mcp/__init__.py        2
+src/codescent/mcp/context_tools.py       82
+src/codescent/mcp/finding_tools.py      134
+src/codescent/mcp/planning_tools.py      110
+src/codescent/mcp/repo_tools.py      129
+src/codescent/mcp/search_tools.py       50
+src/codescent/mcp/server.py       18
+src/codescent/services/code_health.py      237
