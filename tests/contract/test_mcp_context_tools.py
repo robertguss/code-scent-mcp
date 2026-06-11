@@ -18,6 +18,26 @@ class ContextToolPayload(BaseModel):
     next_tools: tuple[str, ...] = ()
 
 
+class GraphResultPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    text: str
+    path: str
+    start_line: int
+    confidence: float
+    certainty: str
+    caller: str | None = None
+
+
+class GraphToolPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    query: str
+    results: tuple[GraphResultPayload, ...]
+    next_cursor: int | None = None
+
+
 @pytest.mark.anyio
 async def test_context_tools_do_not_dump_whole_files() -> None:
     async with Client(mcp) as client:
@@ -42,10 +62,10 @@ async def test_context_tools_do_not_dump_whole_files() -> None:
         "find_symbol",
         "get_file_context",
         "get_symbol_context",
+        "find_references",
+        "find_callers",
+        "find_callees",
     } <= tool_names.keys()
-    assert "find_references" not in tool_names
-    assert "find_callers" not in tool_names
-    assert "find_callees" not in tool_names
     assert "get_related_files" not in tool_names
 
     file_payload = ContextToolPayload.model_validate_json(
@@ -62,6 +82,66 @@ async def test_context_tools_do_not_dump_whole_files() -> None:
     assert symbol_payload.likely_tests == ("tests/test_workflow.py",)
     assert "archive completed tickets" not in combined
     assert "close empty work queues" not in combined
+
+
+@pytest.mark.anyio
+async def test_reference_graph_tools_return_bounded_graph_results() -> None:
+    async with Client(mcp) as client:
+        reference_result = await client.call_tool(
+            "find_references",
+            {
+                "repo": "tests/fixtures/python-basic",
+                "query": "print",
+                "limit": 2,
+            },
+        )
+        callers_result = await client.call_tool(
+            "find_callers",
+            {
+                "repo": "tests/fixtures/python-basic",
+                "query": "print",
+                "limit": 2,
+            },
+        )
+        callees_result = await client.call_tool(
+            "find_callees",
+            {
+                "repo": "tests/fixtures/python-basic",
+                "query": "build_daily_plan",
+                "limit": 2,
+            },
+        )
+
+    references = GraphToolPayload.model_validate_json(
+        _text_content(reference_result.content),
+    )
+    callers = GraphToolPayload.model_validate_json(
+        _text_content(callers_result.content),
+    )
+    callees = GraphToolPayload.model_validate_json(
+        _text_content(callees_result.content),
+    )
+    combined = (
+        f"{references.model_dump_json()} "
+        f"{callers.model_dump_json()} "
+        f"{callees.model_dump_json()}"
+    )
+
+    assert references.ok is True
+    assert callers.ok is True
+    assert callees.ok is True
+    assert 0 < len(references.results) <= 2
+    assert 0 < len(callers.results) <= 2
+    assert 0 < len(callees.results) <= 2
+    assert all(result.confidence <= 1 for result in references.results)
+    assert all(
+        result.certainty in {"low", "medium", "high"}
+        for result in callers.results
+    )
+    assert any(result.caller is not None for result in callers.results)
+    assert all(result.path.endswith(".py") for result in callees.results)
+    assert "archive completed tickets" not in combined
+    assert "source_content" not in combined
 
 
 def _text_content(content: list[ContentBlock]) -> str:

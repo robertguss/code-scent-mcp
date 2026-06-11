@@ -1,0 +1,54 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "graph context tools are single request/response reads with idempotent auto-index"
+  },
+  "dirty_worktree": {
+    "dirty_callers": 1,
+    "note": "unrelated codescent-mcp-test-results.md remains untracked in main repo",
+    "passed": true
+  },
+  "flaky_tests": {
+    "focused_test_exit": 0,
+    "passed": true
+  },
+  "hung_or_long_commands": {
+    "passed": true,
+    "timeout_exit": 0
+  },
+  "malformed_input": {
+    "missing_repo_exit": 1,
+    "output_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:237  \u2502\n\u2502 in main                                                                      \u2502\n\u2502                                                        ",
+    "passed": true
+  },
+  "misleading_success_output": {
+    "passed": true,
+    "source_read_only": {
+      "allowed_runtime_state": ".codescent",
+      "changed_source_paths": [],
+      "source_hashes_unchanged": true
+    },
+    "tools": [
+      "find_references",
+      "find_callers",
+      "find_callees"
+    ]
+  },
+  "ok": true,
+  "prompt_injection": {
+    "note": "prompt-like source string remained inert local source text",
+    "passed": true,
+    "source_hash_after": "a4510fb4aa09b9429c77843af02857777d730795621631c9774e43aaf75b1945",
+    "source_hash_before": "a4510fb4aa09b9429c77843af02857777d730795621631c9774e43aaf75b1945"
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "no checkpointed or interrupt-resumable graph context workflow exists"
+  },
+  "stale_state": {
+    "first_count": 1,
+    "passed": true,
+    "same_payload": true,
+    "second_count": 1
+  }
+}

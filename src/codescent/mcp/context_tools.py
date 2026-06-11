@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, TypedDict
 
-from codescent.services.context import ContextService, SymbolMatchPayload
+from codescent.services.context import (
+    ContextService,
+    GraphResultPayload,
+    SymbolMatchPayload,
+)
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -37,6 +41,13 @@ class SymbolContextToolPayload(TypedDict):
     risk_notes: tuple[str, ...]
 
 
+class GraphToolPayload(TypedDict):
+    ok: bool
+    query: str
+    results: tuple[GraphResultPayload, ...]
+    next_cursor: int | None
+
+
 def register_context_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
@@ -58,6 +69,27 @@ def register_context_tools(mcp: FastMCP) -> None:
             "symbol context with likely tests and source ranges, not whole files."
         ),
     )(get_symbol_context)
+
+    _ = mcp.tool(
+        description=(
+            "Find bounded persisted references for a symbol or identifier with "
+            "confidence labels."
+        ),
+    )(find_references)
+
+    _ = mcp.tool(
+        description=(
+            "Find bounded persisted callers of a symbol or identifier with "
+            "confidence labels."
+        ),
+    )(find_callers)
+
+    _ = mcp.tool(
+        description=(
+            "Find bounded persisted callees from a symbol or function with "
+            "confidence labels."
+        ),
+    )(find_callees)
 
 
 def get_file_context(path: str, repo: str = ".") -> FileContextToolPayload:
@@ -99,4 +131,53 @@ def get_symbol_context(
         "likely_tests": payload["likely_tests"],
         "source_ranges": payload["source_ranges"],
         "risk_notes": payload["risk_notes"],
+    }
+
+
+def find_references(
+    query: str,
+    repo: str = ".",
+    limit: int = SAMPLE_FILE_LIMIT,
+    cursor: int = 0,
+) -> GraphToolPayload:
+    payload = ContextService(repo).find_references(
+        query,
+        limit=limit,
+        cursor=cursor,
+    )
+    return {
+        "ok": True,
+        "query": payload["query"],
+        "results": payload["results"],
+        "next_cursor": payload["next_cursor"],
+    }
+
+
+def find_callers(
+    query: str,
+    repo: str = ".",
+    limit: int = SAMPLE_FILE_LIMIT,
+    cursor: int = 0,
+) -> GraphToolPayload:
+    payload = ContextService(repo).find_callers(query, limit=limit, cursor=cursor)
+    return {
+        "ok": True,
+        "query": payload["query"],
+        "results": payload["results"],
+        "next_cursor": payload["next_cursor"],
+    }
+
+
+def find_callees(
+    query: str,
+    repo: str = ".",
+    limit: int = SAMPLE_FILE_LIMIT,
+    cursor: int = 0,
+) -> GraphToolPayload:
+    payload = ContextService(repo).find_callees(query, limit=limit, cursor=cursor)
+    return {
+        "ok": True,
+        "query": payload["query"],
+        "results": payload["results"],
+        "next_cursor": payload["next_cursor"],
     }

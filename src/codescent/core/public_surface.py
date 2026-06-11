@@ -92,7 +92,15 @@ POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
 )
 
 REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
-    {"multi_search_content", "search_changed_files", "search_tests", "search_todos"},
+    {
+        "find_callees",
+        "find_callers",
+        "find_references",
+        "multi_search_content",
+        "search_changed_files",
+        "search_tests",
+        "search_todos",
+    },
 )
 
 REGISTERED_MCP_TOOL_NAMES: Final[frozenset[str]] = (
@@ -144,9 +152,9 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _registered_post_mvp_entry("search_changed_files", "search"),
         _registered_post_mvp_entry("search_todos", "search"),
         _registered_post_mvp_entry("search_tests", "search"),
-        _post_mvp_entry("find_references", "context"),
-        _post_mvp_entry("find_callers", "context"),
-        _post_mvp_entry("find_callees", "context"),
+        _registered_post_mvp_entry("find_references", "context"),
+        _registered_post_mvp_entry("find_callers", "context"),
+        _registered_post_mvp_entry("find_callees", "context"),
         _post_mvp_entry("get_related_files", "context"),
         _post_mvp_entry("get_impact", "planning"),
         _post_mvp_entry("get_finding", "health"),

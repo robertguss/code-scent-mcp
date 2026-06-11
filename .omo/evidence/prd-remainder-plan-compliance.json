@@ -18,9 +18,6 @@
       ],
       "post_mvp_declared": [
         "explain_score",
-        "find_callees",
-        "find_callers",
-        "find_references",
         "get_backlog",
         "get_changed_file_health",
         "get_finding",
@@ -31,7 +28,7 @@
         "review_diff_risk",
         "verify_change"
       ],
-      "tool_count": 19,
+      "tool_count": 22,
       "unexpected": []
     },
     "user_decisions": {
@@ -43,8 +40,6 @@
   "ok": true,
   "tool_surface_ok": true,
   "unchecked_todos": [
-    "- [ ] 9. Persist references and call edges",
-    "- [ ] 10. Add reference, caller, and callee MCP tools",
     "- [ ] 11. Add related-file detection",
     "- [ ] 12. Add impact analysis",
     "- [ ] 13. Add ReportService and structured finding detail",

@@ -88,3 +88,19 @@ def test_symbol_context_includes_likely_tests() -> None:
         payload.source_ranges[0].end_line - payload.source_ranges[0].start_line + 1 <= 8
     )
     assert any("low-confidence" in note for note in payload.risk_notes)
+
+
+def test_reference_graph_context_is_bounded_and_confidence_labeled() -> None:
+    service = ContextService("tests/fixtures/python-basic")
+
+    references = service.find_references("print", limit=1)
+    callers = service.find_callers("print", limit=1)
+    callees = service.find_callees("build_daily_plan", limit=1)
+
+    assert len(references["results"]) == 1
+    assert len(callers["results"]) == 1
+    assert len(callees["results"]) == 1
+    assert references["next_cursor"] == 1
+    assert references["results"][0]["certainty"] in {"low", "medium", "high"}
+    assert callers["results"][0]["caller"] is not None
+    assert callees["results"][0]["path"] == "src/acme_tasks/workflow.py"

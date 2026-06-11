@@ -240,7 +240,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-9 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent index --repo tests/fixtures/python-basic --json'`; PASS if JSON/index inspection shows reference and call-edge counts. Evidence `.omo/evidence/prd-remainder-task-9-graph-index.txt`.
   Commit: Y | `feat(symbols): persist references and call edges` | Files `src/codescent/engine/parsers/python.py`, `src/codescent/storage/schema.py`, `src/codescent/services/repo_index.py`, `tests/integration/test_repo_index.py`
 
-- [ ] 10. Add reference, caller, and callee MCP tools
+- [x] 10. Add reference, caller, and callee MCP tools
   What to do / Must NOT do: Implement `find_references`, `find_callers`, and `find_callees` using persisted graph data with bounded, confidence-labeled results.
   Parallelization: Can parallel Y | Wave 3 | Blocks related files and impact
   References: `docs/prd.md:566`, `docs/prd.md:570`, `docs/prd.md:574`, `docs/prd.md:1115`

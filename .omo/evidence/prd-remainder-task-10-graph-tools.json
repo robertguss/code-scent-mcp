@@ -1,0 +1,231 @@
+{
+  "calls": [
+    {
+      "data": {
+        "next_cursor": null,
+        "ok": true,
+        "query": "print",
+        "results": [
+          {
+            "caller": null,
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/cli.py",
+            "start_line": 8,
+            "text": "print"
+          },
+          {
+            "caller": null,
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/cli.py",
+            "start_line": 12,
+            "text": "print"
+          }
+        ]
+      },
+      "tool": "find_references"
+    },
+    {
+      "data": {
+        "next_cursor": null,
+        "ok": true,
+        "query": "print",
+        "results": [
+          {
+            "caller": "acme_tasks.cli.main",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/cli.py",
+            "start_line": 8,
+            "text": "print"
+          },
+          {
+            "caller": "acme_tasks.cli.main",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/cli.py",
+            "start_line": 12,
+            "text": "print"
+          }
+        ]
+      },
+      "tool": "find_callers"
+    },
+    {
+      "data": {
+        "next_cursor": 20,
+        "ok": true,
+        "query": "build_daily_plan",
+        "results": [
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 6,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 7,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 8,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 9,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 10,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 11,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 12,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 13,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 14,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 15,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 16,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 17,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 18,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 19,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 20,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 21,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 22,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 23,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 24,
+            "text": "append"
+          },
+          {
+            "caller": "acme_tasks.workflow.build_daily_plan",
+            "certainty": "low",
+            "confidence": 0.4,
+            "path": "src/acme_tasks/workflow.py",
+            "start_line": 25,
+            "text": "append"
+          }
+        ]
+      },
+      "tool": "find_callees"
+    }
+  ],
+  "source_read_only": {
+    "allowed_runtime_state": ".codescent",
+    "changed_source_paths": [],
+    "source_hashes_unchanged": true
+  }
+}

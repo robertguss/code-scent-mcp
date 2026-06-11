@@ -38,6 +38,7 @@ from pydantic import TypeAdapter
 
 from codescent.engine.inventory import build_file_inventory
 from codescent.mcp.server import mcp
+from codescent.services.repo_index import RepoIndexService
 
 type JsonValue = (
     None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
@@ -66,6 +67,19 @@ SEARCH_FRECENCY_TOOLS: Final[tuple[str, ...]] = (
     "search_files:workflow",
     "search_content:pending-review",
 )
+GRAPH_CONTEXT_TOOLS: Final[tuple[str, ...]] = (
+    "find_references:print",
+    "find_callers:print",
+    "find_callees:build_daily_plan",
+)
+EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
+    ("full_loop",): FULL_LOOP_TOOLS,
+    ("search_expansion",): SEARCH_EXPANSION_TOOLS,
+    ("search_changed",): SEARCH_CHANGED_TOOLS,
+    ("search_todos_tests",): SEARCH_TODOS_TESTS_TOOLS,
+    ("search_frecency",): SEARCH_FRECENCY_TOOLS,
+    ("graph_context",): GRAPH_CONTEXT_TOOLS,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,22 +198,15 @@ def _to_json_value(value: object) -> JsonValue:
 
 
 def _expanded_tools(tools: tuple[str, ...]) -> tuple[str, ...]:
-    if tools == ("full_loop",):
-        return FULL_LOOP_TOOLS
-    if tools == ("search_expansion",):
-        return SEARCH_EXPANSION_TOOLS
-    if tools == ("search_changed",):
-        return SEARCH_CHANGED_TOOLS
-    if tools == ("search_todos_tests",):
-        return SEARCH_TODOS_TESTS_TOOLS
-    if tools == ("search_frecency",):
-        return SEARCH_FRECENCY_TOOLS
-    return tools
+    return EXPANDED_TOOL_SETS.get(tools, tools)
 
 
 def prepare_repo_for_tools(repo: Path, tools: tuple[str, ...]) -> None:
     if tools == ("search_changed",):
         shutil.rmtree(repo / ".codescent", ignore_errors=True)
+    if tools == ("graph_context",):
+        shutil.rmtree(repo / ".codescent", ignore_errors=True)
+        _ = RepoIndexService(repo).index_repo()
 
 
 def _source_hashes(repo: Path) -> dict[str, str]:

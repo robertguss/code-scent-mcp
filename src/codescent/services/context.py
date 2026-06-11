@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, cast
 
+from codescent.core.models import PageOptions
 from codescent.core.paths import normalize_repo_path, resolve_repo_root
 from codescent.engine.context import source_range
+from codescent.services.repo_index import RepoIndexService
 from codescent.services.symbols import SymbolService
+from codescent.storage import RepositoryStorage, StorageState, initialize_storage
 
 if TYPE_CHECKING:
+    import sqlite3
+    from collections.abc import Sequence
     from pathlib import Path
 
     from codescent.engine.context.ranges import SourceRange
@@ -15,6 +20,8 @@ if TYPE_CHECKING:
 
 SOURCE_LINE_CAP = 8
 LOW_CONFIDENCE_THRESHOLD = 0.6
+HIGH_CONFIDENCE_THRESHOLD = 0.85
+CALLER_ROW_LENGTH = 5
 
 
 class SymbolMatchPayload(TypedDict):
@@ -43,6 +50,21 @@ class SymbolContextPayload(TypedDict):
     likely_tests: tuple[str, ...]
     source_ranges: tuple[dict[str, str | int], ...]
     risk_notes: tuple[str, ...]
+
+
+class GraphResultPayload(TypedDict):
+    text: str
+    path: str
+    start_line: int
+    confidence: float
+    certainty: str
+    caller: str | None
+
+
+class GraphToolPayload(TypedDict):
+    query: str
+    results: tuple[GraphResultPayload, ...]
+    next_cursor: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,6 +131,93 @@ class ContextService:
             ),
             "risk_notes": _risk_notes(parsed),
         }
+
+    def find_references(
+        self,
+        query: str,
+        *,
+        limit: int = 20,
+        cursor: int = 0,
+    ) -> GraphToolPayload:
+        page = PageOptions(limit=limit, offset=cursor)
+        state = _ensure_graph_indexed(self.repo_root)
+        with RepositoryStorage(state).read_connection() as connection:
+            rows: list[tuple[str, str, int, float]] = connection.execute(
+                """
+                select
+                    symbol_references.reference_text,
+                    files.path,
+                    symbol_references.start_line,
+                    symbol_references.confidence
+                from symbol_references
+                join files on files.id = symbol_references.source_file_id
+                where lower(symbol_references.reference_text) like ?
+                order by files.path, symbol_references.start_line
+                limit ? offset ?
+                """,
+                (_like(query), page.limit + 1, page.offset),
+            ).fetchall()
+        return _graph_payload(query, rows, page)
+
+    def find_callers(
+        self,
+        query: str,
+        *,
+        limit: int = 20,
+        cursor: int = 0,
+    ) -> GraphToolPayload:
+        page = PageOptions(limit=limit, offset=cursor)
+        state = _ensure_graph_indexed(self.repo_root)
+        with RepositoryStorage(state).read_connection() as connection:
+            rows: list[tuple[str, str, int, float, str | None]] = connection.execute(
+                """
+                select
+                    call_edges.call_text,
+                    files.path,
+                    call_edges.start_line,
+                    call_edges.confidence,
+                    symbols.qualified_name
+                from call_edges
+                join files on files.id = call_edges.source_file_id
+                left join symbols on symbols.id = call_edges.caller_symbol_id
+                where lower(call_edges.call_text) like ?
+                order by files.path, call_edges.start_line
+                limit ? offset ?
+                """,
+                (_like(query), page.limit + 1, page.offset),
+            ).fetchall()
+        return _graph_payload(query, rows, page)
+
+    def find_callees(
+        self,
+        query: str,
+        *,
+        limit: int = 20,
+        cursor: int = 0,
+    ) -> GraphToolPayload:
+        page = PageOptions(limit=limit, offset=cursor)
+        state = _ensure_graph_indexed(self.repo_root)
+        with RepositoryStorage(state).read_connection() as connection:
+            rows: list[tuple[str, str, int, float, str | None]] = connection.execute(
+                """
+                select
+                    call_edges.call_text,
+                    files.path,
+                    call_edges.start_line,
+                    call_edges.confidence,
+                    symbols.qualified_name
+                from call_edges
+                join files on files.id = call_edges.source_file_id
+                left join symbols on symbols.id = call_edges.caller_symbol_id
+                where
+                    lower(symbols.name) like ?
+                    or lower(symbols.qualified_name) like ?
+                order by files.path, call_edges.start_line
+                limit ? offset ?
+                """,
+                (_like(query), _like(query), page.limit + 1, page.offset),
+            ).fetchall()
+        return _graph_payload(query, rows, page)
 
 
 def _symbol_payload(
@@ -203,3 +312,70 @@ def _risk_notes(parsed: ParsedPythonFile) -> tuple[str, ...]:
     ):
         notes.append("low-confidence references omitted from caller/callee claims")
     return tuple(notes)
+
+
+def _ensure_graph_indexed(repo_root: Path | str) -> StorageState:
+    state = initialize_storage(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        if _graph_row_count(connection) > 0:
+            return state
+    _ = RepoIndexService(state.repo_root).index_repo()
+    return initialize_storage(state.repo_root)
+
+
+def _graph_row_count(connection: sqlite3.Connection) -> int:
+    reference_count = _count_rows(
+        connection,
+        "select count(*) from symbol_references",
+    )
+    call_count = _count_rows(connection, "select count(*) from call_edges")
+    return reference_count + call_count
+
+
+def _count_rows(connection: sqlite3.Connection, sql: str) -> int:
+    row = cast("tuple[int] | None", connection.execute(sql).fetchone())
+    if row is None:
+        return 0
+    return row[0]
+
+
+def _like(query: str) -> str:
+    return f"%{query.lower()}%"
+
+
+def _graph_payload(
+    query: str,
+    rows: Sequence[
+        tuple[str, str, int, float] | tuple[str, str, int, float, str | None]
+    ],
+    page: PageOptions,
+) -> GraphToolPayload:
+    visible_rows = rows[: page.limit]
+    results: list[GraphResultPayload] = []
+    for row in visible_rows:
+        text, path, start_line, confidence = row[:4]
+        caller = row[4] if len(row) == CALLER_ROW_LENGTH else None
+        results.append(
+            {
+                "text": text,
+                "path": path,
+                "start_line": start_line,
+                "confidence": confidence,
+                "certainty": _certainty(confidence),
+                "caller": caller,
+            },
+        )
+    next_cursor = page.offset + page.limit if len(rows) > page.limit else None
+    return {
+        "query": query,
+        "results": tuple(results),
+        "next_cursor": next_cursor,
+    }
+
+
+def _certainty(confidence: float) -> str:
+    if confidence >= HIGH_CONFIDENCE_THRESHOLD:
+        return "high"
+    if confidence >= LOW_CONFIDENCE_THRESHOLD:
+        return "medium"
+    return "low"
