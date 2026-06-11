@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import re
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final, TypedDict
 
 from codescent.core.models import PageOptions
@@ -11,6 +13,7 @@ from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.search import rank_path
 from codescent.services.git import detect_git_state, git_changed_paths
+from codescent.storage import RepositoryStorage, initialize_storage
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -20,6 +23,7 @@ MAX_LIMIT: Final = 20
 DEFAULT_LINE_BUDGET: Final = 3
 MAX_LINE_BUDGET: Final = 20
 CHANGED_FILE_BONUS: Final = 25.0
+FRECENCY_BONUS_MULTIPLIER: Final = 30.0
 TODO_MARKERS: Final[tuple[str, ...]] = ("TODO", "FIXME", "HACK")
 TODO_PATTERN: Final = re.compile(r"\b(TODO|FIXME|HACK)\b:?\s*(.*)")
 TEST_FILE_BONUS: Final = 40.0
@@ -50,6 +54,11 @@ class TestSearchResultPayload(TypedDict):
     snippet: str | None
 
 
+class SearchPagePayload(TypedDict):
+    results: tuple[SearchResultPayload, ...]
+    next_cursor: str | None
+
+
 @dataclass(frozen=True, slots=True)
 class SearchService:
     repo_root: Path | str
@@ -59,9 +68,11 @@ class SearchService:
         query: str,
         *,
         limit: int = DEFAULT_LIMIT,
+        offset: int = 0,
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
         changed_files = _changed_files(repo_root)
+        frecency_scores = _frecency_scores(repo_root)
         results: list[SearchResultPayload] = []
 
         for item in build_file_inventory(repo_root):
@@ -73,6 +84,10 @@ class SearchService:
             if item.path in changed_files:
                 score += CHANGED_FILE_BONUS
                 reasons = (*reasons, "changed_file")
+            frecency_score = frecency_scores.get(item.path, 0.0)
+            if frecency_score > 0:
+                score += min(frecency_score, 5.0) * FRECENCY_BONUS_MULTIPLIER
+                reasons = (*reasons, "frecency")
             results.append(
                 {
                     "path": item.path,
@@ -82,7 +97,21 @@ class SearchService:
                 },
             )
 
-        return tuple(_sort_results(results)[: _clamp_limit(limit)])
+        page = PageOptions(limit=limit, offset=offset)
+        selected = tuple(_sort_results(results)[page.offset : page.offset + page.limit])
+        _record_frecency(repo_root, query, tuple(result["path"] for result in selected))
+        return selected
+
+    def search_files_page(
+        self,
+        query: str,
+        *,
+        limit: int = DEFAULT_LIMIT,
+        cursor: str | None = None,
+    ) -> SearchPagePayload:
+        offset = _cursor_to_offset(cursor)
+        results = self.search_files(query, limit=MAX_LIMIT, offset=0)
+        return _page_results(results, limit=limit, offset=offset)
 
     def search_content(
         self,
@@ -90,9 +119,11 @@ class SearchService:
         *,
         limit: int = DEFAULT_LIMIT,
         line_budget: int = DEFAULT_LINE_BUDGET,
+        offset: int = 0,
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
         changed_files = _changed_files(repo_root)
+        frecency_scores = _frecency_scores(repo_root)
         results: list[SearchResultPayload] = []
 
         for item in build_file_inventory(repo_root):
@@ -105,6 +136,10 @@ class SearchService:
                 if item.path in changed_files:
                     score += CHANGED_FILE_BONUS
                     reasons = (*reasons, "changed_file")
+                frecency_score = frecency_scores.get(item.path, 0.0)
+                if frecency_score > 0:
+                    score += min(frecency_score, 5.0) * FRECENCY_BONUS_MULTIPLIER
+                    reasons = (*reasons, "frecency")
                 results.append(
                     {
                         "path": item.path,
@@ -114,7 +149,27 @@ class SearchService:
                     },
                 )
 
-        return tuple(_sort_results(results)[: _clamp_limit(limit)])
+        page = PageOptions(limit=limit, offset=offset)
+        selected = tuple(_sort_results(results)[page.offset : page.offset + page.limit])
+        _record_frecency(repo_root, query, tuple(result["path"] for result in selected))
+        return selected
+
+    def search_content_page(
+        self,
+        query: str,
+        *,
+        limit: int = DEFAULT_LIMIT,
+        cursor: str | None = None,
+        line_budget: int = DEFAULT_LINE_BUDGET,
+    ) -> SearchPagePayload:
+        offset = _cursor_to_offset(cursor)
+        results = self.search_content(
+            query,
+            limit=MAX_LIMIT,
+            offset=0,
+            line_budget=line_budget,
+        )
+        return _page_results(results, limit=limit, offset=offset)
 
     def multi_search_content(
         self,
@@ -278,8 +333,26 @@ def _sort_test_results(
     return sorted(results, key=lambda result: (-result["score"], result["path"]))
 
 
-def _clamp_limit(limit: int) -> int:
-    return min(max(limit, 1), MAX_LIMIT)
+def _page_results(
+    results: tuple[SearchResultPayload, ...],
+    *,
+    limit: int,
+    offset: int,
+) -> SearchPagePayload:
+    page = PageOptions(limit=limit, offset=offset)
+    selected = results[page.offset : page.offset + page.limit]
+    next_offset = page.offset + len(selected)
+    next_cursor = str(next_offset) if next_offset < len(results) else None
+    return {"results": selected, "next_cursor": next_cursor}
+
+
+def _cursor_to_offset(cursor: str | None) -> int:
+    if cursor is None or cursor == "":
+        return 0
+    try:
+        return max(int(cursor), 0)
+    except ValueError:
+        return 0
 
 
 def _merge_reasons(
@@ -399,6 +472,49 @@ def _first_matching_line(lines: list[str], term: str) -> str | None:
 
 def _looks_like_symbol(term: str) -> bool:
     return "_" in term or term.isidentifier()
+
+
+def _frecency_scores(repo_root: Path) -> dict[str, float]:
+    database_path = repo_root / ".codescent" / "index.sqlite"
+    if not database_path.exists():
+        return {}
+    try:
+        with closing(sqlite3.connect(database_path)) as connection:
+            rows: list[tuple[str, float]] = connection.execute(
+                (
+                    "select path, coalesce(sum(weight), 0) "
+                    "from frecency_signals group by path"
+                ),
+            ).fetchall()
+    except sqlite3.DatabaseError:
+        return {}
+    return dict(rows)
+
+
+def _record_frecency(
+    repo_root: Path,
+    query: str,
+    paths: tuple[str, ...],
+) -> None:
+    if not paths:
+        return
+    signal = _query_signal(query)
+    updated_at = datetime.now(UTC).isoformat()
+    state = initialize_storage(repo_root)
+    with RepositoryStorage(state).write_transaction() as connection:
+        for path in paths:
+            _ = connection.execute(
+                """
+                insert into frecency_signals (path, signal, weight, updated_at)
+                values (?, ?, ?, ?)
+                """,
+                (path, signal, 1.0, updated_at),
+            )
+
+
+def _query_signal(query: str) -> str:
+    digest = hashlib.sha256(query.encode("utf-8")).hexdigest()
+    return f"search:{digest}"
 
 
 def _changed_files(repo_root: Path) -> frozenset[str]:

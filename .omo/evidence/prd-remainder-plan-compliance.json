@@ -43,7 +43,6 @@
   "ok": true,
   "tool_surface_ok": true,
   "unchecked_todos": [
-    "- [ ] 8. Add frecency, smart-case, and pagination to search",
     "- [ ] 9. Persist references and call edges",
     "- [ ] 10. Add reference, caller, and callee MCP tools",
     "- [ ] 11. Add related-file detection",

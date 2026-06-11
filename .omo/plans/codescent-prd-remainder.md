@@ -224,7 +224,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic search_todos_tests --out .omo/evidence/prd-remainder-task-7-todos-tests.json`; PASS if artifact has TODO results and likely tests for `workflow`. Evidence `.omo/evidence/prd-remainder-task-7-todos-tests.json`.
   Commit: Y | `feat(search): add todo and test search tools` | Files `src/codescent/services/search.py`, `src/codescent/mcp/search_tools.py`, `tests/contract/test_mcp_search_tools.py`
 
-- [ ] 8. Add frecency, smart-case, and pagination to search
+- [x] 8. Add frecency, smart-case, and pagination to search
   What to do / Must NOT do: Persist search history/frecency signals, add smart-case matching, and return page cursors for search tools. Do not leak private query contents outside local SQLite.
   Parallelization: Can parallel N | Wave 2 | Blocks CI/risk ranking
   References: `docs/prd.md:1064`, `docs/prd.md:1069`, `docs/prd.md:710`, `docs/architecture.md:630`

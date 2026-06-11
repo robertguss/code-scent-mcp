@@ -61,6 +61,11 @@ SEARCH_TODOS_TESTS_TOOLS: Final[tuple[str, ...]] = (
     "search_todos:config",
     "search_tests:workflow",
 )
+SEARCH_FRECENCY_TOOLS: Final[tuple[str, ...]] = (
+    "search_files:workflow",
+    "search_files:workflow",
+    "search_content:pending-review",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,6 +192,8 @@ def _expanded_tools(tools: tuple[str, ...]) -> tuple[str, ...]:
         return SEARCH_CHANGED_TOOLS
     if tools == ("search_todos_tests",):
         return SEARCH_TODOS_TESTS_TOOLS
+    if tools == ("search_frecency",):
+        return SEARCH_FRECENCY_TOOLS
     return tools
 
 

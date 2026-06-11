@@ -186,6 +186,55 @@ def test_route_workflow() -> None:
     assert "symbol_match" in test_results[0]["reasons"]
 
 
+def test_frecency_and_pagination_affect_rank_without_unbounded_results(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    source_a = repo / "src" / "alpha_target.py"
+    source_b = repo / "src" / "beta_target.py"
+    source_c = repo / "src" / "case_target.py"
+    source_a.parent.mkdir(parents=True)
+    _ = source_a.write_text("lowercase_marker = True\n")
+    _ = source_b.write_text("lowercase_marker = True\n")
+    _ = source_c.write_text("CamelCaseMarker = True\n")
+
+    service = SearchService(repo)
+    initial = service.search_files("target", limit=2)
+    _ = service.search_files("beta_target", limit=1)
+    _ = service.search_files("beta_target", limit=1)
+    boosted = service.search_files("target", limit=2)
+    lower_case_content = service.search_content("camelcasemarker", limit=5)
+    smart_case_content = service.search_content("CamelCaseMarker", limit=5)
+    first_page = service.search_files_page("target", limit=1)
+    second_page = service.search_files_page(
+        "target",
+        limit=1,
+        cursor=first_page["next_cursor"],
+    )
+    state = initialize_storage(repo)
+
+    with RepositoryStorage(state).read_connection() as connection:
+        rows: list[tuple[str, str, float]] = connection.execute(
+            "select path, signal, weight from frecency_signals order by path, signal",
+        ).fetchall()
+
+    assert initial[0]["path"] == "src/alpha_target.py"
+    assert boosted[0]["path"] == "src/beta_target.py"
+    assert "frecency" in boosted[0]["reasons"]
+    assert tuple(result["path"] for result in lower_case_content) == (
+        "src/case_target.py",
+    )
+    assert tuple(result["path"] for result in smart_case_content) == (
+        "src/case_target.py",
+    )
+    assert first_page["next_cursor"] == "1"
+    assert len(first_page["results"]) == 1
+    assert len(second_page["results"]) == 1
+    assert first_page["results"][0]["path"] != second_page["results"][0]["path"]
+    assert rows
+    assert all("beta_target" not in signal for _, signal, _ in rows)
+
+
 def _run_git(repo: Path, *args: str) -> None:
     _ = subprocess.run(
         ["git", "-C", str(repo), *args],

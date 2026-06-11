@@ -24,6 +24,7 @@ class SearchToolPayload(BaseModel):
     ok: bool
     query: str
     limit: int = Field(ge=1, le=20)
+    next_cursor: str | None = None
     results: tuple[ToolSearchResult, ...]
 
 
@@ -97,7 +98,7 @@ async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
         tools = await client.list_tools()
         file_result = await client.call_tool(
             "search_files",
-            {"repo": str(repo), "query": "ap", "limit": 20},
+            {"repo": str(repo), "query": "ap", "limit": 1},
         )
         content_result = await client.call_tool(
             "search_content",
@@ -123,6 +124,7 @@ async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     assert file_payload.ok is True
     assert file_payload.results[0].path == "src/app.py"
     assert file_payload.results[0].reasons
+    assert file_payload.next_cursor is None
     assert content_payload.ok is True
     assert content_payload.results[0].path == "src/app.py"
     assert "content_match" in content_payload.results[0].reasons

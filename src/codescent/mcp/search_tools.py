@@ -19,6 +19,7 @@ class SearchToolPayload(TypedDict):
     ok: bool
     query: str
     limit: int
+    next_cursor: str | None
     results: tuple[SearchResultPayload, ...]
 
 
@@ -97,13 +98,15 @@ def search_files(
     query: str,
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
+    cursor: str | None = None,
 ) -> SearchToolPayload:
-    results = SearchService(repo).search_files(query, limit=limit)
+    page = SearchService(repo).search_files_page(query, limit=limit, cursor=cursor)
     return {
         "ok": True,
         "query": query,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
-        "results": results,
+        "next_cursor": page["next_cursor"],
+        "results": page["results"],
     }
 
 
@@ -111,13 +114,20 @@ def search_content(
     query: str,
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
+    cursor: str | None = None,
 ) -> SearchToolPayload:
-    results = SearchService(repo).search_content(query, limit=limit, line_budget=1)
+    page = SearchService(repo).search_content_page(
+        query,
+        limit=limit,
+        cursor=cursor,
+        line_budget=1,
+    )
     return {
         "ok": True,
         "query": query,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
-        "results": results,
+        "next_cursor": page["next_cursor"],
+        "results": page["results"],
     }
 
 
@@ -149,6 +159,7 @@ def search_changed_files(
         "ok": True,
         "query": query,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
+        "next_cursor": None,
         "results": results,
     }
 
