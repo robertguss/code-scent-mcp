@@ -192,7 +192,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-3 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run python - <<\"PY\"\nfrom codescent.core.models import PageOptions\nprint(PageOptions(limit=999).model_dump())\nPY'`; PASS if output caps the limit. Evidence `.omo/evidence/prd-remainder-task-3-pagination.txt`.
   Commit: Y | `feat(core): add shared pagination bounds` | Files `src/codescent/core/models.py`, `tests/unit/test_models.py`
 
-- [ ] 4. Add one-writer/many-reader storage concurrency guard
+- [x] 4. Add one-writer/many-reader storage concurrency guard
   What to do / Must NOT do: Extend `.codescent` locking so CLI, MCP, watch, dashboard, and CI scans cannot corrupt state. Allow concurrent readers and one writer. Do not use destructive lock cleanup.
   Parallelization: Can parallel Y | Wave 1 | Blocks watch/dashboard/CI
   References: `src/codescent/storage/repository.py`, `docs/architecture.md:600`, `docs/prd.md:762`

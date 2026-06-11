@@ -15,7 +15,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 ACTIVE_WRITERS: Final[set[Path]] = set()
-ACTIVE_WRITERS_GUARD: Final = threading.Lock()
+ACTIVE_READERS: Final[dict[Path, int]] = {}
+ACTIVE_STORAGE_GUARD: Final = threading.Condition()
 CONFIG_TEXT: Final = f"[project]\nschema_version = {SCHEMA_VERSION}\n"
 
 
@@ -61,11 +62,13 @@ class RepositoryStorage:
 
     @contextmanager
     def read_connection(self) -> Generator[sqlite3.Connection, None, None]:
+        self._claim_reader()
         connection = _connect(self.state.database_path)
         try:
             yield connection
         finally:
             connection.close()
+            self._release_reader()
 
     @contextmanager
     def write_transaction(self) -> Generator[sqlite3.Connection, None, None]:
@@ -86,14 +89,35 @@ class RepositoryStorage:
             self._release_writer()
 
     def _claim_writer(self) -> None:
-        with ACTIVE_WRITERS_GUARD:
-            if self.state.database_path in ACTIVE_WRITERS:
+        with ACTIVE_STORAGE_GUARD:
+            if (
+                self.state.database_path in ACTIVE_WRITERS
+                or ACTIVE_READERS.get(self.state.database_path, 0) > 0
+            ):
                 raise _concurrent_write_error(self.state.database_path)
             ACTIVE_WRITERS.add(self.state.database_path)
 
     def _release_writer(self) -> None:
-        with ACTIVE_WRITERS_GUARD:
+        with ACTIVE_STORAGE_GUARD:
             ACTIVE_WRITERS.discard(self.state.database_path)
+            ACTIVE_STORAGE_GUARD.notify_all()
+
+    def _claim_reader(self) -> None:
+        with ACTIVE_STORAGE_GUARD:
+            while self.state.database_path in ACTIVE_WRITERS:
+                _ = ACTIVE_STORAGE_GUARD.wait()
+            ACTIVE_READERS[self.state.database_path] = (
+                ACTIVE_READERS.get(self.state.database_path, 0) + 1
+            )
+
+    def _release_reader(self) -> None:
+        with ACTIVE_STORAGE_GUARD:
+            reader_count = ACTIVE_READERS.get(self.state.database_path, 0)
+            if reader_count <= 1:
+                _ = ACTIVE_READERS.pop(self.state.database_path, None)
+                ACTIVE_STORAGE_GUARD.notify_all()
+                return
+            ACTIVE_READERS[self.state.database_path] = reader_count - 1
 
 
 def _state_for(repo_root: Path) -> StorageState:
