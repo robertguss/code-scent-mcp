@@ -24,11 +24,10 @@
         "get_impact",
         "get_progress",
         "get_regressions",
-        "get_related_files",
         "review_diff_risk",
         "verify_change"
       ],
-      "tool_count": 22,
+      "tool_count": 23,
       "unexpected": []
     },
     "user_decisions": {
@@ -40,7 +39,6 @@
   "ok": true,
   "tool_surface_ok": true,
   "unchecked_todos": [
-    "- [ ] 11. Add related-file detection",
     "- [ ] 12. Add impact analysis",
     "- [ ] 13. Add ReportService and structured finding detail",
     "- [ ] 14. Add score explanation",

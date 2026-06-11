@@ -35,10 +35,10 @@ implementation, tests, documentation, and smoke evidence are complete.
 - `find_references`
 - `find_callers`
 - `find_callees`
+- `get_related_files`
 
 ## Locked Post-MVP MCP Tools
 
-- `get_related_files`
 - `get_impact`
 - `get_finding`
 - `explain_score`
@@ -81,7 +81,8 @@ Repository tools:
 Search and context tools:
 
 `search_files`, `search_content`, `find_symbol`, `get_file_context`,
-`get_symbol_context`, `find_references`, `find_callers`, `find_callees`
+`get_symbol_context`, `find_references`, `find_callers`, `find_callees`,
+`get_related_files`
 
 Code health and finding lifecycle tools:
 

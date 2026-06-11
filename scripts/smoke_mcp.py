@@ -72,6 +72,9 @@ GRAPH_CONTEXT_TOOLS: Final[tuple[str, ...]] = (
     "find_callers:print",
     "find_callees:build_daily_plan",
 )
+RELATED_FILES_TOOLS: Final[tuple[str, ...]] = (
+    "get_related_files:src/acme_tasks/workflow.py",
+)
 EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("full_loop",): FULL_LOOP_TOOLS,
     ("search_expansion",): SEARCH_EXPANSION_TOOLS,
@@ -79,6 +82,7 @@ EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("search_todos_tests",): SEARCH_TODOS_TESTS_TOOLS,
     ("search_frecency",): SEARCH_FRECENCY_TOOLS,
     ("graph_context",): GRAPH_CONTEXT_TOOLS,
+    ("related_files",): RELATED_FILES_TOOLS,
 }
 
 
@@ -145,7 +149,7 @@ def _parse_tool_call(raw_tool: str, repo: str) -> ToolCall:
             name=tool_name,
             arguments={"repo": repo, "queries": _to_json_value(queries)},
         )
-    if tool_name == "get_file_context":
+    if tool_name in {"get_file_context", "get_related_files"}:
         return ToolCall(name=tool_name, arguments={"repo": repo, "path": query})
     if tool_name == "get_symbol_context":
         return ToolCall(

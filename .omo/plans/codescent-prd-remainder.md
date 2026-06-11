@@ -248,7 +248,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic graph_context --out .omo/evidence/prd-remainder-task-10-graph-tools.json`; PASS if artifact contains all three graph tools and no whole-file dumps. Evidence `.omo/evidence/prd-remainder-task-10-graph-tools.json`.
   Commit: Y | `feat(context): expose reference graph tools` | Files `src/codescent/services/context.py`, `src/codescent/mcp/context_tools.py`, `tests/contract/test_mcp_context_tools.py`
 
-- [ ] 11. Add related-file detection
+- [x] 11. Add related-file detection
   What to do / Must NOT do: Implement `get_related_files` from imports, tests, directory proximity, search similarity, and git history. Return reasons and confidence.
   Parallelization: Can parallel N | Wave 3 | Blocks impact and dashboard detail
   References: `docs/prd.md:578`, `docs/architecture.md:370`, `docs/prd.md:1185`

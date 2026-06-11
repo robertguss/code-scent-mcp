@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Final, TypedDict
 from codescent.services.context import (
     ContextService,
     GraphResultPayload,
+    RelatedFilePayload,
     SymbolMatchPayload,
 )
 
@@ -45,6 +46,13 @@ class GraphToolPayload(TypedDict):
     ok: bool
     query: str
     results: tuple[GraphResultPayload, ...]
+    next_cursor: int | None
+
+
+class RelatedFilesToolPayload(TypedDict):
+    ok: bool
+    path: str
+    results: tuple[RelatedFilePayload, ...]
     next_cursor: int | None
 
 
@@ -90,6 +98,13 @@ def register_context_tools(mcp: FastMCP) -> None:
             "confidence labels."
         ),
     )(find_callees)
+
+    _ = mcp.tool(
+        description=(
+            "Find bounded related files with reasons from imports, tests, "
+            "directory proximity, search similarity, and git history."
+        ),
+    )(get_related_files)
 
 
 def get_file_context(path: str, repo: str = ".") -> FileContextToolPayload:
@@ -178,6 +193,25 @@ def find_callees(
     return {
         "ok": True,
         "query": payload["query"],
+        "results": payload["results"],
+        "next_cursor": payload["next_cursor"],
+    }
+
+
+def get_related_files(
+    path: str,
+    repo: str = ".",
+    limit: int = SAMPLE_FILE_LIMIT,
+    cursor: int = 0,
+) -> RelatedFilesToolPayload:
+    payload = ContextService(repo).get_related_files(
+        path,
+        limit=limit,
+        cursor=cursor,
+    )
+    return {
+        "ok": True,
+        "path": payload["path"],
         "results": payload["results"],
         "next_cursor": payload["next_cursor"],
     }

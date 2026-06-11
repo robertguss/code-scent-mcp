@@ -1,3 +1,5 @@
+import subprocess
+from pathlib import Path
 from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -104,3 +106,47 @@ def test_reference_graph_context_is_bounded_and_confidence_labeled() -> None:
     assert references["results"][0]["certainty"] in {"low", "medium", "high"}
     assert callers["results"][0]["caller"] is not None
     assert callees["results"][0]["path"] == "src/acme_tasks/workflow.py"
+
+
+def test_related_files_include_import_test_directory_and_git_reasons(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    (repo / "tests").mkdir()
+    _ = (repo / "src" / "app.py").write_text(
+        "from helper import render\n\ndef run() -> str:\n    return render()\n",
+    )
+    _ = (repo / "src" / "helper.py").write_text(
+        "def render() -> str:\n    return 'ok'\n",
+    )
+    _ = (repo / "src" / "view.py").write_text(
+        "def render_view() -> str:\n    return 'ok'\n",
+    )
+    _ = (repo / "tests" / "test_app.py").write_text(
+        "from app import run\n\ndef test_run() -> None:\n    assert run() == 'ok'\n",
+    )
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "qa@example.invalid")
+    _git(repo, "config", "user.name", "QA")
+    _git(repo, "add", "src/app.py", "src/helper.py")
+    _git(repo, "commit", "-m", "app helper")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "tests and view")
+
+    related = ContextService(repo).get_related_files("src/app.py", limit=10)
+    by_path = {item["path"]: item for item in related["results"]}
+
+    assert related["next_cursor"] is None
+    assert "test_match" in by_path["tests/test_app.py"]["reasons"]
+    assert "import_graph" in by_path["tests/test_app.py"]["reasons"]
+    assert "git_history" in by_path["src/helper.py"]["reasons"]
+    assert "directory_proximity" in by_path["src/view.py"]["reasons"]
+    assert any(
+        "search_similarity" in item["reasons"] for item in related["results"]
+    )
+    assert all(0 <= item["confidence"] <= 1 for item in related["results"])
+
+
+def _git(repo: Path, *args: str) -> None:
+    _ = subprocess.run(["git", *args], cwd=repo, check=True)

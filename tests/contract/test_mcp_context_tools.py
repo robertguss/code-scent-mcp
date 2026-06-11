@@ -65,8 +65,8 @@ async def test_context_tools_do_not_dump_whole_files() -> None:
         "find_references",
         "find_callers",
         "find_callees",
+        "get_related_files",
     } <= tool_names.keys()
-    assert "get_related_files" not in tool_names
 
     file_payload = ContextToolPayload.model_validate_json(
         _text_content(file_context.content),

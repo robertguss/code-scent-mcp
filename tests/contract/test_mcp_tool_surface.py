@@ -19,6 +19,7 @@ MVP_TOOL_NAMES = {
     "find_references",
     "find_callers",
     "find_callees",
+    "get_related_files",
     "find_symbol",
     "get_file_context",
     "get_symbol_context",
@@ -71,6 +72,7 @@ async def test_no_post_mvp_tools_exposed() -> None:
     assert "find_references" in tool_names
     assert "find_callers" in tool_names
     assert "find_callees" in tool_names
+    assert "get_related_files" in tool_names
     assert "get_impact" not in tool_names
     assert "verify_change" not in tool_names
     assert "get_backlog" not in tool_names

@@ -1,0 +1,62 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "related-file detection is a bounded read-only request with no resumable state"
+  },
+  "dirty_worktree": {
+    "note": "unrelated codescent-mcp-test-results.md remains untracked in main repo",
+    "passed": true,
+    "reasons": [
+      "directory_proximity",
+      "git_history",
+      "import_graph",
+      "search_similarity",
+      "test_match"
+    ]
+  },
+  "flaky_tests": {
+    "focused_test_exit": 0,
+    "passed": true
+  },
+  "hung_or_long_commands": {
+    "passed": true,
+    "timeout_exit": 0
+  },
+  "malformed_input": {
+    "missing_repo_exit": 1,
+    "output_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:242  \u2502\n\u2502 in main                                                                      \u2502\n\u2502                                                        ",
+    "passed": true
+  },
+  "misleading_success_output": {
+    "passed": true,
+    "reasons": [
+      "directory_proximity",
+      "import_graph",
+      "search_similarity",
+      "test_match"
+    ],
+    "source_read_only": {
+      "allowed_runtime_state": ".codescent",
+      "changed_source_paths": [],
+      "source_hashes_unchanged": true
+    },
+    "tool": "get_related_files"
+  },
+  "ok": true,
+  "prompt_injection": {
+    "passed": true,
+    "result_count": 2,
+    "source_hash_after": "7c98e8541ffc0b9644eb20cf36d1665ab6330106d423504ab05cbc777267879f",
+    "source_hash_before": "7c98e8541ffc0b9644eb20cf36d1665ab6330106d423504ab05cbc777267879f"
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "no checkpointed or interrupt-resumable related-file workflow exists"
+  },
+  "stale_state": {
+    "first_count": 2,
+    "passed": true,
+    "same_payload": true,
+    "second_count": 2
+  }
+}
