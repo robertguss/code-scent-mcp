@@ -37,10 +37,10 @@ implementation, tests, documentation, and smoke evidence are complete.
 - `find_callees`
 - `get_related_files`
 - `get_impact`
+- `get_finding`
 
 ## Locked Post-MVP MCP Tools
 
-- `get_finding`
 - `explain_score`
 - `verify_change`
 - `get_backlog`
@@ -87,7 +87,7 @@ Search and context tools:
 Code health and finding lifecycle tools:
 
 `scan_code_health`, `get_smell_report`, `get_next_improvement`,
-`mark_finding`, `rescan`
+`mark_finding`, `rescan`, `get_finding`
 
 Planning tools:
 

@@ -27,6 +27,16 @@ class MarkToolPayload(BaseModel):
     status: str
 
 
+class FindingDetailPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    finding_id: str
+    evidence: dict[str, str | int | float | bool | None]
+    status_history: tuple[dict[str, str | int | float | bool | None], ...]
+    score_inputs: dict[str, str | int | float | bool | None]
+
+
 @pytest.mark.anyio
 async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
     repo = _repo_with_todo(tmp_path)
@@ -75,16 +85,31 @@ async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
                 "status": "in_progress",
             },
         )
+        detail_result = await client.call_tool(
+            "get_finding",
+            {
+                "repo": str(repo),
+                "finding_id": scan_payload.finding_ids[0],
+            },
+        )
         rescan_result = await client.call_tool("rescan", {"repo": str(repo)})
 
     mark_payload = MarkToolPayload.model_validate_json(
         _text_content(mark_result.content),
+    )
+    detail_payload = FindingDetailPayload.model_validate_json(
+        _text_content(detail_result.content),
     )
     rescan_payload = ScanToolPayload.model_validate_json(
         _text_content(rescan_result.content),
     )
     assert mark_payload.ok is True
     assert mark_payload.status == "in_progress"
+    assert detail_payload.ok is True
+    assert detail_payload.finding_id == scan_payload.finding_ids[0]
+    assert detail_payload.evidence
+    assert detail_payload.status_history[-1]["event_type"] == "status_changed"
+    assert detail_payload.score_inputs["confidence"]
     assert rescan_payload.ok is True
     assert source_snapshot(repo) == before
 

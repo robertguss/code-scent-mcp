@@ -264,7 +264,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic impact --out .omo/evidence/prd-remainder-task-12-impact.json`; PASS if artifact includes affected files, likely tests, risk notes, and confidence. Evidence `.omo/evidence/prd-remainder-task-12-impact.json`.
   Commit: Y | `feat(planning): add impact analysis` | Files `src/codescent/services/refactor_planning.py`, `src/codescent/mcp/planning_tools.py`, `tests/contract/test_mcp_planning_tools.py`
 
-- [ ] 13. Add ReportService and structured finding detail
+- [x] 13. Add ReportService and structured finding detail
   What to do / Must NOT do: Add `ReportService` and `get_finding` with stable JSON payloads, evidence, status history, and score inputs. Do not mix subjective and deterministic finding types.
   Parallelization: Can parallel Y | Wave 4 | Blocks report/export/CI/dashboard
   References: `docs/prd.md:597`, `docs/prd.md:800`, `docs/architecture.md:480`

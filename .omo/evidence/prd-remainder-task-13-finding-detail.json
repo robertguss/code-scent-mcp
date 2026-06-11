@@ -1,0 +1,77 @@
+{
+  "calls": [
+    {
+      "data": {
+        "finding_ids": [
+          "python.todo_cluster:ef36e5854db8",
+          "python.duplicate_literal:b29ed1690518",
+          "python.large_file:f0bcaad685b4",
+          "python.large_class:43f2ea73dd26",
+          "python.too_many_imports:314b3d828483",
+          "python.deep_nesting:ba977cbdee86",
+          "python.missing_nearby_test:d50cc4d1bc8a",
+          "python.mixed_responsibilities:832ee49bfe6a",
+          "python.suspicious_slop_candidate:5846e60c03db",
+          "python.missing_nearby_test:40f6b76cf57f",
+          "python.missing_nearby_test:6a5072411e5c",
+          "python.missing_nearby_test:267db4cb7a39",
+          "python.large_function:51a81f47dacc",
+          "python.changed_source_without_related_test:77efbecf23af",
+          "python.changed_source_without_related_test:ee0d42dd72fb",
+          "python.changed_source_without_related_test:ef5be28c6ea8",
+          "python.changed_source_without_related_test:c443f18095af",
+          "python.changed_source_without_related_test:ab54f1b6a991"
+        ],
+        "findings_created": 18,
+        "ok": true,
+        "rule_ids": [
+          "python.changed_source_without_related_test",
+          "python.deep_nesting",
+          "python.duplicate_literal",
+          "python.large_class",
+          "python.large_file",
+          "python.large_function",
+          "python.missing_nearby_test",
+          "python.mixed_responsibilities",
+          "python.suspicious_slop_candidate",
+          "python.todo_cluster",
+          "python.too_many_imports"
+        ],
+        "scan_id": "48fbed93fcf74b948091ceeb6fcdf209",
+        "status": "complete"
+      },
+      "tool": "scan_code_health"
+    },
+    {
+      "data": {
+        "confidence": 0.9,
+        "evidence": {
+          "count": 3,
+          "threshold": 3
+        },
+        "file_path": "src/acme_tasks/config.py",
+        "finding_id": "python.todo_cluster:ef36e5854db8",
+        "message": "src/acme_tasks/config.py contains 3 TODO-like markers.",
+        "ok": true,
+        "rule_id": "python.todo_cluster",
+        "score_inputs": {
+          "confidence": 0.9,
+          "rule_id": "python.todo_cluster",
+          "severity": "info",
+          "status": "open"
+        },
+        "severity": "info",
+        "status": "open",
+        "status_history": [],
+        "suggested_action": "Resolve or split the TODO cluster into tracked work.",
+        "title": "TODO/FIXME/HACK cluster"
+      },
+      "tool": "get_finding"
+    }
+  ],
+  "source_read_only": {
+    "allowed_runtime_state": ".codescent",
+    "changed_source_paths": [],
+    "source_hashes_unchanged": true
+  }
+}

@@ -26,6 +26,7 @@ MVP_TOOL_NAMES = {
     "scan_code_health",
     "get_smell_report",
     "get_finding_context",
+    "get_finding",
     "get_impact",
     "get_next_improvement",
     "plan_refactor",

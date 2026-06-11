@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, TypedDict
 from codescent.core.models import FindingStatus
 from codescent.services.code_health import CodeHealthScanResult, CodeHealthService
 from codescent.services.findings import FindingsService
+from codescent.services.reports import FindingDetail, JsonObject, ReportService
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -26,6 +27,22 @@ class SmellReportToolPayload(TypedDict):
     open_count: int
     status_counts: dict[str, int]
     findings: tuple[dict[str, str | float], ...]
+
+
+class FindingDetailToolPayload(TypedDict):
+    ok: bool
+    finding_id: str
+    rule_id: str
+    file_path: str
+    severity: str
+    confidence: float
+    status: str
+    title: str
+    message: str
+    evidence: JsonObject
+    suggested_action: str
+    status_history: tuple[JsonObject, ...]
+    score_inputs: JsonObject
 
 
 class NextImprovementToolPayload(TypedDict):
@@ -67,6 +84,12 @@ def register_finding_tools(mcp: FastMCP) -> None:
     )(get_smell_report)
     _ = mcp.tool(
         description=(
+            "Use CodeScent to read one finding with structured evidence, "
+            "lifecycle history, and deterministic score inputs."
+        ),
+    )(get_finding)
+    _ = mcp.tool(
+        description=(
             "Use CodeScent to choose the next deterministic improvement from "
             "open or regressed findings."
         ),
@@ -97,6 +120,10 @@ def get_smell_report(repo: str = ".") -> SmellReportToolPayload:
         "status_counts": report.status_counts,
         "findings": tuple(_finding_payload(finding) for finding in report.findings),
     }
+
+
+def get_finding(finding_id: str, repo: str = ".") -> FindingDetailToolPayload:
+    return _detail_payload(ReportService(repo).get_finding(finding_id))
 
 
 def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
@@ -161,4 +188,22 @@ def _finding_payload(finding: FindingRow) -> dict[str, str | float]:
         "confidence": finding.confidence,
         "status": finding.status.value,
         "suggested_action": finding.suggested_action,
+    }
+
+
+def _detail_payload(detail: FindingDetail) -> FindingDetailToolPayload:
+    return {
+        "ok": True,
+        "finding_id": detail.finding_id,
+        "rule_id": detail.rule_id,
+        "file_path": detail.file_path,
+        "severity": detail.severity,
+        "confidence": detail.confidence,
+        "status": detail.status,
+        "title": detail.title,
+        "message": detail.message,
+        "evidence": detail.evidence,
+        "suggested_action": detail.suggested_action,
+        "status_history": detail.status_history,
+        "score_inputs": detail.score_inputs,
     }
