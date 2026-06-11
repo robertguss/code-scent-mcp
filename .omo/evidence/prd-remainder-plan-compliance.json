@@ -18,10 +18,9 @@
       ],
       "post_mvp_declared": [
         "get_changed_file_health",
-        "review_diff_risk",
-        "verify_change"
+        "review_diff_risk"
       ],
-      "tool_count": 29,
+      "tool_count": 30,
       "unexpected": []
     },
     "user_decisions": {

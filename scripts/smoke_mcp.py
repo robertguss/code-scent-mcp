@@ -92,6 +92,10 @@ BACKLOG_PROGRESS_TOOLS: Final[tuple[str, ...]] = (
     "get_progress",
     "get_regressions",
 )
+VERIFY_CHANGE_TOOLS: Final[tuple[str, ...]] = (
+    "scan_code_health",
+    "verify_change",
+)
 EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("full_loop",): FULL_LOOP_TOOLS,
     ("search_expansion",): SEARCH_EXPANSION_TOOLS,
@@ -104,6 +108,7 @@ EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("finding_detail",): FINDING_DETAIL_TOOLS,
     ("explain_score",): EXPLAIN_SCORE_TOOLS,
     ("backlog_progress",): BACKLOG_PROGRESS_TOOLS,
+    ("verify_change",): VERIFY_CHANGE_TOOLS,
 }
 
 
@@ -146,6 +151,7 @@ async def _call_tools(repo: str, tools: tuple[str, ...]) -> dict[str, JsonValue]
                     "get_finding_context",
                     "plan_refactor",
                     "suggest_tests",
+                    "verify_change",
                 }
                 and current_finding_id is not None
             ):

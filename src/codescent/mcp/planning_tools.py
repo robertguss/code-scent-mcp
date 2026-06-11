@@ -12,7 +12,10 @@ from codescent.services.refactor_planning import (
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
-    from codescent.services.verification import SuggestedTests
+    from codescent.services.verification import (
+        SuggestedTests,
+        VerificationRecommendation,
+    )
 
 
 class FindingContextToolPayload(TypedDict):
@@ -50,6 +53,15 @@ class SuggestedTestsToolPayload(TypedDict):
     executes_in_v1: bool
 
 
+class VerifyChangeToolPayload(TypedDict):
+    ok: bool
+    executes: bool
+    recommendation_id: int
+    recommended_commands: tuple[str, ...]
+    likely_tests: tuple[str, ...]
+    missing_characterization_tests: tuple[str, ...]
+
+
 class ImpactToolPayload(TypedDict):
     ok: bool
     target_type: str
@@ -85,6 +97,12 @@ def register_planning_tools(mcp: FastMCP) -> None:
             "or finding with bounded confidence-labeled evidence."
         ),
     )(get_impact)
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to record recommend-only verification commands. "
+            "This does not execute target project commands."
+        ),
+    )(verify_change)
 
 
 def get_finding_context(
@@ -122,6 +140,12 @@ def get_impact(
             target_type=target_type,
             finding_id=finding_id,
         ),
+    )
+
+
+def verify_change(finding_id: str, repo: str = ".") -> VerifyChangeToolPayload:
+    return _verify_change_payload(
+        RefactorPlanningService(repo).verify_change(finding_id),
     )
 
 
@@ -175,4 +199,19 @@ def _impact_payload(impact: ImpactReport) -> ImpactToolPayload:
         "likely_tests": impact.likely_tests,
         "risk_notes": impact.risk_notes,
         "confidence": impact.confidence,
+    }
+
+
+def _verify_change_payload(
+    recommendation: VerificationRecommendation,
+) -> VerifyChangeToolPayload:
+    return {
+        "ok": True,
+        "executes": recommendation.executes,
+        "recommendation_id": recommendation.recommendation_id,
+        "recommended_commands": recommendation.recommended_commands,
+        "likely_tests": recommendation.likely_tests,
+        "missing_characterization_tests": (
+            recommendation.missing_characterization_tests
+        ),
     }

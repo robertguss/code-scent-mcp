@@ -8,7 +8,11 @@ from pydantic import BaseModel, ConfigDict
 from codescent.core.paths import resolve_repo_root
 from codescent.services.context import ContextService, RelatedFilePayload
 from codescent.services.git import git_changed_paths
-from codescent.services.verification import SuggestedTests, VerificationService
+from codescent.services.verification import (
+    SuggestedTests,
+    VerificationRecommendation,
+    VerificationService,
+)
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import FindingRepository, FindingRow
 
@@ -127,6 +131,9 @@ class RefactorPlanningService:
     def suggest_tests(self, finding_id: str) -> SuggestedTests:
         finding = _repository(self.repo_root).get_finding(finding_id)
         return VerificationService(self.repo_root).suggest_tests(finding.file_path)
+
+    def verify_change(self, finding_id: str) -> VerificationRecommendation:
+        return VerificationService(self.repo_root).verify_change(finding_id)
 
     def get_impact(
         self,

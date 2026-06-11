@@ -40,6 +40,17 @@ class SuggestedTestsPayload(BaseModel):
     executes_in_v1: bool
 
 
+class VerifyChangePayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    executes: bool
+    recommendation_id: int
+    recommended_commands: tuple[str, ...]
+    likely_tests: tuple[str, ...]
+    missing_characterization_tests: tuple[str, ...]
+
+
 class ImpactPayload(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
@@ -126,6 +137,33 @@ async def test_get_impact_reports_blast_radius_without_false_certainty(
     assert any("confidence" in note for note in impact.risk_notes)
     assert 0 < impact.confidence < 1
     assert "SECRET_SENTINEL" not in impact.model_dump_json()
+
+
+@pytest.mark.anyio
+async def test_verify_change_records_recommendations_without_execution(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_smell(tmp_path)
+    scan = CodeHealthService(repo).scan()
+    finding_id = next(
+        item for item in scan.finding_ids if item.startswith("python.todo_cluster")
+    )
+
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "verify_change",
+            {"repo": str(repo), "finding_id": finding_id},
+        )
+
+    payload = VerifyChangePayload.model_validate_json(_text_content(result.content))
+
+    assert payload.ok is True
+    assert payload.executes is False
+    assert payload.recommendation_id > 0
+    assert payload.recommended_commands == ("pytest tests/test_config.py",)
+    assert payload.likely_tests == ("tests/test_config.py",)
+    assert payload.missing_characterization_tests == ()
+    assert not (repo / ".pytest_cache").exists()
 
 
 def _repo_with_smell(tmp_path: Path) -> Path:

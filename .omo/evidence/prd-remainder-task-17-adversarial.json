@@ -1,0 +1,67 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "verify_change records one local recommendation transaction and has no resumable job"
+  },
+  "dirty_worktree": {
+    "dirty_marker_exists": true,
+    "executes": false,
+    "note": "main repo user file codescent-mcp-test-results.md intentionally left untouched",
+    "passed": true
+  },
+  "flaky_tests": {
+    "cmd": "uv run pytest tests/contract/test_mcp_planning_tools.py::test_verify_change_records_recommendations_without_execution -q",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": ".                                                                        [100%]\n1 passed in 0.37s\n"
+  },
+  "hung_or_long_commands": {
+    "cmd": "timeout 10 uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic verify_change",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": "{\n  \"calls\": [\n    {\n      \"data\": {\n        \"finding_ids\": [\n          \"python.todo_cluster:ef36e5854db8\",\n          \"python.duplicate_literal:b29ed1690518\",\n          \"python.large_file:f0bcaad685b4\",\n          \"python.large_class:43f2ea73dd26\",\n          \"python.too_many_imports:314b3d828483\",\n          \"python.deep_nesting:ba977cbdee86\",\n          \"python.missing_nearby_test:d50cc4d1bc8a\",\n          \"python.mixed_responsibilities:832ee49bfe6a\",\n          \"python.suspicious_slop_candidate:5846e60c03db\",\n          \"python.missing_nearby_test:40f6b76cf57f\",\n          \"python.missing_nearby_test:6a5072411e5c\",\n          \"python.missing_nearby_test:267db4cb7a39\",\n          \"python.large_funct"
+  },
+  "malformed_input": {
+    "cmd": "uv run python scripts/smoke_mcp.py --repo /tmp/codescent-missing-repo-task17 verify_change",
+    "passed": true,
+    "returncode": 1,
+    "stderr_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:284  \u2502\n\u2502 in main                                                                      \u2502\n\u2502                                                                              \u2502\n\u2502   281 ) -> None:                                                             \u2502\n\u2502   282 \u2502   repo_path = Path(repo)                                             \u2502\n\u2502   283 \u2502   prepare_repo_for_tools(repo_path, tuple(tools))                    \u2502\n\u2502 \u2771 284 \u2502   before = _source_hashes(repo_path)                                 \u2502\n\u2502   285 \u2502   payload = anyio.run(_call_tools, repo,  ",
+    "stdout_excerpt": ""
+  },
+  "misleading_success_output": {
+    "executes": false,
+    "passed": true,
+    "recommendation_id": 1,
+    "source_read_only": {
+      "allowed_runtime_state": ".codescent",
+      "changed_source_paths": [],
+      "source_hashes_unchanged": true
+    },
+    "tools": [
+      "scan_code_health",
+      "verify_change"
+    ]
+  },
+  "ok": true,
+  "prompt_injection": {
+    "executes": false,
+    "passed": true,
+    "returncode": 0,
+    "source_hash_after": "6f34ceffa7d836888c43924c5cbde3df1a2b59380f667fa136c7ae1e3bfac0a8",
+    "source_hash_before": "6f34ceffa7d836888c43924c5cbde3df1a2b59380f667fa136c7ae1e3bfac0a8"
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "no checkpointed or interrupt-resumable verification workflow exists"
+  },
+  "stale_state": {
+    "cmd": "uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic verify_change",
+    "passed": true,
+    "pytest_cache_exists": false,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": "{\n  \"calls\": [\n    {\n      \"data\": {\n        \"finding_ids\": [\n          \"python.todo_cluster:ef36e5854db8\",\n          \"python.duplicate_literal:b29ed1690518\",\n          \"python.large_file:f0bcaad685b4\",\n          \"python.large_class:43f2ea73dd26\",\n          \"python.too_many_imports:314b3d828483\",\n          \"python.deep_nesting:ba977cbdee86\",\n          \"python.missing_nearby_test:d50cc4d1bc8a\",\n          \"python.mixed_responsibilities:832ee49bfe6a\",\n          \"python.suspicious_slop_candidate:5846e60c03db\",\n          \"python.missing_nearby_test:40f6b76cf57f\",\n          \"python.missing_nearby_test:6a5072411e5c\",\n          \"python.missing_nearby_test:267db4cb7a39\",\n          \"python.large_funct"
+  }
+}

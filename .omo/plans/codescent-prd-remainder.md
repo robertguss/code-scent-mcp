@@ -296,7 +296,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-16 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent report --repo tests/fixtures/python-basic --format json'`; PASS if captured output parses as JSON with findings and score explanations. Evidence `.omo/evidence/prd-remainder-task-16-cli-report.txt`.
   Commit: Y | `feat(cli): add report and backlog commands` | Files `src/codescent/cli/main.py`, `README.md`, `tests/contract/test_cli.py`
 
-- [ ] 17. Add recommend-only verify_change
+- [x] 17. Add recommend-only verify_change
   What to do / Must NOT do: Implement `verify_change` to recommend commands, likely tests, missing characterization tests, and record a non-executed verification recommendation. Do not run subprocesses.
   Parallelization: Can parallel Y | Wave 5 | Blocks risk reports
   References: `docs/prd.md:623`, `docs/prd.md:1256`, `docs/architecture.md:463`, `docs/architecture.md:799`

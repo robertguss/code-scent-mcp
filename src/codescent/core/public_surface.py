@@ -107,6 +107,7 @@ REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "search_changed_files",
         "search_tests",
         "search_todos",
+        "verify_change",
     },
 )
 
@@ -166,7 +167,7 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _registered_post_mvp_entry("get_impact", "planning"),
         _registered_post_mvp_entry("get_finding", "health"),
         _registered_post_mvp_entry("explain_score", "health"),
-        _post_mvp_entry("verify_change", "planning"),
+        _registered_post_mvp_entry("verify_change", "planning"),
         _registered_post_mvp_entry("get_backlog", "health"),
         _registered_post_mvp_entry("get_progress", "health"),
         _registered_post_mvp_entry("get_regressions", "health"),
