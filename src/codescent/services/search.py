@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
@@ -19,9 +20,30 @@ MAX_LIMIT: Final = 20
 DEFAULT_LINE_BUDGET: Final = 3
 MAX_LINE_BUDGET: Final = 20
 CHANGED_FILE_BONUS: Final = 25.0
+TODO_MARKERS: Final[tuple[str, ...]] = ("TODO", "FIXME", "HACK")
+TODO_PATTERN: Final = re.compile(r"\b(TODO|FIXME|HACK)\b:?\s*(.*)")
+TEST_FILE_BONUS: Final = 40.0
+TEST_NAME_BONUS: Final = 35.0
+TEST_CONTENT_BONUS: Final = 20.0
 
 
 class SearchResultPayload(TypedDict):
+    path: str
+    score: float
+    reasons: tuple[str, ...]
+    snippet: str | None
+
+
+class TodoSearchResultPayload(TypedDict):
+    path: str
+    score: float
+    reasons: tuple[str, ...]
+    snippet: str
+    marker: str
+    line: int
+
+
+class TestSearchResultPayload(TypedDict):
     path: str
     score: float
     reasons: tuple[str, ...]
@@ -162,10 +184,97 @@ class SearchService:
 
         return tuple(_sort_results(results)[: page.limit])
 
+    def search_todos(
+        self,
+        query: str = "",
+        *,
+        limit: int = DEFAULT_LIMIT,
+    ) -> tuple[TodoSearchResultPayload, ...]:
+        repo_root = resolve_repo_root(self.repo_root)
+        page = PageOptions(limit=limit)
+        results: list[TodoSearchResultPayload] = []
+
+        for item in build_file_inventory(repo_root):
+            lines = (repo_root / item.path).read_text().splitlines()
+            for line_number, line in enumerate(lines, start=1):
+                marker_match = TODO_PATTERN.search(line)
+                if marker_match is None:
+                    continue
+                if query and (
+                    _match_text(item.path, query) is None
+                    and _match_text(line, query) is None
+                ):
+                    continue
+                marker = marker_match.group(1)
+                results.append(
+                    {
+                        "path": item.path,
+                        "score": _todo_score(item.path, line, marker, query),
+                        "reasons": ("todo_marker", f"marker:{marker}"),
+                        "snippet": line.strip(),
+                        "marker": marker,
+                        "line": line_number,
+                    },
+                )
+
+        return tuple(_sort_todo_results(results)[: page.limit])
+
+    def search_tests(
+        self,
+        query: str = "",
+        *,
+        path: str | None = None,
+        symbol: str | None = None,
+        finding_id: str | None = None,
+        limit: int = DEFAULT_LIMIT,
+    ) -> tuple[TestSearchResultPayload, ...]:
+        repo_root = resolve_repo_root(self.repo_root)
+        page = PageOptions(limit=limit)
+        terms = _test_search_terms(
+            query=query,
+            path=path,
+            symbol=symbol,
+            finding_id=finding_id,
+        )
+        results: list[TestSearchResultPayload] = []
+
+        for item in build_file_inventory(repo_root):
+            if not _is_test_path(item.path):
+                continue
+            lines = (repo_root / item.path).read_text().splitlines()
+            score, reasons, snippet = _rank_test_file(item.path, lines, terms)
+            if score <= 0:
+                continue
+            results.append(
+                {
+                    "path": item.path,
+                    "score": score,
+                    "reasons": reasons,
+                    "snippet": snippet,
+                },
+            )
+
+        return tuple(_sort_test_results(results)[: page.limit])
+
 
 def _sort_results(
     results: list[SearchResultPayload],
 ) -> list[SearchResultPayload]:
+    return sorted(results, key=lambda result: (-result["score"], result["path"]))
+
+
+def _sort_todo_results(
+    results: list[TodoSearchResultPayload],
+) -> list[TodoSearchResultPayload]:
+    return sorted(
+        results,
+        key=lambda result: (-result["score"], result["path"], result["line"]),
+    )
+
+
+def _sort_test_results(
+    results: list[TestSearchResultPayload],
+) -> list[TestSearchResultPayload]:
     return sorted(results, key=lambda result: (-result["score"], result["path"]))
 
 
@@ -199,6 +308,97 @@ def _snippet(lines: list[str], line_number: int, line_budget: int) -> str:
     start = max(line_number - (budget // 2), 0)
     selected = lines[start : start + budget]
     return "\n".join(line.strip() for line in selected)
+
+
+def _todo_score(path: str, line: str, marker: str, query: str) -> float:
+    marker_boost = {
+        "FIXME": 12.0,
+        "TODO": 10.0,
+        "HACK": 8.0,
+    }[marker]
+    score = 80.0 + marker_boost
+    if query and _match_text(path, query) is not None:
+        score += 15.0
+    if query and _match_text(line, query) is not None:
+        score += 20.0
+    return score
+
+
+def _is_test_path(path: str) -> bool:
+    name = path.rsplit("/", maxsplit=1)[-1]
+    return (
+        path.startswith("tests/")
+        or name.startswith("test_")
+        or name.endswith("_test.py")
+    )
+
+
+def _test_search_terms(
+    *,
+    query: str,
+    path: str | None,
+    symbol: str | None,
+    finding_id: str | None,
+) -> tuple[str, ...]:
+    terms: list[str] = []
+    for value in (query, path, symbol, finding_id):
+        if value is None:
+            continue
+        terms.extend(_split_test_terms(value))
+    return tuple(dict.fromkeys(term for term in terms if term))
+
+
+def _split_test_terms(value: str) -> tuple[str, ...]:
+    normalized = value.replace("\\", "/").replace(":", "/")
+    parts = re.split(r"[^A-Za-z0-9_]+", normalized)
+    terms: list[str] = []
+    for part in parts:
+        if not part or part in {"src", "tests", "test", "py", "python"}:
+            continue
+        terms.append(part)
+        if "_" in part:
+            terms.extend(piece for piece in part.split("_") if piece)
+    return tuple(terms)
+
+
+def _rank_test_file(
+    path: str,
+    lines: list[str],
+    terms: tuple[str, ...],
+) -> tuple[float, tuple[str, ...], str | None]:
+    score = TEST_FILE_BONUS
+    reasons: list[str] = ["likely_test"]
+    snippet: str | None = None
+    if not terms:
+        return score, tuple(reasons), snippet
+
+    content = "\n".join(lines)
+    for term in terms:
+        if _match_text(path, term) is not None:
+            score += TEST_NAME_BONUS
+            reasons.append("path_match")
+        line_match = _first_matching_line(lines, term)
+        if line_match is not None:
+            score += TEST_CONTENT_BONUS
+            reasons.append("content_match")
+            if snippet is None:
+                snippet = line_match
+        if _match_text(content, term) is not None and _looks_like_symbol(term):
+            score += TEST_CONTENT_BONUS
+            reasons.append("symbol_match")
+
+    return score, _merge_reasons(tuple(reasons), ()), snippet
+
+
+def _first_matching_line(lines: list[str], term: str) -> str | None:
+    for line in lines:
+        if _match_text(line, term) is not None:
+            return line.strip()
+    return None
+
+
+def _looks_like_symbol(term: str) -> bool:
+    return "_" in term or term.isidentifier()
 
 
 def _changed_files(repo_root: Path) -> frozenset[str]:

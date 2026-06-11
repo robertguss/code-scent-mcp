@@ -45,6 +45,47 @@ class ChangedSearchToolPayload(BaseModel):
     results: tuple[ToolSearchResult, ...]
 
 
+class TodoSearchResult(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    path: str
+    score: float = Field(ge=0)
+    reasons: tuple[str, ...]
+    snippet: str
+    marker: str
+    line: int = Field(ge=1)
+
+
+class TodoSearchToolPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    query: str
+    limit: int = Field(ge=1, le=20)
+    results: tuple[TodoSearchResult, ...]
+
+
+class LikelyTestSearchResult(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    path: str
+    score: float = Field(ge=0)
+    reasons: tuple[str, ...]
+    snippet: str | None = None
+
+
+class LikelyTestSearchToolPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    query: str
+    path: str | None
+    symbol: str | None
+    finding_id: str | None
+    limit: int = Field(ge=1, le=20)
+    results: tuple[LikelyTestSearchResult, ...]
+
+
 @pytest.mark.anyio
 async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
@@ -67,8 +108,8 @@ async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     assert {"search_files", "search_content"} <= tool_names.keys()
     assert "multi_search_content" in tool_names
     assert "search_changed_files" in tool_names
-    assert "search_todos" not in tool_names
-    assert "search_tests" not in tool_names
+    assert "search_todos" in tool_names
+    assert "search_tests" in tool_names
     assert "ranking reasons" in (tool_names["search_files"].description or "")
     assert "bounded" in (tool_names["search_content"].description or "")
 
@@ -149,6 +190,78 @@ async def test_search_changed_files_returns_bounded_changed_paths(
     assert tuple(item.path for item in payload.results) == ("src/app.py",)
     assert "changed_file" in payload.results[0].reasons
     assert all(".codescent" not in item.path for item in payload.results)
+
+
+@pytest.mark.anyio
+async def test_search_todos_and_tests_are_bounded_and_ranked(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "workflow.py"
+    test_source = repo / "tests" / "test_workflow.py"
+    ignored_runtime = repo / ".codescent" / "state.py"
+    source.parent.mkdir(parents=True)
+    test_source.parent.mkdir(parents=True)
+    ignored_runtime.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """def route_workflow() -> None:
+    pass
+# TODO: route workflow retries
+# FIXME: route workflow cancellation
+# HACK: temporary workflow owner fallback
+""",
+    )
+    _ = test_source.write_text(
+        """from src.workflow import route_workflow
+
+def test_route_workflow() -> None:
+    route_workflow()
+""",
+    )
+    _ = ignored_runtime.write_text("# TODO: ignored runtime state\n")
+
+    async with Client(mcp) as client:
+        todo_result = await client.call_tool(
+            "search_todos",
+            {"repo": str(repo), "query": "workflow", "limit": 2},
+        )
+        test_result = await client.call_tool(
+            "search_tests",
+            {
+                "repo": str(repo),
+                "query": "workflow",
+                "path": "src/workflow.py",
+                "symbol": "route_workflow",
+                "finding_id": "python.large_function:src/workflow.py",
+                "limit": 5,
+            },
+        )
+
+    todo_payload = TodoSearchToolPayload.model_validate_json(
+        _text_content(todo_result.content),
+    )
+    test_payload = LikelyTestSearchToolPayload.model_validate_json(
+        _text_content(test_result.content),
+    )
+
+    assert todo_payload.ok is True
+    assert todo_payload.query == "workflow"
+    assert todo_payload.limit == 2
+    assert len(todo_payload.results) == 2
+    assert {item.marker for item in todo_payload.results} <= {"TODO", "FIXME", "HACK"}
+    assert all(item.path == "src/workflow.py" for item in todo_payload.results)
+    assert all(".codescent" not in item.path for item in todo_payload.results)
+    assert all("todo_marker" in item.reasons for item in todo_payload.results)
+    assert all(len(item.snippet.splitlines()) == 1 for item in todo_payload.results)
+
+    assert test_payload.ok is True
+    assert test_payload.query == "workflow"
+    assert test_payload.path == "src/workflow.py"
+    assert test_payload.symbol == "route_workflow"
+    assert test_payload.finding_id == "python.large_function:src/workflow.py"
+    assert test_payload.results[0].path == "tests/test_workflow.py"
+    assert "likely_test" in test_payload.results[0].reasons
+    assert "symbol_match" in test_payload.results[0].reasons
 
 
 def _text_content(content: list[ContentBlock]) -> str:

@@ -30,11 +30,11 @@ implementation, tests, documentation, and smoke evidence are complete.
 
 - `multi_search_content`
 - `search_changed_files`
+- `search_todos`
+- `search_tests`
 
 ## Locked Post-MVP MCP Tools
 
-- `search_todos`
-- `search_tests`
 - `find_references`
 - `find_callers`
 - `find_callees`

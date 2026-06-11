@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, TypedDict
 
-from codescent.services.search import SearchResultPayload, SearchService
+from codescent.services.search import (
+    SearchResultPayload,
+    SearchService,
+    TestSearchResultPayload,
+    TodoSearchResultPayload,
+)
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -22,6 +27,23 @@ class MultiSearchToolPayload(TypedDict):
     queries: tuple[str, ...]
     limit: int
     results: tuple[SearchResultPayload, ...]
+
+
+class TodoSearchToolPayload(TypedDict):
+    ok: bool
+    query: str
+    limit: int
+    results: tuple[TodoSearchResultPayload, ...]
+
+
+class TestSearchToolPayload(TypedDict):
+    ok: bool
+    query: str
+    path: str | None
+    symbol: str | None
+    finding_id: str | None
+    limit: int
+    results: tuple[TestSearchResultPayload, ...]
 
 
 def register_search_tools(mcp: FastMCP) -> None:
@@ -55,6 +77,20 @@ def register_search_tools(mcp: FastMCP) -> None:
             "excludes CodeScent runtime state and generated paths."
         ),
     )(search_changed_files)
+
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to find TODO, FIXME, and HACK comments with bounded "
+            "one-line snippets, marker grouping, and ranking reasons."
+        ),
+    )(search_todos)
+
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to find likely tests for a query, file path, symbol, "
+            "or finding id with bounded ranking reasons."
+        ),
+    )(search_tests)
 
 
 def search_files(
@@ -112,6 +148,46 @@ def search_changed_files(
     return {
         "ok": True,
         "query": query,
+        "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
+        "results": results,
+    }
+
+
+def search_todos(
+    query: str = "",
+    repo: str = ".",
+    limit: int = SAMPLE_FILE_LIMIT,
+) -> TodoSearchToolPayload:
+    results = SearchService(repo).search_todos(query, limit=limit)
+    return {
+        "ok": True,
+        "query": query,
+        "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
+        "results": results,
+    }
+
+
+def search_tests(  # noqa: PLR0913 - MCP tool exposes distinct target inputs.
+    query: str = "",
+    repo: str = ".",
+    path: str | None = None,
+    symbol: str | None = None,
+    finding_id: str | None = None,
+    limit: int = SAMPLE_FILE_LIMIT,
+) -> TestSearchToolPayload:
+    results = SearchService(repo).search_tests(
+        query,
+        path=path,
+        symbol=symbol,
+        finding_id=finding_id,
+        limit=limit,
+    )
+    return {
+        "ok": True,
+        "query": query,
+        "path": path,
+        "symbol": symbol,
+        "finding_id": finding_id,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "results": results,
     }

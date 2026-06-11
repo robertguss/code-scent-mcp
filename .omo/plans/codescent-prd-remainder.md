@@ -216,7 +216,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-6 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic search_changed --out .omo/evidence/prd-remainder-task-6-changed-search.json'`; PASS if JSON includes only changed fixture paths and excludes `.codescent`. Evidence `.omo/evidence/prd-remainder-task-6-changed-search.json`.
   Commit: Y | `feat(search): add changed file search` | Files `src/codescent/services/git.py`, `src/codescent/services/search.py`, `src/codescent/mcp/search_tools.py`, `tests/integration/test_search.py`
 
-- [ ] 7. Add TODO and test search tools
+- [x] 7. Add TODO and test search tools
   What to do / Must NOT do: Implement `search_todos` and `search_tests` with bounded results, TODO/FIXME/HACK grouping, and likely-test ranking for query/file/symbol/finding inputs.
   Parallelization: Can parallel Y | Wave 2 | Blocks verification ranking
   References: `docs/prd.md:543`, `docs/prd.md:547`, `docs/architecture.md:335`

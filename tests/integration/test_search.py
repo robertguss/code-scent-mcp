@@ -142,6 +142,50 @@ def test_search_changed_files_filters_to_git_and_index_changes(
     assert "changed_file" in plain_results[0]["reasons"]
 
 
+def test_search_todos_and_tests_service_rank_bounded_results(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "workflow.py"
+    test_source = repo / "tests" / "test_workflow.py"
+    ignored_runtime = repo / ".codescent" / "notes.py"
+    source.parent.mkdir(parents=True)
+    test_source.parent.mkdir(parents=True)
+    ignored_runtime.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """def route_workflow() -> None:
+    pass
+# TODO: route workflow retries
+# FIXME: route workflow cancellation
+# HACK: temporary workflow owner fallback
+""",
+    )
+    _ = test_source.write_text(
+        """from src.workflow import route_workflow
+
+def test_route_workflow() -> None:
+    route_workflow()
+""",
+    )
+    _ = ignored_runtime.write_text("# TODO: ignored runtime state\n")
+
+    service = SearchService(repo)
+    todo_results = service.search_todos("workflow", limit=2)
+    test_results = service.search_tests(
+        "workflow",
+        path="src/workflow.py",
+        symbol="route_workflow",
+        finding_id="python.large_function:src/workflow.py",
+        limit=5,
+    )
+
+    assert len(todo_results) == 2
+    assert {result["marker"] for result in todo_results} <= {"TODO", "FIXME", "HACK"}
+    assert all(result["path"] == "src/workflow.py" for result in todo_results)
+    assert all(".codescent" not in result["path"] for result in todo_results)
+    assert test_results[0]["path"] == "tests/test_workflow.py"
+    assert "likely_test" in test_results[0]["reasons"]
+    assert "symbol_match" in test_results[0]["reasons"]
+
+
 def _run_git(repo: Path, *args: str) -> None:
     _ = subprocess.run(
         ["git", "-C", str(repo), *args],
