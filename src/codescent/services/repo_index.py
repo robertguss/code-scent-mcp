@@ -36,7 +36,8 @@ class RepoIndexService:
 
     def index_repo(self) -> IndexResult:
         state = initialize_storage(self.repo_root)
-        inventory = build_file_inventory(state.repo_root)
+        config = ConfigService(state.repo_root).load()
+        inventory = build_file_inventory(state.repo_root, config=config)
         previous_hashes = _load_hashes(RepositoryStorage(state))
         now = datetime.now(UTC).isoformat()
 
@@ -47,7 +48,7 @@ class RepoIndexService:
         )
         file_hashes = {item.path: item.hash for item in inventory}
         git_state = detect_git_state(state.repo_root)
-        registry = build_pack_registry(ConfigService(state.repo_root).load())
+        registry = build_pack_registry(config)
 
         with RepositoryStorage(state).write_transaction() as connection:
             _ = connection.execute("delete from files")

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Final, TypedDict
 
 from codescent.core.models import PageOptions
 from codescent.engine.inventory import build_file_inventory
+from codescent.services.config import ConfigService
 from codescent.services.git import detect_git_state, git_changed_paths
 from codescent.storage import RepositoryStorage, initialize_storage
 
@@ -150,8 +151,9 @@ def changed_files(repo_root: Path) -> frozenset[str]:
 
 
 def changed_file_reasons(repo_root: Path) -> dict[str, tuple[str, ...]]:
+    config = ConfigService(repo_root).load()
     inventory_hashes = {
-        item.path: item.hash for item in build_file_inventory(repo_root)
+        item.path: item.hash for item in build_file_inventory(repo_root, config=config)
     }
     inventory_paths = frozenset(inventory_hashes)
     git_paths = git_changed_paths(repo_root) & inventory_paths

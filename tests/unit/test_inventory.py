@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from codescent.core.errors import CodeScentError, ErrorCode
+from codescent.core.models import ProjectConfig
 from codescent.core.paths import normalize_repo_path
 from codescent.engine.inventory import build_file_inventory
 
@@ -35,6 +36,22 @@ def test_default_excludes_skip_sensitive_and_generated_paths(
         _ = path.write_text("SHOULD_NOT_READ\n")
 
     paths = {item.path for item in build_file_inventory(repo)}
+
+    assert paths == {"src/app.py"}
+
+
+def test_project_config_excludes_nested_paths(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    included = repo / "src" / "app.py"
+    fixture = repo / "tests" / "fixtures" / "sample" / "app.py"
+    nested = repo / "docs" / "generated" / "schema.py"
+    config = ProjectConfig(exclude=("tests/fixtures", "docs/generated"))
+
+    for path in (included, fixture, nested):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        _ = path.write_text("value = 1\n")
+
+    paths = {item.path for item in build_file_inventory(repo, config=config)}
 
     assert paths == {"src/app.py"}
 

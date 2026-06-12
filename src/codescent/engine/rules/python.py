@@ -4,6 +4,7 @@ import ast
 from collections import Counter
 from typing import TYPE_CHECKING, Final
 
+from codescent.core.models import ProjectConfig
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.parsers.python import parse_python_file
@@ -27,10 +28,15 @@ DUPLICATE_LITERAL_COUNT: Final = 3
 MIN_LITERAL_LENGTH: Final = 3
 
 
-def scan_python_health(root: Path | str) -> tuple[CodeHealthFinding, ...]:
+def scan_python_health(
+    root: Path | str,
+    *,
+    config: ProjectConfig | None = None,
+) -> tuple[CodeHealthFinding, ...]:
     repo_root = resolve_repo_root(root)
+    project_config = config or ProjectConfig()
     findings: list[CodeHealthFinding] = []
-    for item in build_file_inventory(repo_root):
+    for item in build_file_inventory(repo_root, config=project_config):
         if item.language != "python":
             continue
         parsed = parse_python_file(repo_root / item.path, item.path)

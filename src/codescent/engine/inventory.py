@@ -1,10 +1,11 @@
 import hashlib
 from pathlib import Path
+from typing import Final
 
-from codescent.core.models import IndexedFile
+from codescent.core.models import IndexedFile, ProjectConfig
 from codescent.core.paths import resolve_repo_root
 
-DEFAULT_EXCLUDED_NAMES = frozenset(
+DEFAULT_EXCLUDED_NAMES: Final = frozenset(
     {
         ".codescent",
         ".git",
@@ -27,7 +28,7 @@ DEFAULT_EXCLUDED_NAMES = frozenset(
         "vendor",
     },
 )
-DEFAULT_EXCLUDED_FILENAMES = frozenset(
+DEFAULT_EXCLUDED_FILENAMES: Final = frozenset(
     {
         ".env",
         ".env.local",
@@ -37,8 +38,8 @@ DEFAULT_EXCLUDED_FILENAMES = frozenset(
         "yarn.lock",
     },
 )
-MINIFIED_SUFFIXES = (".min.js", ".min.css")
-LANGUAGE_BY_SUFFIX = {
+MINIFIED_SUFFIXES: Final = (".min.js", ".min.css")
+LANGUAGE_BY_SUFFIX: Final = {
     ".js": "javascript",
     ".jsx": "javascript",
     ".py": "python",
@@ -48,12 +49,17 @@ LANGUAGE_BY_SUFFIX = {
 }
 
 
-def build_file_inventory(root: Path | str) -> tuple[IndexedFile, ...]:
+def build_file_inventory(
+    root: Path | str,
+    *,
+    config: ProjectConfig | None = None,
+) -> tuple[IndexedFile, ...]:
     repo_root = resolve_repo_root(root)
+    project_config = config or ProjectConfig()
     files: list[IndexedFile] = []
 
     for path in sorted(repo_root.rglob("*")):
-        if not path.is_file() or _is_excluded(repo_root, path):
+        if not path.is_file() or _is_excluded(repo_root, path, project_config):
             continue
         if path.is_symlink() and not _stays_inside_root(repo_root, path):
             continue
@@ -82,7 +88,7 @@ def build_file_inventory(root: Path | str) -> tuple[IndexedFile, ...]:
     return tuple(files)
 
 
-def _is_excluded(repo_root: Path, path: Path) -> bool:
+def _is_excluded(repo_root: Path, path: Path, config: ProjectConfig) -> bool:
     relative = path.relative_to(repo_root)
     parts = relative.parts
 
@@ -90,7 +96,21 @@ def _is_excluded(repo_root: Path, path: Path) -> bool:
         return True
     if any(part in DEFAULT_EXCLUDED_NAMES for part in parts):
         return True
+    if _matches_config_exclude(relative.as_posix(), config):
+        return True
     return path.name.endswith(MINIFIED_SUFFIXES)
+
+
+def _matches_config_exclude(relative_path: str, config: ProjectConfig) -> bool:
+    patterns = (*config.exclude, *config.generated, *config.vendor, *config.build)
+    return any(_matches_path_pattern(relative_path, pattern) for pattern in patterns)
+
+
+def _matches_path_pattern(relative_path: str, pattern: str) -> bool:
+    normalized = pattern.strip().strip("/")
+    if not normalized:
+        return False
+    return relative_path == normalized or relative_path.startswith(f"{normalized}/")
 
 
 def _stays_inside_root(repo_root: Path, path: Path) -> bool:

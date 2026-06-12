@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
+from codescent.core.models import ProjectConfig
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.packs_ts import parse_typescript_file
@@ -20,11 +21,17 @@ TOO_MANY_EXPORTS: Final = 3
 ROUTE_HANDLER_LINES: Final = 3
 
 
-def scan_ts_react_next_health(root: Path | str) -> tuple[CodeHealthFinding, ...]:
+def scan_ts_react_next_health(
+    root: Path | str,
+    *,
+    config: ProjectConfig | None = None,
+) -> tuple[CodeHealthFinding, ...]:
     repo_root = resolve_repo_root(root)
+    project_config = config or ProjectConfig()
     findings: list[CodeHealthFinding] = []
-    indexed_paths = {item.path for item in build_file_inventory(repo_root)}
-    for item in build_file_inventory(repo_root):
+    inventory = build_file_inventory(repo_root, config=project_config)
+    indexed_paths = {item.path for item in inventory}
+    for item in inventory:
         if item.language not in {"javascript", "typescript"}:
             continue
         parsed = parse_typescript_file(repo_root / item.path, item.path)

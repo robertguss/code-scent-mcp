@@ -4,6 +4,7 @@ from pathlib import Path
 from pydantic import TypeAdapter
 
 from codescent.engine.inventory import build_file_inventory
+from codescent.services.config import ConfigService
 from codescent.services.git import detect_git_state
 from codescent.storage import RepositoryStorage, initialize_storage
 
@@ -27,8 +28,10 @@ class RepoStatusService:
 
     def get_status(self) -> RepoIndexStatus:
         state = initialize_storage(self.repo_root)
+        config = ConfigService(state.repo_root).load()
         inventory_hashes = {
-            item.path: item.hash for item in build_file_inventory(state.repo_root)
+            item.path: item.hash
+            for item in build_file_inventory(state.repo_root, config=config)
         }
         stored_hashes = _load_hashes(RepositoryStorage(state))
         modified_files = tuple(

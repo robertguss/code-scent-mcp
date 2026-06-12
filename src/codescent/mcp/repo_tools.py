@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Final, TypedDict
 
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
+from codescent.services.config import ConfigService
 from codescent.services.git import detect_git_state
 
 if TYPE_CHECKING:
@@ -60,7 +61,8 @@ def register_repo_tools(mcp: FastMCP) -> None:
 
 def get_repo_map(repo: str = ".") -> RepoMapToolPayload:
     repo_root = resolve_repo_root(repo)
-    inventory = build_file_inventory(repo_root)
+    config = ConfigService(repo_root).load()
+    inventory = build_file_inventory(repo_root, config=config)
 
     return {
         "ok": True,
@@ -76,8 +78,9 @@ def get_repo_map(repo: str = ".") -> RepoMapToolPayload:
 
 def get_repo_status(repo: str = ".") -> RepoStatusToolPayload:
     repo_root = resolve_repo_root(repo)
+    config = ConfigService(repo_root).load()
     inventory_hashes = {
-        item.path: item.hash for item in build_file_inventory(repo_root)
+        item.path: item.hash for item in build_file_inventory(repo_root, config=config)
     }
     database_path = repo_root / ".codescent" / "index.sqlite"
     stored_hashes = _stored_hashes(database_path)

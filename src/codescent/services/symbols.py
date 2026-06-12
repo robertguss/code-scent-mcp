@@ -25,10 +25,11 @@ class SymbolService:
 
     def extract(self) -> SymbolExtraction:
         repo_root = resolve_repo_root(self.repo_root)
-        registry = build_pack_registry(ConfigService(repo_root).load())
+        config = ConfigService(repo_root).load()
+        registry = build_pack_registry(config)
         parsed_files = tuple(
             parser(repo_root / item.path, item.path)
-            for item in build_file_inventory(repo_root)
+            for item in build_file_inventory(repo_root, config=config)
             for parser in (registry.parser_for_language(item.language),)
             if parser is not None
         )

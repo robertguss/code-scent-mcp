@@ -7,6 +7,7 @@ from codescent.core.models import PageOptions
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.search import rank_path
+from codescent.services.config import ConfigService
 from codescent.services.search_queries import (
     TestSearchRequest,
     search_tests_for_repo,
@@ -50,11 +51,12 @@ class SearchService:
         offset: int = 0,
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
+        config = ConfigService(repo_root).load()
         changed = changed_files(repo_root)
         frecency = frecency_scores(repo_root)
         results: list[SearchResultPayload] = []
 
-        for item in build_file_inventory(repo_root):
+        for item in build_file_inventory(repo_root, config=config):
             rank = rank_path(item.path, query)
             if rank is None:
                 continue
@@ -101,11 +103,12 @@ class SearchService:
         offset: int = 0,
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
+        config = ConfigService(repo_root).load()
         changed = changed_files(repo_root)
         frecency = frecency_scores(repo_root)
         results: list[SearchResultPayload] = []
 
-        for item in build_file_inventory(repo_root):
+        for item in build_file_inventory(repo_root, config=config):
             lines = (repo_root / item.path).read_text().splitlines()
             for line_number, line in enumerate(lines):
                 if match_text(line, query) is None:
@@ -191,11 +194,12 @@ class SearchService:
         limit: int = DEFAULT_LIMIT,
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
+        config = ConfigService(repo_root).load()
         page = PageOptions(limit=limit)
         change_reasons = changed_file_reasons(repo_root)
         results: list[SearchResultPayload] = []
 
-        for item in build_file_inventory(repo_root):
+        for item in build_file_inventory(repo_root, config=config):
             reasons = change_reasons.get(item.path)
             if reasons is None:
                 continue
@@ -224,7 +228,8 @@ class SearchService:
         limit: int = DEFAULT_LIMIT,
     ) -> tuple[TodoSearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
-        return search_todos_for_repo(repo_root, query, limit=limit)
+        config = ConfigService(repo_root).load()
+        return search_todos_for_repo(repo_root, query, limit=limit, config=config)
 
     def search_tests(
         self,
@@ -243,4 +248,5 @@ class SearchService:
             finding_id=finding_id,
             limit=limit,
         )
-        return search_tests_for_repo(repo_root, request)
+        config = ConfigService(repo_root).load()
+        return search_tests_for_repo(repo_root, request, config=config)

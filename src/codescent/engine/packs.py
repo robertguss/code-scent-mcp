@@ -25,7 +25,11 @@ class ParseFile(Protocol):
 
 
 class RuleScanner(Protocol):
-    def __call__(self, root: Path | str) -> tuple[CodeHealthFinding, ...]: ...
+    def __call__(
+        self,
+        root: Path | str,
+        config: ProjectConfig,
+    ) -> tuple[CodeHealthFinding, ...]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +51,7 @@ class RulePack:
 class PackRegistry:
     language_packs: tuple[LanguagePack, ...]
     rule_packs: tuple[RulePack, ...]
+    config: ProjectConfig
 
     def parser_for_language(self, language: str) -> ParseFile | None:
         for pack in self.language_packs:
@@ -57,7 +62,7 @@ class PackRegistry:
     def scan_rule_packs(self, root: Path | str) -> tuple[CodeHealthFinding, ...]:
         findings: list[CodeHealthFinding] = []
         for pack in self.rule_packs:
-            findings.extend(pack.scan(root))
+            findings.extend(pack.scan(root, self.config))
         return tuple(findings)
 
 
@@ -65,7 +70,11 @@ def build_pack_registry(config: ProjectConfig | None = None) -> PackRegistry:
     project_config = config or ProjectConfig()
     language_packs = _language_packs(project_config.language_packs)
     rule_packs = _rule_packs(project_config.rule_packs)
-    return PackRegistry(language_packs=language_packs, rule_packs=rule_packs)
+    return PackRegistry(
+        language_packs=language_packs,
+        rule_packs=rule_packs,
+        config=project_config,
+    )
 
 
 def _language_packs(enabled: tuple[str, ...]) -> tuple[LanguagePack, ...]:
@@ -118,9 +127,15 @@ def _rule_packs(enabled: tuple[str, ...]) -> tuple[RulePack, ...]:
     return tuple(packs)
 
 
-def _scan_python_health(root: Path | str) -> tuple[CodeHealthFinding, ...]:
-    return scan_python_health(root)
+def _scan_python_health(
+    root: Path | str,
+    config: ProjectConfig,
+) -> tuple[CodeHealthFinding, ...]:
+    return scan_python_health(root, config=config)
 
 
-def _scan_ts_react_next_health(root: Path | str) -> tuple[CodeHealthFinding, ...]:
-    return scan_ts_react_next_health(root)
+def _scan_ts_react_next_health(
+    root: Path | str,
+    config: ProjectConfig,
+) -> tuple[CodeHealthFinding, ...]:
+    return scan_ts_react_next_health(root, config=config)

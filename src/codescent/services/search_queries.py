@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
-from codescent.core.models import PageOptions
+from codescent.core.models import PageOptions, ProjectConfig
 from codescent.engine.inventory import build_file_inventory
 from codescent.services.search_support import (
     TestSearchResultPayload,
@@ -36,10 +36,12 @@ def search_todos_for_repo(
     query: str,
     *,
     limit: int,
+    config: ProjectConfig | None = None,
 ) -> tuple[TodoSearchResultPayload, ...]:
     page = PageOptions(limit=limit)
+    project_config = config or ProjectConfig()
     results: list[TodoSearchResultPayload] = []
-    for item in build_file_inventory(repo_root):
+    for item in build_file_inventory(repo_root, config=project_config):
         lines = (repo_root / item.path).read_text().splitlines()
         for line_number, line in enumerate(lines, start=1):
             marker_match = TODO_PATTERN.search(line)
@@ -64,11 +66,14 @@ def search_todos_for_repo(
 def search_tests_for_repo(
     repo_root: Path,
     request: TestSearchRequest,
+    *,
+    config: ProjectConfig | None = None,
 ) -> tuple[TestSearchResultPayload, ...]:
     page = PageOptions(limit=request.limit)
+    project_config = config or ProjectConfig()
     terms = test_search_terms(request)
     results: list[TestSearchResultPayload] = []
-    for item in build_file_inventory(repo_root):
+    for item in build_file_inventory(repo_root, config=project_config):
         if not is_test_path(item.path):
             continue
         lines = (repo_root / item.path).read_text().splitlines()
