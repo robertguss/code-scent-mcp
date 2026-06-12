@@ -400,7 +400,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-29 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent doctor --repo tests/fixtures/python-basic --json'`; PASS if doctor recommends templates but does not write them. Evidence `.omo/evidence/prd-remainder-task-29-routing.txt`.
   Commit: Y | `docs: add agent routing templates` | Files `docs/agent-routing.md`, `templates/AGENTS.md`, `templates/CLAUDE.md`, `tests/docs/test_docs.py`
 
-- [ ] 30. Add local dashboard service and read API
+- [x] 30. Add local dashboard service and read API
   What to do / Must NOT do: Add a Python-served dashboard bound to `127.0.0.1` by default with local JSON endpoints for status, findings, progress, rules, reports, and exports. Do not expose remote bind by default or fetch external assets.
   Parallelization: Can parallel N | Wave 9 | Blocks dashboard UI
   References: `docs/prd.md:1365`, `docs/prd.md:1373`, `docs/prd.md:1385`
