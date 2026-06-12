@@ -72,15 +72,17 @@ def _render_config(config: ProjectConfig) -> str:
 def _render_config_payload(payload: dict[str, TomlValue]) -> str:
     lines: list[str] = []
     for key, value in payload.items():
-        if isinstance(value, dict):
-            lines.append("")
-            lines.append(f"[{key}]")
-            lines.extend(
-                f"{child_key} = {_toml_value(child_value)}"
-                for child_key, child_value in value.items()
-            )
+        if not isinstance(value, dict):
+            lines.append(f"{key} = {_toml_value(value)}")
+    for key, value in payload.items():
+        if not isinstance(value, dict):
             continue
-        lines.append(f"{key} = {_toml_value(value)}")
+        lines.append("")
+        lines.append(f"[{key}]")
+        lines.extend(
+            f"{child_key} = {_toml_value(child_value)}"
+            for child_key, child_value in value.items()
+        )
     lines.append("")
     return "\n".join(lines)
 
