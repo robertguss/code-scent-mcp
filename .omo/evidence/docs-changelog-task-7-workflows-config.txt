@@ -1,0 +1,24 @@
+{"state_dir": "/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/tmp.I6Su
+9NqVD3/repo/.codescent"}
+{"deleted": false, "paths": ["/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x800
+00gn/T/tmp.I6Su9NqVD3/repo/.codescent"]}
+reset requires --dry-run or --yes
+
+EXIT:0 CLEANUP:0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

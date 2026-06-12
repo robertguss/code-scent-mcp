@@ -11,7 +11,8 @@ expanded search and graph tools, reports, CI/diff review, opt-in subjective
 review, evals, and a loopback dashboard.
 
 CodeScent is local stdio for MCP and loopback-only for the dashboard. It writes
-only `.codescent` state in the analyzed repository. It does not edit analyzed source files.
+only `.codescent` state in the analyzed repository. It does not edit analyzed so
+urce files.
 Safety summary: writes only .codescent state and does not edit
 analyzed source files. The runtime no-network model applies to indexing,
 scanning, searching, context building, dashboard use, CI mode, and eval
@@ -68,19 +69,23 @@ See [docs/mcp-tools.md](docs/mcp-tools.md) for the registered MCP tool surface.
 Run the deterministic offline eval:
 
 ```bash
-uv run python evals/run_deterministic.py --repo tests/fixtures/python-basic --expected evals/fixtures/python-basic.expected.json --out .omo/evidence/task-16-deterministic-eval.json
+uv run python evals/run_deterministic.py --repo tests/fixtures/python-basic --ex
+pected evals/fixtures/python-basic.expected.json --out .omo/evidence/task-16-det
+erministic-eval.json
 ```
 
 Run the real repo smoke target:
 
 ```bash
-uv run python scripts/smoke_lx_data_lake.py --repo /Users/robertguss/Projects/wts-lx/lx_data_lake --out .omo/evidence/task-18-lx-smoke.json
+uv run python scripts/smoke_lx_data_lake.py --repo /Users/robertguss/Projects/wt
+s-lx/lx_data_lake --out .omo/evidence/task-18-lx-smoke.json
 ```
 
 Run the source-read-only proof:
 
 ```bash
-uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-basic --out .omo/evidence/task-19-read-only.json
+uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-bas
+ic --out .omo/evidence/task-19-read-only.json
 ```
 
 See [docs/evals.md](docs/evals.md) for deterministic, agent-in-the-loop, real
@@ -131,3 +136,35 @@ uv run ruff check .
 uv run ruff format --check .
 uv run basedpyright
 ```
+
+ Usage: codescent [OPTIONS] COMMAND [ARGS]...
+
+ Local MCP-first codebase improvement server.
+
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --version          Print the CodeScent version and exit.                     │
+│ --help             Show this message and exit.                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ───────────────────────────────────────────────────────────────────╮
+│ init                                                                         │
+│ index                                                                        │
+│ status                                                                       │
+│ scan                                                                         │
+│ serve                                                                        │
+│ doctor                                                                       │
+│ config                                                                       │
+│ rules                                                                        │
+│ watch                                                                        │
+│ reset                                                                        │
+│ report                                                                       │
+│ export                                                                       │
+│ findings                                                                     │
+│ next                                                                         │
+│ explain                                                                      │
+│ ci                                                                           │
+│ review-diff                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+EXIT:0
+

@@ -1,0 +1,86 @@
+{"state_dir": "/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/tmp.Ciar
+QEAoJj/repo/.codescent"}
+{"indexed_files": 11, "changed_files": ["src/acme_tasks/__init__.py", "src/acme_
+tasks/cli.py", "src/acme_tasks/config.py", "src/acme_tasks/oversized.py", "src/a
+cme_tasks/payroll.py", "src/acme_tasks/report.py", "src/acme_tasks/storage.py",
+"src/acme_tasks/workflow.py", "tests/test_cli.py", "tests/test_config.py", "test
+s/test_workflow.py"], "git_available": false, "git_status": "not_git"}
+{"status": "complete", "scan_id": "bcd2979b54c1455b830cbd172a42bb35", "files_sca
+nned": 11, "findings_created": 13, "findings_resolved": 0, "finding_ids": ["pyth
+on.todo_cluster:ef36e5854db8", "python.duplicate_literal:b29ed1690518", "python.
+large_file:f0bcaad685b4", "python.large_class:43f2ea73dd26", "python.too_many_im
+ports:314b3d828483", "python.deep_nesting:ba977cbdee86", "python.missing_nearby_
+test:d50cc4d1bc8a", "python.mixed_responsibilities:832ee49bfe6a", "python.suspic
+ious_slop_candidate:5846e60c03db", "python.missing_nearby_test:40f6b76cf57f", "p
+ython.missing_nearby_test:6a5072411e5c", "python.missing_nearby_test:267db4cb7a3
+9", "python.large_function:51a81f47dacc"], "rule_ids": ["python.deep_nesting", "
+python.duplicate_literal", "python.large_class", "python.large_file", "python.la
+rge_function", "python.missing_nearby_test", "python.mixed_responsibilities", "p
+ython.suspicious_slop_candidate", "python.todo_cluster", "python.too_many_import
+s"], "findings": [{"id": "python.todo_cluster:ef36e5854db8", "stable_key": "pyth
+on.todo_cluster:ef36e5854db8", "rule_id": "python.todo_cluster", "file_path": "s
+rc/acme_tasks/config.py", "symbol": null, "severity": "info", "confidence": 0.9,
+ "evidence": {"count": 3, "threshold": 3}, "suggested_action": "Resolve or split
+ the TODO cluster into tracked work."}, {"id": "python.duplicate_literal:b29ed16
+90518", "stable_key": "python.duplicate_literal:b29ed1690518", "rule_id": "pytho
+n.duplicate_literal", "file_path": "src/acme_tasks/config.py", "symbol": null, "
+severity": "info", "confidence": 0.85, "evidence": {"literal": "pending-review",
+ "count": 3}, "suggested_action": "Name the repeated literal once and reuse it."
+}, {"id": "python.large_file:f0bcaad685b4", "stable_key": "python.large_file:f0b
+caad685b4", "rule_id": "python.large_file", "file_path": "src/acme_tasks/oversiz
+ed.py", "symbol": null, "severity": "warning", "confidence": 0.9, "evidence": {"
+line_count": 201, "threshold": 70}, "suggested_action": "Split cohesive responsi
+bilities into smaller modules."}, {"id": "python.large_class:43f2ea73dd26", "sta
+ble_key": "python.large_class:43f2ea73dd26", "rule_id": "python.large_class", "f
+ile_path": "src/acme_tasks/oversized.py", "symbol": "acme_tasks.oversized.Legacy
+ExportMapper", "severity": "warning", "confidence": 0.85, "evidence": {"line_cou
+nt": 65, "threshold": 60}, "suggested_action": "Extract smaller classes or colla
+borators."}, {"id": "python.too_many_imports:314b3d828483", "stable_key": "pytho
+n.too_many_imports:314b3d828483", "rule_id": "python.too_many_imports", "file_pa
+th": "src/acme_tasks/oversized.py", "symbol": null, "severity": "info", "confide
+nce": 0.75, "evidence": {"import_count": 14, "threshold": 12}, "suggested_action
+": "Review whether this module has too many responsibilities."}, {"id": "python.
+deep_nesting:ba977cbdee86", "stable_key": "python.deep_nesting:ba977cbdee86", "r
+ule_id": "python.deep_nesting", "file_path": "src/acme_tasks/oversized.py", "sym
+bol": null, "severity": "warning", "confidence": 0.75, "evidence": {"depth": 6,
+"threshold": 4}, "suggested_action": "Flatten control flow or extract guard clau
+ses."}, {"id": "python.missing_nearby_test:d50cc4d1bc8a", "stable_key": "python.
+missing_nearby_test:d50cc4d1bc8a", "rule_id": "python.missing_nearby_test", "fil
+e_path": "src/acme_tasks/oversized.py", "symbol": "acme_tasks.oversized.export_f
+ield_names", "severity": "info", "confidence": 0.65, "evidence": {"expected_test
+": "tests/test_oversized.py"}, "suggested_action": "Add or link a focused nearby
+ test for this module."}, {"id": "python.mixed_responsibilities:832ee49bfe6a", "
+stable_key": "python.mixed_responsibilities:832ee49bfe6a", "rule_id": "python.mi
+xed_responsibilities", "file_path": "src/acme_tasks/oversized.py", "symbol": nul
+l, "severity": "info", "confidence": 0.55, "evidence": {"verb_count": 6}, "sugge
+sted_action": "Group related responsibilities into separate modules."}, {"id": "
+python.suspicious_slop_candidate:5846e60c03db", "stable_key": "python.suspicious
+_slop_candidate:5846e60c03db", "rule_id": "python.suspicious_slop_candidate", "f
+ile_path": "src/acme_tasks/oversized.py", "symbol": null, "severity": "info", "c
+onfidence": 0.5, "evidence": {"marker_count": 1}, "suggested_action": "Review wh
+ether this code is intentional and maintained."}, {"id": "python.missing_nearby_
+test:40f6b76cf57f", "stable_key": "python.missing_nearby_test:40f6b76cf57f", "ru
+le_id": "python.missing_nearby_test", "file_path": "src/acme_tasks/payroll.py",
+"symbol": "acme_tasks.payroll.summarize_payroll_run", "severity": "info", "confi
+dence": 0.65, "evidence": {"expected_test": "tests/test_payroll.py"}, "suggested
+_action": "Add or link a focused nearby test for this module."}, {"id": "python.
+missing_nearby_test:6a5072411e5c", "stable_key": "python.missing_nearby_test:6a5
+072411e5c", "rule_id": "python.missing_nearby_test", "file_path": "src/acme_task
+s/report.py", "symbol": "acme_tasks.report.render_priority_report", "severity":
+"info", "confidence": 0.65, "evidence": {"expected_test": "tests/test_report.py"
+}, "suggested_action": "Add or link a focused nearby test for this module."}, {"
+id": "python.missing_nearby_test:267db4cb7a39", "stable_key": "python.missing_ne
+arby_test:267db4cb7a39", "rule_id": "python.missing_nearby_test", "file_path": "
+src/acme_tasks/storage.py", "symbol": "acme_tasks.storage.save_plan", "severity"
+: "info", "confidence": 0.65, "evidence": {"expected_test": "tests/test_storage.
+py"}, "suggested_action": "Add or link a focused nearby test for this module."},
+ {"id": "python.large_function:51a81f47dacc", "stable_key": "python.large_functi
+on:51a81f47dacc", "rule_id": "python.large_function", "file_path": "src/acme_tas
+ks/workflow.py", "symbol": "acme_tasks.workflow.build_daily_plan", "severity": "
+warning", "confidence": 0.9, "evidence": {"line_count": 27, "threshold": 25}, "s
+uggested_action": "Extract named steps while preserving behavior."}]}
+{"index_fresh": true, "indexed_files": 11, "changed_files": [], "finding_count":
+ 13, "database_ok": true, "git_available": false, "git_status": "not_git"}
+
+EXIT:0 CLEANUP:0
+

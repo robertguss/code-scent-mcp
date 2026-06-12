@@ -1,0 +1,6 @@
+$ uv run ruff check .
+All checks passed!
+$ uv run ruff format --check .
+129 files already formatted
+$ uv run basedpyright
+0 errors, 0 warnings, 0 notes

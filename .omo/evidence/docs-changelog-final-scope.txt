@@ -1,0 +1,734 @@
+$ git diff -- README.md docs CHANGELOG.md tests/docs/test_docs.py .omo/plans/codescent-documentation-changelog.md
+diff --git a/README.md b/README.md
+index bb4ec49..ca4373b 100644
+--- a/README.md
++++ b/README.md
+@@ -1,20 +1,21 @@
+ # CodeScent
+ 
+ CodeScent is a local, MCP-first codebase improvement server for AI coding
+-agents. This repository implements the local PRD surface: Python and
+-TypeScript/React/Next indexing, bounded search, graph/context tools,
+-deterministic code-health findings, refactor planning, recommended verification
+-commands, finding lifecycle, CI/PR reporting, opt-in subjective review, evals,
+-and a loopback dashboard.
++agents. It indexes repositories locally, exposes bounded code intelligence to
++MCP clients, finds deterministic code-health issues, guides safe improvement
++loops, and keeps all runtime state under `.codescent/`.
+ 
+-The first shipped slice was the Python-first MVP; the current local surface
+-keeps those safety guarantees while adding the remaining PRD features.
++The first shipped slice was the Python-first MVP. The current local surface
++keeps those safety guarantees while adding TypeScript/React/Next support,
++expanded search and graph tools, reports, CI/diff review, opt-in subjective
++review, evals, and a loopback dashboard.
+ 
+ CodeScent is local stdio for MCP and loopback-only for the dashboard. It writes
+-only `.codescent` state in the analyzed repository. It does not edit analyzed
+-source files. Safety summary: writes only .codescent state and does not edit analyzed source files.
+-The runtime no-network model applies to indexing, scanning, searching, context
+-building, dashboard use, CI mode, and eval execution.
++only `.codescent` state in the analyzed repository. It does not edit analyzed source files.
++Safety summary: writes only .codescent state and does not edit
++analyzed source files. The runtime no-network model applies to indexing,
++scanning, searching, context building, dashboard use, CI mode, and eval
++execution.
+ Subjective LLM review remains opt-in and disabled by default.
+ 
+ ## Install
+@@ -40,6 +41,9 @@ uv run codescent doctor --repo tests/fixtures/python-basic --json
+ commands are recommendations; CodeScent does not execute target project
+ test/lint/build commands in V1.
+ 
++See [docs/getting-started.md](docs/getting-started.md) for an isolated first
++run that uses a temporary fixture copy.
++
+ ## MCP Stdio
+ 
+ Connect an MCP client to the local stdio server:
+@@ -57,8 +61,7 @@ The first-run loop is:
+    suggested tests, and rescan
+ 5. mark findings only after the user or agent has separate verification evidence
+ 
+-See [docs/mcp-tools.md](docs/mcp-tools.md) for the registered tool and command
+-surface.
++See [docs/mcp-tools.md](docs/mcp-tools.md) for the registered MCP tool surface.
+ 
+ ## Evals And Smoke
+ 
+@@ -83,6 +86,25 @@ uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-bas
+ See [docs/evals.md](docs/evals.md) for deterministic, agent-in-the-loop, real
+ smoke, and safety eval details.
+ 
++## Documentation
++
++- [Getting started](docs/getting-started.md): install and run the first local
++  workflow.
++- [CLI reference](docs/cli-reference.md): commands, options, outputs, and
++  safety notes.
++- [MCP tools](docs/mcp-tools.md): registered tools, groups, and output
++  boundaries.
++- [Workflows](docs/workflows.md): finding lifecycle and safe improvement loop.
++- [Configuration](docs/configuration.md): `.codescent/`, rules, routing
++  templates, reset, and recovery.
++- [Dashboard](docs/dashboard.md): loopback UI/API, exports, and smoke checks.
++- [Language packs](docs/language-packs.md): shipped language support and future
++  pack boundaries.
++- [Evals](docs/evals.md): deterministic eval, agent transcript, real smoke, and
++  source-read-only proof.
++- [Agent routing](docs/agent-routing.md): optional downstream agent templates.
++- [Changelog](CHANGELOG.md): release history.
++
+ ## Implemented Local Surface
+ 
+ - Python and TypeScript/React/Next language and rule packs.
+diff --git a/docs/language-packs.md b/docs/language-packs.md
+index 2185264..5d91590 100644
+--- a/docs/language-packs.md
++++ b/docs/language-packs.md
+@@ -1,16 +1,40 @@
+ # Language Packs
+ 
+ CodeScent keeps language support behind internal pack interfaces before opening
+-an external plugin API. The first non-Python pack will cover JavaScript,
+-TypeScript, JSX, TSX, React, and basic Next.js routing.
++an external plugin API.
++
++## Shipped Packs
++
++### Python
++
++The Python pack covers inventory, symbol extraction, bounded context,
++deterministic maintainability findings, test proximity, and the Python-first
++MVP workflow.
++
++### TypeScript/React/Next
++
++The TypeScript/React/Next pack covers JavaScript, TypeScript, JSX, TSX, React,
++and basic Next.js routing patterns. It is implemented as an internal pack, not
++an external plugin API.
+ 
+ ## Parser Decision
+ 
+-The TypeScript/JavaScript pack will use `tree-sitter` through a local deterministic parser
+-adapter. The adapter must run from installed local
+-dependencies, require no runtime network, and degrade gracefully when a grammar
+-cannot produce high-confidence references.
++The TypeScript/JavaScript pack uses a local deterministic parser adapter. The
++adapter must run from installed local dependencies, require no runtime network,
++and degrade gracefully when a grammar cannot produce high-confidence
++references.
+ 
+ This keeps parsing source-read-only and gives CodeScent one parser strategy for
+ plain JavaScript, JSX, TypeScript, and TSX instead of separate ad hoc regex
+ paths.
++
++## Future Packs
++
++Future packs may add Go, Rust, Ruby, Elixir, PHP, or other language support.
++Future packs should keep the same source-read-only and runtime no-network
++contracts.
++
++## Related Docs
++
++- [MCP tools](mcp-tools.md)
++- [Workflows](workflows.md)
+diff --git a/docs/mcp-tools.md b/docs/mcp-tools.md
+index e86477f..10a6be2 100644
+--- a/docs/mcp-tools.md
++++ b/docs/mcp-tools.md
+@@ -1,8 +1,13 @@
+-# CodeScent Public Surface
++# CodeScent MCP Tools
+ 
+-CodeScent registers the MVP MCP tools and the completed local PRD-remainder
+-tools below. Surface entries stay versioned in `codescent.core.public_surface`
+-so docs, contract tests, and plan audits can detect drift.
++CodeScent registers MCP tools in `codescent.core.public_surface`. The MCP
++server is local stdio and source-read-only for analyzed source. Tools may write
++or update `.codescent/` state for indexes, scan runs, findings, lifecycle
++events, and telemetry.
++
++Every tool should return bounded output by default. Inputs are the tool
++arguments supplied by the MCP client. Outputs are structured payloads validated
++by the service and contract tests.
+ 
+ ## Current Registered MCP Tools
+ 
+@@ -101,6 +106,319 @@ All tools are local and source-read-only for analyzed source. Tools may create
+ or update `.codescent` state for indexing, scan runs, findings, lifecycle
+ events, and telemetry.
+ 
++## Tool Reference
++
++### `get_repo_map`
++
++- Group: `repository`
++- Purpose: Return a compact repository map for orientation.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_repo_map", "ok": true, "data": {...}}`
++
++### `get_repo_status`
++
++- Group: `repository`
++- Purpose: Report index, finding, database, and git status.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_repo_status", "ok": true, "data": {...}}`
++
++### `search_files`
++
++- Group: `search`
++- Purpose: Find files by ranked path query.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "search_files", "ok": true, "data": {...}}`
++
++### `search_content`
++
++- Group: `search`
++- Purpose: Find bounded content matches by query.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "search_content", "ok": true, "data": {...}}`
++
++### `find_symbol`
++
++- Group: `context`
++- Purpose: Find indexed symbols by name.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "find_symbol", "ok": true, "data": {...}}`
++
++### `get_file_context`
++
++- Group: `context`
++- Purpose: Return bounded context for one file.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_file_context", "ok": true, "data": {...}}`
++
++### `get_symbol_context`
++
++- Group: `context`
++- Purpose: Return bounded context for one symbol.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_symbol_context", "ok": true, "data": {...}}`
++
++### `scan_code_health`
++
++- Group: `health`
++- Purpose: Run deterministic code-health scanning.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "scan_code_health", "ok": true, "data": {...}}`
++
++### `get_smell_report`
++
++- Group: `health`
++- Purpose: Return summarized open finding report data.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_smell_report", "ok": true, "data": {...}}`
++
++### `get_finding_context`
++
++- Group: `planning`
++- Purpose: Return evidence and bounded context for a finding.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_finding_context", "ok": true, "data": {...}}`
++
++### `get_next_improvement`
++
++- Group: `health`
++- Purpose: Return the next recommended finding to address.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_next_improvement", "ok": true, "data": {...}}`
++
++### `plan_refactor`
++
++- Group: `planning`
++- Purpose: Return a safe refactor plan for a finding.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "plan_refactor", "ok": true, "data": {...}}`
++
++### `suggest_tests`
++
++- Group: `planning`
++- Purpose: Recommend verification commands for a finding or change.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "suggest_tests", "ok": true, "data": {...}}`
++
++### `mark_finding`
++
++- Group: `health`
++- Purpose: Record finding lifecycle status after external evidence.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "mark_finding", "ok": true, "data": {...}}`
++
++### `rescan`
++
++- Group: `health`
++- Purpose: Run scan again and report resolved or regressed findings.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "rescan", "ok": true, "data": {...}}`
++
++### `multi_search_content`
++
++- Group: `search`
++- Purpose: Run multiple bounded content queries together.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "multi_search_content", "ok": true, "data": {...}}`
++
++### `search_changed_files`
++
++- Group: `search`
++- Purpose: Rank files changed in git status or diff context.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "search_changed_files", "ok": true, "data": {...}}`
++
++### `search_todos`
++
++- Group: `search`
++- Purpose: Find TODO/FIXME/HACK style comments.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "search_todos", "ok": true, "data": {...}}`
++
++### `search_tests`
++
++- Group: `search`
++- Purpose: Find likely relevant tests.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "search_tests", "ok": true, "data": {...}}`
++
++### `find_references`
++
++- Group: `context`
++- Purpose: Return indexed references for a symbol or path.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "find_references", "ok": true, "data": {...}}`
++
++### `find_callers`
++
++- Group: `context`
++- Purpose: Return callers for an indexed callable.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "find_callers", "ok": true, "data": {...}}`
++
++### `find_callees`
++
++- Group: `context`
++- Purpose: Return callees from an indexed callable.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "find_callees", "ok": true, "data": {...}}`
++
++### `get_related_files`
++
++- Group: `context`
++- Purpose: Return related implementation, test, and config files.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_related_files", "ok": true, "data": {...}}`
++
++### `get_impact`
++
++- Group: `planning`
++- Purpose: Summarize likely blast radius for a path or symbol.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_impact", "ok": true, "data": {...}}`
++
++### `get_finding`
++
++- Group: `health`
++- Purpose: Return one finding by id.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_finding", "ok": true, "data": {...}}`
++
++### `explain_score`
++
++- Group: `health`
++- Purpose: Explain deterministic score inputs and ranking reasons.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "explain_score", "ok": true, "data": {...}}`
++
++### `verify_change`
++
++- Group: `planning`
++- Purpose: Record a recommend-only verification plan.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "verify_change", "ok": true, "data": {...}}`
++
++### `get_backlog`
++
++- Group: `health`
++- Purpose: Return backlog-style finding summary.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_backlog", "ok": true, "data": {...}}`
++
++### `get_progress`
++
++- Group: `health`
++- Purpose: Return progress over finding lifecycle states.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_progress", "ok": true, "data": {...}}`
++
++### `get_regressions`
++
++- Group: `health`
++- Purpose: Return findings that regressed across scans.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_regressions", "ok": true, "data": {...}}`
++
++### `review_diff_risk`
++
++- Group: `risk`
++- Purpose: Return deterministic risk report for changed files.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "review_diff_risk", "ok": true, "data": {...}}`
++
++### `get_changed_file_health`
++
++- Group: `risk`
++- Purpose: Return health summary for changed files.
++- Inputs: repository root plus tool-specific arguments such as query, path, symbol, finding id, status, or limit.
++- Outputs: JSON-compatible structured payload with local evidence and no unbounded source dump.
++- Bounds: source-read-only for analyzed files; bounded output by default; runtime no-network.
++- Example shape: `{"tool": "get_changed_file_health", "ok": true, "data": {...}}`
++
++## Reference Pattern
++
++Each registered tool follows this reference contract:
++
++- Inputs: a repository root plus tool-specific arguments such as query, path,
++  symbol, finding id, limit, status, or output bounds.
++- Outputs: JSON-compatible structured payloads with bounded output and evidence
++  fields where applicable.
++- Safety: tools do not edit analyzed source and do not require runtime network
++  access.
++
++Repository tools report repo map and status. Search and context tools return
++bounded matches, source ranges, graph relationships, and related files. Code
++health tools scan, report, prioritize, mark, and rescan findings. Planning tools
++return finding context, refactor plans, impact, and recommended verification.
++Risk tools summarize changed-file health and diff risk.
++
+ Future tools and commands remain unregistered until their stage passes contract
+ tests, real-surface QA, source-read-only proof, and the required evidence
+ capture.
++
++## Related Docs
++
++- [Getting started](getting-started.md)
++- [Workflows](workflows.md)
++- [CLI reference](cli-reference.md)
+diff --git a/tests/docs/test_docs.py b/tests/docs/test_docs.py
+index 9e790ad..b60025e 100644
+--- a/tests/docs/test_docs.py
++++ b/tests/docs/test_docs.py
+@@ -1,17 +1,54 @@
++import re
+ from pathlib import Path
+ 
+ from typer.testing import CliRunner
+ 
+ from codescent.cli.main import app
++from codescent.core.public_surface import PUBLIC_SURFACE, REGISTERED_MCP_TOOL_NAMES
+ 
+ README = Path("README.md")
++CHANGELOG = Path("CHANGELOG.md")
+ EVALS = Path("docs/evals.md")
+ MCP_TOOLS = Path("docs/mcp-tools.md")
+ AGENT_ROUTING = Path("docs/agent-routing.md")
++GETTING_STARTED = Path("docs/getting-started.md")
++CLI_REFERENCE = Path("docs/cli-reference.md")
++WORKFLOWS = Path("docs/workflows.md")
++CONFIGURATION = Path("docs/configuration.md")
++DASHBOARD = Path("docs/dashboard.md")
++LANGUAGE_PACKS = Path("docs/language-packs.md")
+ AGENTS_TEMPLATE = Path("templates/AGENTS.md")
+ CLAUDE_TEMPLATE = Path("templates/CLAUDE.md")
+ CODEX_TEMPLATE = Path("templates/CODEX.md")
+ 
++DOC_MAP_TARGETS = (
++    GETTING_STARTED,
++    CLI_REFERENCE,
++    MCP_TOOLS,
++    WORKFLOWS,
++    CONFIGURATION,
++    DASHBOARD,
++    LANGUAGE_PACKS,
++    EVALS,
++    AGENT_ROUTING,
++    CHANGELOG,
++)
++
++DOC_CONTRACT_PATHS = (
++    README,
++    GETTING_STARTED,
++    CLI_REFERENCE,
++    MCP_TOOLS,
++    WORKFLOWS,
++    CONFIGURATION,
++    DASHBOARD,
++    LANGUAGE_PACKS,
++    EVALS,
++    AGENT_ROUTING,
++    Path("scripts/run_agent_eval.md"),
++    Path("evals/agent_task.md"),
++)
++
+ MVP_TOOLS = {
+     "get_repo_map",
+     "get_repo_status",
+@@ -56,14 +93,9 @@ def test_readme_names_python_first_mvp_and_safety() -> None:
+ 
+ 
+ def test_no_docs_or_runbooks_use_unsupported_serve_repo_option() -> None:
+-    paths = [
+-        README,
+-        EVALS,
+-        MCP_TOOLS,
+-        Path("scripts/run_agent_eval.md"),
+-        Path("evals/agent_task.md"),
+-    ]
+-    combined = "\n".join(path.read_text().lower() for path in paths)
++    combined = "\n".join(
++        path.read_text().lower() for path in DOC_CONTRACT_PATHS if path.exists()
++    )
+ 
+     assert "serve --repo" not in combined
+     assert "codescent serve --repo" not in combined
+@@ -126,3 +158,113 @@ def test_agent_routing_templates_are_documented_and_not_auto_written(
+     assert not (repo / "AGENTS.md").exists()
+     assert not (repo / "CLAUDE.md").exists()
+     assert not (repo / "CODEX.md").exists()
++
++
++def test_documentation_map_links_exist() -> None:
++    text = README.read_text()
++    linked_targets = _linked_markdown_targets(text)
++
++    for target in DOC_MAP_TARGETS:
++        assert _display_path(target) in text
++        assert target in linked_targets
++        assert target.exists()
++
++    for path in DOC_CONTRACT_PATHS:
++        if path.exists():
++            for target in _linked_markdown_targets(path.read_text()):
++                assert _resolve_local_markdown_target(path, target).exists()
++
++
++def test_changelog_has_unreleased_and_initial_release() -> None:
++    text = CHANGELOG.read_text()
++
++    assert "## [Unreleased]" in text
++    assert "## [0.1.0] - 2026-06-12" in text
++    assert "Python-first" in text
++    assert "TypeScript/React/Next" in text
++    assert "loopback dashboard" in text
++    assert "source-read-only" in text
++    for future_tool in (
++        "retrieve_result",
++        "context_stats",
++        "project_guidance",
++        "project_learnings",
++    ):
++        assert future_tool not in text
++
++
++def test_cli_reference_covers_registered_commands() -> None:
++    text = CLI_REFERENCE.read_text()
++    registered_commands = {
++        command.name for command in PUBLIC_SURFACE.cli_commands if command.registered
++    }
++
++    for command in registered_commands:
++        assert f"`{command}`" in text
++    assert "serve --repo" not in text
++    assert "codescent dashboard" not in text
++    assert "reset requires --dry-run or --yes" in text
++
++
++def test_mcp_reference_covers_registered_tools() -> None:
++    text = MCP_TOOLS.read_text()
++
++    for tool_name in REGISTERED_MCP_TOOL_NAMES:
++        section = f"### `{tool_name}`"
++        assert section in text
++        assert f"`{tool_name}`" in text
++        after_section = text.split(section, maxsplit=1)[1]
++        section_body = after_section.split("\n### `", maxsplit=1)[0]
++        for phrase in (
++            "- Group:",
++            "- Purpose:",
++            "- Inputs:",
++            "- Outputs:",
++            "- Bounds:",
++            "- Example shape:",
++        ):
++            assert phrase in section_body
++    for phrase in (
++        "source-read-only",
++        "bounded output",
++        "Inputs",
++        "Outputs",
++    ):
++        assert phrase in text
++
++
++def test_dashboard_docs_do_not_invent_public_command() -> None:
++    text = DASHBOARD.read_text()
++
++    assert "127.0.0.1" in text
++    assert "loopback" in text
++    assert "no auth" in text
++    assert "no remote dashboard" in text
++    assert "codescent dashboard" not in text
++
++
++def _linked_markdown_targets(text: str) -> set[Path]:
++    targets: set[Path] = set()
++    for match in re.finditer(r"\[[^\]]+\]\(([^)]+)\)", text):
++        raw_target = match.group(1)
++        if _is_local_markdown_target(raw_target):
++            targets.add(Path(raw_target.split("#", maxsplit=1)[0]))
++    return targets
++
++
++def _is_local_markdown_target(raw_target: str) -> bool:
++    return (
++        not raw_target.startswith(("http://", "https://", "mailto:"))
++        and not raw_target.startswith("#")
++        and raw_target.split("#", maxsplit=1)[0].endswith(".md")
++    )
++
++
++def _display_path(path: Path) -> str:
++    return path.as_posix()
++
++
++def _resolve_local_markdown_target(source: Path, target: Path) -> Path:
++    if target.parts[:1] in (("docs",), ("scripts",), ("evals",)) or target == CHANGELOG:
++        return target
++    return source.parent / target
+$ git status --short
+ M .omo/boulder.json
+ M .omo/start-work/ledger.jsonl
+ M README.md
+ D codescent-mcp-test-results.md
+ M docs/language-packs.md
+ M docs/mcp-tools.md
+ M templates/AGENTS.md
+ M tests/docs/test_docs.py
+?? .omo/drafts/codescent-documentation-changelog-planning-notepad.md
+?? .omo/evidence/docs-changelog-final-code-quality.txt
+?? .omo/evidence/docs-changelog-final-manual-qa.txt
+?? .omo/evidence/docs-changelog-final-plan-compliance.txt
+?? .omo/evidence/docs-changelog-final-scope.txt
+?? .omo/evidence/docs-changelog-task-1-baseline.txt
+?? .omo/evidence/docs-changelog-task-1-cleanup.txt
+?? .omo/evidence/docs-changelog-task-1-dirty-worktree.txt
+?? .omo/evidence/docs-changelog-task-1-red.txt
+?? .omo/evidence/docs-changelog-task-1-tmux.txt
+?? .omo/evidence/docs-changelog-task-10-quality.txt
+?? .omo/evidence/docs-changelog-task-10-status.txt
+?? .omo/evidence/docs-changelog-task-2-cleanup.txt
+?? .omo/evidence/docs-changelog-task-2-green.txt
+?? .omo/evidence/docs-changelog-task-2-readme.txt
+?? .omo/evidence/docs-changelog-task-3-cleanup.txt
+?? .omo/evidence/docs-changelog-task-3-getting-started.txt
+?? .omo/evidence/docs-changelog-task-3-green.txt
+?? .omo/evidence/docs-changelog-task-4-changelog.txt
+?? .omo/evidence/docs-changelog-task-4-cleanup.txt
+?? .omo/evidence/docs-changelog-task-4-green.txt
+?? .omo/evidence/docs-changelog-task-5-cleanup.txt
+?? .omo/evidence/docs-changelog-task-5-cli-reference.txt
+?? .omo/evidence/docs-changelog-task-5-green.txt
+?? .omo/evidence/docs-changelog-task-6-cleanup.txt
+?? .omo/evidence/docs-changelog-task-6-green.txt
+?? .omo/evidence/docs-changelog-task-6-mcp-reference.txt
+?? .omo/evidence/docs-changelog-task-7-cleanup.txt
+?? .omo/evidence/docs-changelog-task-7-green.txt
+?? .omo/evidence/docs-changelog-task-7-workflows-config.txt
+?? .omo/evidence/docs-changelog-task-8-cleanup.txt
+?? .omo/evidence/docs-changelog-task-8-dashboard-smoke-dashboard.png
+?? .omo/evidence/docs-changelog-task-8-dashboard-smoke-export.json
+?? .omo/evidence/docs-changelog-task-8-dashboard-smoke-export.md
+?? .omo/evidence/docs-changelog-task-8-dashboard-smoke.json
+?? .omo/evidence/docs-changelog-task-8-dashboard.txt
+?? .omo/evidence/docs-changelog-task-8-green.txt
+?? .omo/evidence/docs-changelog-task-9-cleanup.txt
+?? .omo/evidence/docs-changelog-task-9-focused-gate.txt
+?? .omo/evidence/docs-changelog-wave-1-cleanup.txt
+?? .omo/evidence/docs-changelog-wave-1-docs-test.txt
+?? .omo/evidence/docs-changelog-wave-1-status.txt
+?? .omo/plans/codescent-documentation-changelog.md
+?? AGENTS.md
+?? CHANGELOG.md
+?? docs/cli-reference.md
+?? docs/configuration.md
+?? docs/dashboard.md
+?? docs/getting-started.md
+?? docs/prd/
+?? docs/workflows.md
+?? src/codescent/AGENTS.md
+?? src/codescent/dashboard/AGENTS.md
+?? src/codescent/mcp/AGENTS.md
+?? src/codescent/services/AGENTS.md
+?? tests/AGENTS.md
+?? tests/fixtures/AGENTS.md

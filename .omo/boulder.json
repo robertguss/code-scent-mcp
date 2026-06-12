@@ -1,5 +1,5 @@
 {
-  "active_work_id": null,
+  "active_work_id": "codescent-documentation-changelog",
   "schema_version": 2,
   "works": {
     "codescent-prd-remainder": {
@@ -10,6 +10,16 @@
       ],
       "status": "completed",
       "work_id": "codescent-prd-remainder",
+      "worktree_path": null
+    },
+    "codescent-documentation-changelog": {
+      "active_plan": ".omo/plans/codescent-documentation-changelog.md",
+      "plan_name": "codescent-documentation-changelog",
+      "session_ids": [
+        "codex:019ebc1c-4c94-72a3-bffe-2d3af82ef513"
+      ],
+      "status": "active",
+      "work_id": "codescent-documentation-changelog",
       "worktree_path": null
     },
     "codescent-python-mvp": {

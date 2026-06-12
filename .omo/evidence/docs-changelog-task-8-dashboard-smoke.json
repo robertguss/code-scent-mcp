@@ -1,0 +1,14 @@
+{
+  "changed_source_paths": [],
+  "cleanup": {
+    "chrome_profile_removed": true,
+    "server_stopped": true
+  },
+  "exports": {
+    "json": ".omo/evidence/docs-changelog-task-8-dashboard-smoke-export.json",
+    "markdown": ".omo/evidence/docs-changelog-task-8-dashboard-smoke-export.md"
+  },
+  "external_requests": 0,
+  "ok": true,
+  "screenshot_path": ".omo/evidence/docs-changelog-task-8-dashboard-smoke-dashboard.png"
+}

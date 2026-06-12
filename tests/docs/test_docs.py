@@ -1,16 +1,53 @@
+import re
 from pathlib import Path
 
 from typer.testing import CliRunner
 
 from codescent.cli.main import app
+from codescent.core.public_surface import PUBLIC_SURFACE, REGISTERED_MCP_TOOL_NAMES
 
 README = Path("README.md")
+CHANGELOG = Path("CHANGELOG.md")
 EVALS = Path("docs/evals.md")
 MCP_TOOLS = Path("docs/mcp-tools.md")
 AGENT_ROUTING = Path("docs/agent-routing.md")
+GETTING_STARTED = Path("docs/getting-started.md")
+CLI_REFERENCE = Path("docs/cli-reference.md")
+WORKFLOWS = Path("docs/workflows.md")
+CONFIGURATION = Path("docs/configuration.md")
+DASHBOARD = Path("docs/dashboard.md")
+LANGUAGE_PACKS = Path("docs/language-packs.md")
 AGENTS_TEMPLATE = Path("templates/AGENTS.md")
 CLAUDE_TEMPLATE = Path("templates/CLAUDE.md")
 CODEX_TEMPLATE = Path("templates/CODEX.md")
+
+DOC_MAP_TARGETS = (
+    GETTING_STARTED,
+    CLI_REFERENCE,
+    MCP_TOOLS,
+    WORKFLOWS,
+    CONFIGURATION,
+    DASHBOARD,
+    LANGUAGE_PACKS,
+    EVALS,
+    AGENT_ROUTING,
+    CHANGELOG,
+)
+
+DOC_CONTRACT_PATHS = (
+    README,
+    GETTING_STARTED,
+    CLI_REFERENCE,
+    MCP_TOOLS,
+    WORKFLOWS,
+    CONFIGURATION,
+    DASHBOARD,
+    LANGUAGE_PACKS,
+    EVALS,
+    AGENT_ROUTING,
+    Path("scripts/run_agent_eval.md"),
+    Path("evals/agent_task.md"),
+)
 
 MVP_TOOLS = {
     "get_repo_map",
@@ -56,14 +93,9 @@ def test_readme_names_python_first_mvp_and_safety() -> None:
 
 
 def test_no_docs_or_runbooks_use_unsupported_serve_repo_option() -> None:
-    paths = [
-        README,
-        EVALS,
-        MCP_TOOLS,
-        Path("scripts/run_agent_eval.md"),
-        Path("evals/agent_task.md"),
-    ]
-    combined = "\n".join(path.read_text().lower() for path in paths)
+    combined = "\n".join(
+        path.read_text().lower() for path in DOC_CONTRACT_PATHS if path.exists()
+    )
 
     assert "serve --repo" not in combined
     assert "codescent serve --repo" not in combined
@@ -126,3 +158,113 @@ def test_agent_routing_templates_are_documented_and_not_auto_written(
     assert not (repo / "AGENTS.md").exists()
     assert not (repo / "CLAUDE.md").exists()
     assert not (repo / "CODEX.md").exists()
+
+
+def test_documentation_map_links_exist() -> None:
+    text = README.read_text()
+    linked_targets = _linked_markdown_targets(text)
+
+    for target in DOC_MAP_TARGETS:
+        assert _display_path(target) in text
+        assert target in linked_targets
+        assert target.exists()
+
+    for path in DOC_CONTRACT_PATHS:
+        if path.exists():
+            for target in _linked_markdown_targets(path.read_text()):
+                assert _resolve_local_markdown_target(path, target).exists()
+
+
+def test_changelog_has_unreleased_and_initial_release() -> None:
+    text = CHANGELOG.read_text()
+
+    assert "## [Unreleased]" in text
+    assert "## [0.1.0] - 2026-06-12" in text
+    assert "Python-first" in text
+    assert "TypeScript/React/Next" in text
+    assert "loopback dashboard" in text
+    assert "source-read-only" in text
+    for future_tool in (
+        "retrieve_result",
+        "context_stats",
+        "project_guidance",
+        "project_learnings",
+    ):
+        assert future_tool not in text
+
+
+def test_cli_reference_covers_registered_commands() -> None:
+    text = CLI_REFERENCE.read_text()
+    registered_commands = {
+        command.name for command in PUBLIC_SURFACE.cli_commands if command.registered
+    }
+
+    for command in registered_commands:
+        assert f"`{command}`" in text
+    assert "serve --repo" not in text
+    assert "codescent dashboard" not in text
+    assert "reset requires --dry-run or --yes" in text
+
+
+def test_mcp_reference_covers_registered_tools() -> None:
+    text = MCP_TOOLS.read_text()
+
+    for tool_name in REGISTERED_MCP_TOOL_NAMES:
+        section = f"### `{tool_name}`"
+        assert section in text
+        assert f"`{tool_name}`" in text
+        after_section = text.split(section, maxsplit=1)[1]
+        section_body = after_section.split("\n### `", maxsplit=1)[0]
+        for phrase in (
+            "- Group:",
+            "- Purpose:",
+            "- Inputs:",
+            "- Outputs:",
+            "- Bounds:",
+            "- Example shape:",
+        ):
+            assert phrase in section_body
+    for phrase in (
+        "source-read-only",
+        "bounded output",
+        "Inputs",
+        "Outputs",
+    ):
+        assert phrase in text
+
+
+def test_dashboard_docs_do_not_invent_public_command() -> None:
+    text = DASHBOARD.read_text()
+
+    assert "127.0.0.1" in text
+    assert "loopback" in text
+    assert "no auth" in text
+    assert "no remote dashboard" in text
+    assert "codescent dashboard" not in text
+
+
+def _linked_markdown_targets(text: str) -> set[Path]:
+    targets: set[Path] = set()
+    for match in re.finditer(r"\[[^\]]+\]\(([^)]+)\)", text):
+        raw_target = match.group(1)
+        if _is_local_markdown_target(raw_target):
+            targets.add(Path(raw_target.split("#", maxsplit=1)[0]))
+    return targets
+
+
+def _is_local_markdown_target(raw_target: str) -> bool:
+    return (
+        not raw_target.startswith(("http://", "https://", "mailto:"))
+        and not raw_target.startswith("#")
+        and raw_target.split("#", maxsplit=1)[0].endswith(".md")
+    )
+
+
+def _display_path(path: Path) -> str:
+    return path.as_posix()
+
+
+def _resolve_local_markdown_target(source: Path, target: Path) -> Path:
+    if target.parts[:1] in (("docs",), ("scripts",), ("evals",)) or target == CHANGELOG:
+        return target
+    return source.parent / target
