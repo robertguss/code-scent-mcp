@@ -1,0 +1,6 @@
+F5 visual inspection PASS:
+- Screenshot renders Health dashboard on loopback local UI.
+- Findings list is visible with selected row state.
+- Selected finding detail is visible and readable.
+- Progress trend, rule config, and export control are visible below the main grid.
+- No text overlap or blank UI detected in the captured artifact.

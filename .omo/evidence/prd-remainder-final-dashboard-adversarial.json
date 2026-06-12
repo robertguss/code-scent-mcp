@@ -1,0 +1,51 @@
+{
+  "cancel_resume": {
+    "cleanup": {
+      "chrome_profile_removed": true,
+      "server_stopped": true
+    },
+    "passed": true
+  },
+  "dirty_worktree": {
+    "changed_source_paths": [],
+    "passed": true,
+    "returncode": 0,
+    "source_hashes_unchanged": true,
+    "status_excerpt": "?? .omo/evidence/prd-remainder-final-dashboard-dashboard.png\n?? .omo/evidence/prd-remainder-final-dashboard-export.json\n?? .omo/evidence/prd-remainder-final-dashboard-export.md\n?? .omo/evidence/prd-remainder-final-dashboard-timeout-dashboard.png\n?? .omo/evidence/prd-remainder-final-dashboard-timeout-export.json\n?? .omo/evidence/prd-remainder-final-dashboard-timeout-export.md\n?? .omo/evidence/prd-remainder-final-dashboard-timeout.json\n?? .omo/evidence/prd-remainder-final-dashboard-tmux-dashboard.png\n?? .omo/evidence/prd-remainder-final-dashboard-tmux-export.json\n?? .omo/evidence/prd-remainder-final-dashboard-tmux-export.md\n?? .omo/evidence/prd-remainder-final-dashboard-tmux.json\n?? .omo/evidence/prd-remainder-final-dashboard-tmux.txt\n?? .omo/evidence/prd-remainder-final-dashboard-visual.txt\n?? .omo/evidence/prd-remainder-final-dashboard.json\n?? .omo/evidence/prd-remainder-task-18-review-diff-risk.json\n?? codescent-mcp-test-results.md\n?? src/codescent/__pycache__/\n?? src/codescent/core/_"
+  },
+  "flaky_tests": {
+    "passed": true,
+    "returncode": 0
+  },
+  "hung_or_long_commands": {
+    "passed": true,
+    "returncode": 0
+  },
+  "malformed_input": {
+    "passed": true,
+    "returncode": 1,
+    "stderr_excerpt": "Traceback (most recent call last):\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_dashboard.py\", line 291, in <module>\n    main()\n    ~~~~^^\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_dashboard.py\", line 43, in main\n    _ = CodeHealthService(repo).scan()\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/services/code_health.py\", line 41, in scan\n    index_result = RepoIndexService(self.repo_root).index_repo()\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/services/repo_index.py\", line 38, in index_repo\n    state = initialize_storage(self.repo_root)\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/storage/repository.py\", line 32, in initialize_storage\n    repo_root = resolve_repo_root(root)\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/core/paths.py\", line 10, in resolve_repo_root\n    raise CodeScentError(\n    ...<4 lines>...\n    )\nc",
+    "stdout_excerpt": ""
+  },
+  "misleading_success_output": {
+    "passed": true,
+    "primary_screenshot": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-final-dashboard-dashboard.png",
+    "tmux_screenshot": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-final-dashboard-tmux-dashboard.png"
+  },
+  "ok": true,
+  "prompt_injection": {
+    "external_requests": 0,
+    "passed": true,
+    "returncode": 0,
+    "source_hashes_unchanged": true
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "dashboard smoke has bounded subprocess timeouts and no resumable checkpoint state"
+  },
+  "stale_state": {
+    "passed": true,
+    "primary_changed": [],
+    "tmux_changed": []
+  }
+}

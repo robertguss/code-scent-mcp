@@ -452,7 +452,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   Evidence: the two JSON files above, plus cleanup receipt `.omo/evidence/prd-remainder-final-cleanup.txt`.
   Must prove `changed_source_paths: []`, `network_attempts: 0`, and only `.codescent/` runtime state changed.
 
-- [ ] F5. Dashboard browser QA
+- [x] F5. Dashboard browser QA
   Command: `uv run python scripts/smoke_dashboard.py --repo tests/fixtures/python-basic --out .omo/evidence/prd-remainder-final-dashboard.json`
   Evidence: `.omo/evidence/prd-remainder-final-dashboard.json`, screenshot path recorded inside JSON.
   Must prove local loopback UI renders findings/detail/trends/rules/export, makes no external requests, and cleans up the server.

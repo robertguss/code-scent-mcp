@@ -1,0 +1,6 @@
+F5 cleanup receipt:
+- tmux session ulw-qa-prd-f5 killed or absent after capture.
+- Dashboard smoke stopped its server and removed Chrome profile in primary and tmux runs.
+- Prompt-injection and dirty-worktree temp repos removed.
+- tests/fixtures/python-basic/.codescent removed.
+- Python caches removed after evidence capture.

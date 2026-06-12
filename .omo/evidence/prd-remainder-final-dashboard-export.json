@@ -1,0 +1,1 @@
+{"read_only": true, "format": "json", "routes": ["/api/status", "/api/findings", "/api/progress", "/api/rules", "/api/reports", "/api/exports"]}
