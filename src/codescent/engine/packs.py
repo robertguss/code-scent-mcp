@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from codescent.core.models import ProjectConfig
+from codescent.engine.packs_ts import TS_EXTENSIONS, parse_typescript_file
 from codescent.engine.parsers.python import ParsedPythonFile, parse_python_file
 from codescent.engine.rules.python import scan_python_health
 
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
 
 PYTHON_LANGUAGE_PACK = "python"
 PYTHON_RULE_PACK = "python-maintainability"
+TYPESCRIPT_LANGUAGE_PACK = "typescript"
 
 
 class ParseFile(Protocol):
@@ -65,14 +67,30 @@ def build_pack_registry(config: ProjectConfig | None = None) -> PackRegistry:
 
 
 def _language_packs(enabled: tuple[str, ...]) -> tuple[LanguagePack, ...]:
+    packs: list[LanguagePack] = []
     if PYTHON_LANGUAGE_PACK not in enabled:
-        return ()
-    return (
+        return _typescript_language_packs(enabled)
+    packs.append(
         LanguagePack(
             name=PYTHON_LANGUAGE_PACK,
             languages=("python",),
             suffixes=(".py", ".pyi"),
             parse_file=parse_python_file,
+        ),
+    )
+    packs.extend(_typescript_language_packs(enabled))
+    return tuple(packs)
+
+
+def _typescript_language_packs(enabled: tuple[str, ...]) -> tuple[LanguagePack, ...]:
+    if TYPESCRIPT_LANGUAGE_PACK not in enabled:
+        return ()
+    return (
+        LanguagePack(
+            name=TYPESCRIPT_LANGUAGE_PACK,
+            languages=("javascript", "typescript"),
+            suffixes=TS_EXTENSIONS,
+            parse_file=parse_typescript_file,
         ),
     )
 

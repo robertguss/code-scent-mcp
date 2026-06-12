@@ -1,0 +1,68 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "parser pack indexing is a bounded synchronous CLI operation in this task"
+  },
+  "dirty_worktree": {
+    "cmd": "uv run codescent index --repo /var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/codescent-task24-dirty-1t881r12/repo --json",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": "{\"indexed_files\": 8, \"changed_files\": [\"components/task-list.tsx\"], \"git_available\": true, \"git_status\": \"dirty\"}\n"
+  },
+  "flaky_tests": {
+    "cmd": "uv run pytest tests/integration/test_ts_react_next_parser.py::test_ts_pack_indexes_symbols_imports_components_hooks_and_routes -q",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": ".                                                                        [100%]\n1 passed in 0.05s\n"
+  },
+  "hung_or_long_commands": {
+    "cmd": "timeout 10 uv run codescent index --repo /Users/robertguss/Projects/startups/code-scent-mcp/tests/fixtures/ts-react-next-basic --json",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": "{\"indexed_files\": 8, \"changed_files\": [], \"git_available\": false, \"git_status\": \"not_git\"}\n"
+  },
+  "malformed_input": {
+    "cmd": "uv run codescent index --repo /var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/codescent-missing-repo-task24 --json",
+    "passed": true,
+    "returncode": 1,
+    "stderr_excerpt": "",
+    "stdout_excerpt": "{\"code\": \"invalid_repo_root\", \"message\": \"Repository root must be an existing directory.\", \"severity\": \"error\", \"details\": {\"root\": \"/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/codescent-missing-repo-task24\"}}\n"
+  },
+  "misleading_success_output": {
+    "graph_counts": {
+      "kinds": [
+        "component",
+        "function",
+        "hook",
+        "route"
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "references": 32,
+      "symbols": 7
+    },
+    "manual_excerpt": "{\"indexed_files\": 8, \"changed_files\": [\"app/api/tasks/route.ts\", \"app/tasks/page\n.tsx\", \"components/task-card.jsx\", \"components/task-list.tsx\", \"hooks/useTasks.t\ns\", \"lib/tasks.js\", \"pages/legacy.jsx\", \"tests/task-list.test.tsx\"], \"git_availa\nble\": false, \"git_status\": \"not_git\"}\nEXIT:0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "passed": true
+  },
+  "ok": true,
+  "prompt_injection": {
+    "passed": true,
+    "returncode": 0,
+    "source_hashes_unchanged": true
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "no checkpointed or interrupt-resumable parser workflow exists"
+  },
+  "stale_state": {
+    "first_returncode": 0,
+    "passed": true,
+    "second_returncode": 0,
+    "source_hashes_unchanged": true
+  }
+}

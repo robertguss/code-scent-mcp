@@ -352,7 +352,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-23 'cd /Users/robertguss/Projects/startups/code-scent-mcp && find tests/fixtures/ts-react-next-basic -type f | sort'`; PASS if fixture includes JS/JSX/TS/TSX, app/pages routes, and tests. Evidence `.omo/evidence/prd-remainder-task-23-ts-fixture.txt`.
   Commit: Y | `test(fixtures): add ts react next fixture` | Files `tests/fixtures/ts-react-next-basic/**`, `tests/fixtures/test_ts_react_next_fixture.py`, `docs/architecture.md`
 
-- [ ] 24. Add TypeScript/JavaScript parser pack
+- [x] 24. Add TypeScript/JavaScript parser pack
   What to do / Must NOT do: Implement parser pack for `.js`, `.jsx`, `.ts`, `.tsx`: symbols, imports/exports, functions/classes, React components/hooks, Next routes with confidence labels. Do not support arbitrary transpilation or typechecking.
   Parallelization: Can parallel Y | Wave 7 | Blocks TS rules
   References: `docs/prd.md:1099`, `docs/prd.md:1101`, `docs/prd.md:1102`, `docs/prd.md:1103`

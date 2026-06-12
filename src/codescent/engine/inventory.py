@@ -39,8 +39,12 @@ DEFAULT_EXCLUDED_FILENAMES = frozenset(
 )
 MINIFIED_SUFFIXES = (".min.js", ".min.css")
 LANGUAGE_BY_SUFFIX = {
+    ".js": "javascript",
+    ".jsx": "javascript",
     ".py": "python",
     ".pyi": "python",
+    ".ts": "typescript",
+    ".tsx": "typescript",
 }
 
 

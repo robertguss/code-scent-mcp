@@ -83,7 +83,7 @@ class ProjectConfig(BaseModel):
     generated: tuple[str, ...] = ()
     vendor: tuple[str, ...] = ()
     build: tuple[str, ...] = ()
-    language_packs: tuple[str, ...] = ("python",)
+    language_packs: tuple[str, ...] = ("python", "typescript")
     framework_packs: tuple[str, ...] = ()
     rule_packs: tuple[str, ...] = ("python-maintainability",)
     commands: CommandHints = Field(default_factory=CommandHints)

@@ -1,0 +1,11 @@
+Command:
+uv run pytest tests/integration/test_ts_react_next_parser.py::test_ts_pack_indexes_symbols_imports_components_hooks_and_routes -q
+
+Observed before implementation:
+F
+>       assert result.indexed_files == 8
+E       AssertionError: assert 0 == 8
+E        +  where 0 = IndexResult(indexed_files=0, changed_files=(), file_hashes={}, git_available=False, git_status='not_git').indexed_files
+
+Result:
+RED for the intended reason: inventory and the pack registry did not yet index JS/JSX/TS/TSX files.

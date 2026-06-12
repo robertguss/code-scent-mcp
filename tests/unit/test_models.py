@@ -120,6 +120,13 @@ def test_project_config_parses_full_prd_surface_with_precedence() -> None:
     assert merged.commands.test == ("pytest tests/test_config.py",)
 
 
+def test_project_config_defaults_enable_python_and_typescript_packs() -> None:
+    config = ProjectConfig()
+
+    assert config.language_packs == ("python", "typescript")
+    assert config.rule_packs == ("python-maintainability",)
+
+
 def test_core_model_inventory_is_available() -> None:
     required_models = [
         RepoConfig,

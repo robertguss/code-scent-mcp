@@ -44,12 +44,15 @@ def test_python_pack_registers_parser_rules_and_context_without_behavior_regress
 
     registry = build_pack_registry(ProjectConfig())
 
-    assert tuple(pack.name for pack in registry.language_packs) == ("python",)
+    assert tuple(pack.name for pack in registry.language_packs) == (
+        "python",
+        "typescript",
+    )
     assert tuple(pack.name for pack in registry.rule_packs) == (
         "python-maintainability",
     )
     assert registry.parser_for_language("python") is not None
-    assert registry.parser_for_language("typescript") is None
+    assert registry.parser_for_language("typescript") is not None
 
     index_result = RepoIndexService(repo).index_repo()
     scan_result = CodeHealthService(repo).scan()
