@@ -1,0 +1,11 @@
+Task 15 receipt: MCP docs and docs tests cover the retrieval workflow and deferred
+generic command-output shaping. Existing eval docs did not require runtime
+changes for this MCP-only slice.
+
+Primary evidence:
+- .omo/evidence/task-17-headroom-full-verification.txt
+
+Verified by:
+- uv run pytest tests/docs/test_docs.py -q
+- uv run pytest
+

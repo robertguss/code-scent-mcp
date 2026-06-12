@@ -46,6 +46,8 @@ by the service and contract tests.
 - `get_regressions`
 - `review_diff_risk`
 - `get_changed_file_health`
+- `retrieve_result`
+- `context_stats`
 
 ## Locked Post-MVP MCP Tools
 
@@ -85,7 +87,27 @@ Search and context tools:
 
 `search_files`, `search_content`, `find_symbol`, `get_file_context`,
 `get_symbol_context`, `find_references`, `find_callers`, `find_callees`,
-`get_related_files`
+`get_related_files`, `retrieve_result`, `context_stats`
+
+First-wave context optimization applies to `find_symbol`, `find_references`,
+`search_content`, and `search_tests`. These tools keep their existing top-level
+result fields and add a summary envelope with:
+
+- `kind`
+- `mode`
+- `summary`
+- `omitted_count`
+- `original_result_id`
+- `retrieval_available`
+- `retrieval_hints`
+- `confidence`
+- `warnings`
+
+The envelope stores the retrievable payload in `.codescent/index.sqlite` under
+an opaque `ctx_<hash>` id. Tools accept optional `session_id`; when omitted,
+CodeScent uses `sess_default`. Stored results expire after 86,400 seconds.
+Use `retrieve_result` with `exact`, `summary`, `filtered`, or `sample` mode to
+inspect the stored payload without rerunning the original search.
 
 Code health and finding lifecycle tools:
 
@@ -149,9 +171,9 @@ events, and telemetry.
 - Group: `search`
 - Purpose: Find bounded content matches by query.
 - Inputs: repository root plus tool-specific arguments such as query, path,
-  symbol, finding id, status, or limit.
+  symbol, finding id, status, limit, or session id.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump; includes a retrievable context optimization envelope.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
 - Example shape: `{"tool": "search_content", "ok": true, "data": {...}}`
@@ -161,9 +183,9 @@ events, and telemetry.
 - Group: `context`
 - Purpose: Find indexed symbols by name.
 - Inputs: repository root plus tool-specific arguments such as query, path,
-  symbol, finding id, status, or limit.
+  symbol, finding id, status, limit, or session id.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump; includes a retrievable context optimization envelope.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
 - Example shape: `{"tool": "find_symbol", "ok": true, "data": {...}}`
@@ -493,6 +515,31 @@ events, and telemetry.
 - Example shape:
   `{"tool": "get_changed_file_health", "ok": true, "data": {...}}`
 
+### `retrieve_result`
+
+- Group: `context`
+- Purpose: Retrieve a previously summarized local result by opaque result id.
+- Inputs: repository root, result id, mode, optional query/file/symbol filters,
+  session id, and limit.
+- Outputs: JSON-compatible structured payload with bounded retrieved data or a
+  clear structured not-found response.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network.
+- Example shape: `{"tool": "retrieve_result", "ok": false, "data": {...}}`
+
+### `context_stats`
+
+- Group: `context`
+- Purpose: Return local context savings and retrieval statistics.
+- Inputs: repository root plus optional session id.
+- Outputs: JSON-compatible structured payload with local counters and no source
+  content. Counters include tool calls, summarized results, retrievals,
+  estimated raw tokens, estimated returned tokens, estimated tokens avoided,
+  largest summarized result ids, and most used tools.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network.
+- Example shape: `{"tool": "context_stats", "ok": true, "data": {...}}`
+
 ## Reference Pattern
 
 Each registered tool follows this reference contract:
@@ -508,7 +555,8 @@ Repository tools report repo map and status. Search and context tools return
 bounded matches, source ranges, graph relationships, and related files. Code
 health tools scan, report, prioritize, mark, and rescan findings. Planning tools
 return finding context, refactor plans, impact, and recommended verification.
-Risk tools summarize changed-file health and diff risk.
+Risk tools summarize changed-file health and diff risk. Context optimization
+tools expose local retrieval and stats without editing analyzed source.
 
 Future tools and commands remain unregistered until their stage passes contract
 tests, real-surface QA, source-read-only proof, and the required evidence

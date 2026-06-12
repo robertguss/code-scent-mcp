@@ -1,0 +1,9 @@
+COMMAND: uv run pytest tests/contract/test_mcp_search_tools.py tests/contract/test_mcp_context_tools.py -q
+.......                                                                  [100%]
+7 passed in 0.56s
+COMMAND: uv run ruff check [envelope MCP slice]
+All checks passed!
+COMMAND: uv run basedpyright [envelope MCP slice]
+0 errors, 0 warnings, 0 notes
+
+EXIT:0

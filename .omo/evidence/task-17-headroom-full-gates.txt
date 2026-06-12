@@ -1,0 +1,13 @@
+Task 17 receipt: full verification completed.
+
+Primary evidence:
+- .omo/evidence/task-17-headroom-full-verification.txt
+
+Verified gates:
+- uv run pytest: 143 passed
+- uv run ruff check .: passed
+- uv run ruff format --check .: passed
+- uv run basedpyright: passed
+- uv run pytest --cov=src --cov-report=term-missing: 143 passed, TOTAL 93%
+- uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-basic --out .omo/evidence/task-14-headroom-read-only.json: ok true
+

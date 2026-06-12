@@ -100,7 +100,7 @@ uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-bas
 - `.venv/`, `.omo/`, caches, `.codescent/`, generated/vendor/build outputs, and
   fixture runtime state can dominate search results; exclude them deliberately.
 - `codescent reset` is intentionally gated behind `--dry-run` or `--yes`.
-- `docs/prd.md`, `docs/architecture.md`, and `docs/mcp-tools.md` outrank older
+- `docs/prd/**`, `docs/architecture.md`, and `docs/mcp-tools.md` outrank older
   chat context for product behavior.
 - The TypeScript/React/Next tree under `tests/fixtures/ts-react-next-basic` is a
   fixture inside a Python repo, not a top-level frontend app.

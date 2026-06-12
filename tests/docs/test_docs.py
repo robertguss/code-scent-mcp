@@ -104,7 +104,7 @@ def test_no_docs_or_runbooks_use_unsupported_serve_repo_option() -> None:
 def test_original_docs_name_python_first_supersession() -> None:
     combined = "\n".join(
         (
-            Path("docs/prd.md").read_text(),
+            Path("docs/prd/prd.md").read_text(),
             Path("docs/architecture.md").read_text(),
         ),
     ).lower()

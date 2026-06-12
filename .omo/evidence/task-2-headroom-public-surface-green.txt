@@ -1,0 +1,36 @@
+Todo 2 / public surface green evidence
+
+RED command:
+
+uv run pytest tests/contract/test_mcp_tool_surface.py::test_exact_mvp_tool_names tests/contract/test_public_surface_registry.py::test_post_mvp_surface_tracks_registered_and_locked_tools tests/contract/test_public_surface_registry.py::test_context_optimization_tools_are_registered_context_surface -q
+
+RED result:
+
+2 failed, 1 passed. Failures were missing retrieve_result and context_stats in
+the FastMCP runtime tool list and public-surface registry.
+
+GREEN commands:
+
+uv run pytest tests/contract/test_mcp_tool_surface.py::test_exact_mvp_tool_names tests/contract/test_public_surface_registry.py::test_post_mvp_surface_tracks_registered_and_locked_tools tests/contract/test_public_surface_registry.py::test_context_optimization_tools_are_registered_context_surface -q
+
+Result: 3 passed.
+
+uv run pytest tests/contract/test_mcp_tool_surface.py tests/contract/test_public_surface_registry.py tests/docs/test_docs.py -q
+
+Result: 18 passed.
+
+uv run ruff check src/codescent/mcp/context_optimization_tools.py src/codescent/mcp/server.py src/codescent/core/public_surface.py tests/contract/test_mcp_tool_surface.py tests/contract/test_public_surface_registry.py tests/docs/test_docs.py
+
+Result: All checks passed.
+
+uv run basedpyright src/codescent/mcp/context_optimization_tools.py src/codescent/mcp/server.py src/codescent/core/public_surface.py tests/contract/test_mcp_tool_surface.py tests/contract/test_public_surface_registry.py tests/docs/test_docs.py
+
+Result: 0 errors, 0 warnings, 0 notes.
+
+tmux QA:
+
+.omo/evidence/task-2-headroom-public-surface.txt contains the transcript for:
+
+uv run pytest tests/contract/test_mcp_tool_surface.py::test_exact_mvp_tool_names -q
+
+Result: 1 passed, EXIT:0.

@@ -1,0 +1,17 @@
+Command:
+
+uv run pytest tests/contract/test_mcp_tool_surface.py::test_exact_mvp_tool_names tests/contract/test_public_surface_registry.py::test_post_mvp_surface_tracks_registered_and_locked_tools tests/contract/test_public_surface_registry.py::test_context_optimization_tools_are_registered_context_surface -q
+
+Result:
+
+2 failed, 1 passed
+
+Expected RED failures:
+
+- test_exact_mvp_tool_names fails because runtime MCP tools do not include
+  retrieve_result or context_stats yet.
+- test_context_optimization_tools_are_registered_context_surface fails because
+  PUBLIC_SURFACE registered context tools do not include retrieve_result or
+  context_stats yet.
+
+This is the intended RED state for Todo 2 before public-surface implementation.

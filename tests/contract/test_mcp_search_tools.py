@@ -26,6 +26,10 @@ class SearchToolPayload(BaseModel):
     limit: int = Field(ge=1, le=20)
     next_cursor: str | None = None
     results: tuple[ToolSearchResult, ...]
+    kind: str | None = None
+    mode: str | None = None
+    original_result_id: str | None = None
+    retrieval_available: bool | None = None
 
 
 class MultiSearchToolPayload(BaseModel):
@@ -85,6 +89,8 @@ class LikelyTestSearchToolPayload(BaseModel):
     finding_id: str | None
     limit: int = Field(ge=1, le=20)
     results: tuple[LikelyTestSearchResult, ...]
+    kind: str | None = None
+    original_result_id: str | None = None
 
 
 @pytest.mark.anyio
@@ -129,6 +135,11 @@ async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     assert content_payload.results[0].path == "src/app.py"
     assert "content_match" in content_payload.results[0].reasons
     assert content_payload.results[0].snippet == "# TODO: handle billing"
+    assert content_payload.kind == "search_content"
+    assert content_payload.mode == "summary"
+    assert content_payload.original_result_id is not None
+    assert content_payload.original_result_id.startswith("ctx_")
+    assert content_payload.retrieval_available is True
 
 
 @pytest.mark.anyio
@@ -264,6 +275,9 @@ def test_route_workflow() -> None:
     assert test_payload.results[0].path == "tests/test_workflow.py"
     assert "likely_test" in test_payload.results[0].reasons
     assert "symbol_match" in test_payload.results[0].reasons
+    assert test_payload.kind == "search_tests"
+    assert test_payload.original_result_id is not None
+    assert test_payload.original_result_id.startswith("ctx_")
 
 
 def _text_content(content: list[ContentBlock]) -> str:

@@ -1,0 +1,12 @@
+Task 5 receipt: RED/GREEN integration coverage for session events and
+context_stats aggregation without source content.
+
+Primary evidence:
+- .omo/evidence/task-3-5-headroom-storage-service-red.txt
+- .omo/evidence/task-3-9-headroom-storage-service-green.txt
+- .omo/evidence/task-17-headroom-full-verification.txt
+
+Verified by:
+- uv run pytest tests/integration/test_context_stats.py -q
+- uv run pytest
+

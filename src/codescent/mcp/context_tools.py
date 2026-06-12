@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, TypedDict
+from typing import TYPE_CHECKING, Final, Literal, NotRequired, TypedDict
 
+from codescent.mcp.envelopes import envelope_for_graph_results, envelope_for_symbols
 from codescent.services.context import (
     ContextService,
     GraphResultPayload,
@@ -28,10 +29,24 @@ class FileContextToolPayload(TypedDict):
     next_tools: tuple[str, ...]
 
 
+class RetrievalHintPayload(TypedDict):
+    mode: Literal["exact", "summary", "filtered", "sample"]
+    description: str
+
+
 class FindSymbolToolPayload(TypedDict):
     ok: bool
     query: str
     results: tuple[SymbolMatchPayload, ...]
+    kind: NotRequired[str]
+    mode: NotRequired[str]
+    summary: NotRequired[str]
+    omitted_count: NotRequired[int]
+    original_result_id: NotRequired[str | None]
+    retrieval_available: NotRequired[bool]
+    retrieval_hints: NotRequired[tuple[RetrievalHintPayload, ...]]
+    confidence: NotRequired[str]
+    warnings: NotRequired[tuple[str, ...]]
 
 
 class SymbolContextToolPayload(TypedDict):
@@ -47,6 +62,15 @@ class GraphToolPayload(TypedDict):
     query: str
     results: tuple[GraphResultPayload, ...]
     next_cursor: int | None
+    kind: NotRequired[str]
+    mode: NotRequired[str]
+    summary: NotRequired[str]
+    omitted_count: NotRequired[int]
+    original_result_id: NotRequired[str | None]
+    retrieval_available: NotRequired[bool]
+    retrieval_hints: NotRequired[tuple[RetrievalHintPayload, ...]]
+    confidence: NotRequired[str]
+    warnings: NotRequired[tuple[str, ...]]
 
 
 class RelatedFilesToolPayload(TypedDict):
@@ -127,11 +151,23 @@ def find_symbol(
     query: str,
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
+    session_id: str | None = None,
 ) -> FindSymbolToolPayload:
+    results = ContextService(repo).find_symbol(query, limit=limit)
+    envelope = envelope_for_symbols(
+        {
+            "tool_name": "find_symbol",
+            "repo": repo,
+            "session_id": session_id,
+            "query": query,
+        },
+        results,
+    )
     return {
         "ok": True,
         "query": query,
-        "results": ContextService(repo).find_symbol(query, limit=limit),
+        "results": results,
+        **envelope,
     }
 
 
@@ -154,17 +190,28 @@ def find_references(
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: int = 0,
+    session_id: str | None = None,
 ) -> GraphToolPayload:
     payload = ContextService(repo).find_references(
         query,
         limit=limit,
         cursor=cursor,
     )
+    envelope = envelope_for_graph_results(
+        {
+            "tool_name": "find_references",
+            "repo": repo,
+            "session_id": session_id,
+            "query": query,
+        },
+        payload["results"],
+    )
     return {
         "ok": True,
         "query": payload["query"],
         "results": payload["results"],
         "next_cursor": payload["next_cursor"],
+        **envelope,
     }
 
 

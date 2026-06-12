@@ -1,0 +1,11 @@
+Task 6 receipt: schema version 5, stored_results/session_events persistence,
+expiry cleanup, and retrieval-count persistence.
+
+Primary evidence:
+- .omo/evidence/task-3-9-headroom-storage-service-green.txt
+- .omo/evidence/task-17-headroom-full-verification.txt
+
+Verified by:
+- uv run pytest tests/integration/test_storage_migrations.py tests/integration/test_context_results.py -q
+- uv run pytest
+

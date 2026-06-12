@@ -1,0 +1,85 @@
+{
+    "changed_source_paths": [],
+    "ok": true,
+    "result_id": "ctx_641af6c583b20f33",
+    "retrieve": {
+        "file": null,
+        "limit": 5,
+        "mode": "filtered",
+        "ok": true,
+        "payload": {
+            "items": [
+                {
+                    "path": "src/acme_tasks/config.py",
+                    "score": 125.0,
+                    "snippet": "# TODO: split staging and local credentials."
+                }
+            ]
+        },
+        "query": "TODO",
+        "repo": "tests/fixtures/python-basic",
+        "result_id": "ctx_641af6c583b20f33",
+        "session_id": "sess_headroom_smoke",
+        "symbol": null,
+        "warnings": []
+    },
+    "search": {
+        "confidence": "high",
+        "kind": "search_content",
+        "limit": 1,
+        "mode": "summary",
+        "next_cursor": "1",
+        "ok": true,
+        "omitted_count": 0,
+        "original_result_id": "ctx_641af6c583b20f33",
+        "query": "TODO",
+        "results": [
+            {
+                "path": "src/acme_tasks/config.py",
+                "reasons": [
+                    "content_match",
+                    "changed_file"
+                ],
+                "score": 125.0,
+                "snippet": "# TODO: split staging and local credentials."
+            }
+        ],
+        "retrieval_available": true,
+        "retrieval_hints": [
+            {
+                "description": "return the full stored payload",
+                "mode": "exact"
+            },
+            {
+                "description": "filter by file or symbol",
+                "mode": "filtered"
+            },
+            {
+                "description": "return a bounded sample",
+                "mode": "sample"
+            }
+        ],
+        "summary": "1 items; showing 1. Retrieve ctx_641af6c583b20f33 for full result.",
+        "warnings": []
+    },
+    "session_id": "sess_headroom_smoke",
+    "source_hashes_unchanged": true,
+    "stats": {
+        "estimated_raw_tokens": 29,
+        "estimated_returned_tokens": 7,
+        "estimated_tokens_avoided": 22,
+        "largest_summarized_results": [
+            "ctx_641af6c583b20f33"
+        ],
+        "most_used_tools": [
+            "search_content"
+        ],
+        "ok": true,
+        "repo": "tests/fixtures/python-basic",
+        "retrievals": 1,
+        "session_id": "sess_headroom_smoke",
+        "summarized_results": 1,
+        "tool_calls": 1,
+        "warnings": []
+    }
+}

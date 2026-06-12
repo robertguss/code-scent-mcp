@@ -1,5 +1,8 @@
 from fastmcp import FastMCP
 
+from codescent.mcp.context_optimization_tools import (
+    register_context_optimization_tools,
+)
 from codescent.mcp.context_tools import register_context_tools
 from codescent.mcp.finding_tools import register_finding_tools
 from codescent.mcp.planning_tools import register_planning_tools
@@ -12,6 +15,7 @@ mcp = FastMCP(name="CodeScent")
 register_repo_tools(mcp)
 register_search_tools(mcp)
 register_context_tools(mcp)
+register_context_optimization_tools(mcp)
 register_finding_tools(mcp)
 register_planning_tools(mcp)
 register_risk_tools(mcp)

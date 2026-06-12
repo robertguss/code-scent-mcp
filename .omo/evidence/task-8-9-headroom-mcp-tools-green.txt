@@ -1,0 +1,9 @@
+COMMAND: uv run pytest tests/contract/test_mcp_context_optimization_tools.py -q
+..                                                                       [100%]
+2 passed in 0.47s
+COMMAND: uv run ruff check src/codescent/mcp/context_optimization_tools.py tests/contract/test_mcp_context_optimization_tools.py
+All checks passed!
+COMMAND: uv run basedpyright src/codescent/mcp/context_optimization_tools.py tests/contract/test_mcp_context_optimization_tools.py
+0 errors, 0 warnings, 0 notes
+
+EXIT:0

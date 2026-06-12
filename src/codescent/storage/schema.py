@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Final
 
-SCHEMA_VERSION: Final = 4
+SCHEMA_VERSION: Final = 5
 
 BASE_TABLE_STATEMENTS: Final[tuple[str, ...]] = (
     "create table if not exists schema_version (version integer not null)",
@@ -175,6 +175,47 @@ MIGRATION_STATEMENTS: Final[dict[int, tuple[str, ...]]] = {
             confidence real not null,
             created_at text not null
         )
+        """,
+    ),
+    5: (
+        """
+        create table if not exists stored_results (
+            id text primary key,
+            tool_name text not null,
+            session_id text not null,
+            query text,
+            raw_payload_json text not null,
+            returned_payload_json text not null,
+            raw_token_estimate integer not null,
+            returned_token_estimate integer not null,
+            created_at text not null,
+            expires_at text not null,
+            retrieval_count integer not null default 0
+        )
+        """,
+        """
+        create index if not exists idx_stored_results_session
+        on stored_results (session_id, created_at)
+        """,
+        """
+        create index if not exists idx_stored_results_expiry
+        on stored_results (expires_at)
+        """,
+        """
+        create table if not exists session_events (
+            id integer primary key,
+            session_id text not null,
+            tool_name text not null,
+            event_type text not null,
+            result_id text references stored_results(id) on delete set null,
+            raw_token_estimate integer not null default 0,
+            returned_token_estimate integer not null default 0,
+            created_at text not null
+        )
+        """,
+        """
+        create index if not exists idx_session_events_session
+        on session_events (session_id, created_at)
         """,
     ),
 }

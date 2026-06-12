@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "receipt": "search_tests emits bounded test-surface results with envelope metadata; generic command-output shaping remains deferred",
+  "primary_evidence": [
+    ".omo/evidence/task-11-13-headroom-first-wave-envelopes-green.txt",
+    ".omo/evidence/task-17-headroom-full-verification.txt"
+  ],
+  "verified_by": [
+    "uv run pytest tests/contract/test_mcp_search_tools.py tests/integration/test_search.py -q"
+  ]
+}
+

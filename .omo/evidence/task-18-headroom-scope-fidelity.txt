@@ -1,0 +1,13 @@
+tests/docs/test_docs.py:190:        "project_guidance",
+tests/docs/test_docs.py:191:        "project_learnings",
+tests/contract/test_public_surface_registry.py:57:    assert "project_learnings" not in registered_context_tools
+tests/contract/test_public_surface_registry.py:58:    assert "project_guidance" not in registered_context_tools
+tests/contract/test_public_surface_registry.py:59:    assert "compress_generic_output" not in registered_context_tools
+tests/contract/test_public_surface_registry.py:60:    assert "retrieve_original_output" not in registered_context_tools
+tests/contract/test_mcp_tool_surface.py:98:    assert "project_learnings" not in tool_names
+tests/contract/test_mcp_tool_surface.py:99:    assert "project_guidance" not in tool_names
+tests/contract/test_mcp_tool_surface.py:100:    assert "compress_generic_output" not in tool_names
+tests/contract/test_mcp_tool_surface.py:101:    assert "retrieve_original_output" not in tool_names
+
+EXIT:0
+Scope classification: matches are negative contract/doc assertions that forbidden future tools are absent. No implementation registration or docs support was found in src/ or docs/mcp-tools.md.

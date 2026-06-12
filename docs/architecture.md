@@ -139,6 +139,8 @@ It exposes tools such as:
 - `search_files`
 - `search_content`
 - `find_symbol`
+- `find_references`
+- `search_tests`
 - `get_file_context`
 - `get_symbol_context`
 - `scan_code_health`
@@ -149,6 +151,14 @@ It exposes tools such as:
 - `suggest_tests`
 - `mark_finding`
 - `rescan`
+
+`find_symbol`, `find_references`, `search_content`, and `search_tests` also
+emit a context optimization envelope. The existing top-level payload remains
+available for compatibility, while `.codescent/index.sqlite` stores the
+retrievable payload under an opaque `ctx_<hash>` id. `retrieve_result` returns
+the stored payload in `exact`, `summary`, `filtered`, or `sample` modes, and
+`context_stats` reports local savings and retrieval counters by optional
+session id.
 
 ### 5.2 CLI
 

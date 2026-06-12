@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "receipt": "retrieve_result and context_stats are registered, documented, and contract-tested",
+  "primary_evidence": [
+    ".omo/evidence/task-2-headroom-public-surface-green.txt",
+    ".omo/evidence/task-17-headroom-full-verification.txt"
+  ],
+  "verified_by": [
+    "uv run pytest tests/contract/test_public_surface_registry.py tests/contract/test_mcp_tool_surface.py tests/docs/test_docs.py -q"
+  ]
+}
+

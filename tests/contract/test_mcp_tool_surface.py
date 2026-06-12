@@ -40,6 +40,8 @@ MVP_TOOL_NAMES = {
     "rescan",
     "review_diff_risk",
     "get_changed_file_health",
+    "retrieve_result",
+    "context_stats",
 }
 
 
@@ -89,8 +91,14 @@ async def test_no_post_mvp_tools_exposed() -> None:
     assert "get_regressions" in tool_names
     assert "review_diff_risk" in tool_names
     assert "get_changed_file_health" in tool_names
+    assert "retrieve_result" in tool_names
+    assert "context_stats" in tool_names
     assert "report" not in tool_names
     assert "reset" not in tool_names
+    assert "project_learnings" not in tool_names
+    assert "project_guidance" not in tool_names
+    assert "compress_generic_output" not in tool_names
+    assert "retrieve_original_output" not in tool_names
 
 
 @pytest.mark.anyio

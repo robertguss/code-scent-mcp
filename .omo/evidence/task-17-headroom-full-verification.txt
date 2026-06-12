@@ -1,0 +1,202 @@
+COMMAND: uv run pytest
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, anyio-4.13.0
+collected 143 items
+
+tests/contract/test_cli.py ...........                                   [  7%]
+tests/contract/test_mcp_context_optimization_tools.py ..                 [  9%]
+tests/contract/test_mcp_context_tools.py ...                             [ 11%]
+tests/contract/test_mcp_finding_tools.py ...                             [ 13%]
+tests/contract/test_mcp_planning_tools.py ...                            [ 15%]
+tests/contract/test_mcp_prompt_resources.py .                            [ 16%]
+tests/contract/test_mcp_repo_tools.py ..                                 [ 17%]
+tests/contract/test_mcp_search_tools.py ....                             [ 20%]
+tests/contract/test_mcp_tool_surface.py ...                              [ 22%]
+tests/contract/test_public_surface_registry.py ....                      [ 25%]
+tests/docs/test_docs.py ...........                                      [ 32%]
+tests/evals/test_agent_eval_spec.py .                                    [ 33%]
+tests/evals/test_deterministic_eval.py .......                           [ 38%]
+tests/fixtures/test_python_basic_fixture.py .                            [ 39%]
+tests/fixtures/test_ts_react_next_fixture.py .                           [ 39%]
+tests/integration/test_context.py ....                                   [ 42%]
+tests/integration/test_context_results.py ....                           [ 45%]
+tests/integration/test_context_stats.py ..                               [ 46%]
+tests/integration/test_dashboard.py ......                               [ 51%]
+tests/integration/test_findings.py ......                                [ 55%]
+tests/integration/test_packs.py .                                        [ 55%]
+tests/integration/test_refactor_planning.py ...                          [ 58%]
+tests/integration/test_repo_index.py .......                             [ 62%]
+tests/integration/test_reports.py .                                      [ 63%]
+tests/integration/test_scan_code_health.py .                             [ 64%]
+tests/integration/test_search.py ......                                  [ 68%]
+tests/integration/test_storage.py ....                                   [ 71%]
+tests/integration/test_storage_concurrency.py .                          [ 72%]
+tests/integration/test_storage_migrations.py .                           [ 72%]
+tests/integration/test_subjective_review.py .                            [ 73%]
+tests/integration/test_ts_react_next_parser.py .                         [ 74%]
+tests/integration/test_ts_react_next_rules.py .                          [ 74%]
+tests/security/test_runtime_safety.py .......                            [ 79%]
+tests/smoke/test_lx_data_lake_smoke_config.py .                          [ 80%]
+tests/smoke/test_smoke_mcp_search.py .                                   [ 81%]
+tests/test_package_metadata.py ..                                        [ 82%]
+tests/unit/test_context_optimization.py ....                             [ 85%]
+tests/unit/test_errors.py ..                                             [ 86%]
+tests/unit/test_inventory.py ....                                        [ 89%]
+tests/unit/test_models.py ..........                                     [ 96%]
+tests/unit/test_python_parser.py ...                                     [ 98%]
+tests/unit/test_rules_python.py ..                                       [100%]
+
+============================= 143 passed in 12.54s =============================
+COMMAND: uv run ruff check .
+All checks passed!
+COMMAND: uv run ruff format --check .
+139 files already formatted
+COMMAND: uv run basedpyright
+0 errors, 0 warnings, 0 notes
+COMMAND: uv run pytest --cov=src --cov-report=term-missing
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, anyio-4.13.0
+collected 143 items
+
+tests/contract/test_cli.py ...........                                   [  7%]
+tests/contract/test_mcp_context_optimization_tools.py ..                 [  9%]
+tests/contract/test_mcp_context_tools.py ...                             [ 11%]
+tests/contract/test_mcp_finding_tools.py ...                             [ 13%]
+tests/contract/test_mcp_planning_tools.py ...                            [ 15%]
+tests/contract/test_mcp_prompt_resources.py .                            [ 16%]
+tests/contract/test_mcp_repo_tools.py ..                                 [ 17%]
+tests/contract/test_mcp_search_tools.py ....                             [ 20%]
+tests/contract/test_mcp_tool_surface.py ...                              [ 22%]
+tests/contract/test_public_surface_registry.py ....                      [ 25%]
+tests/docs/test_docs.py ...........                                      [ 32%]
+tests/evals/test_agent_eval_spec.py .                                    [ 33%]
+tests/evals/test_deterministic_eval.py .......                           [ 38%]
+tests/fixtures/test_python_basic_fixture.py .                            [ 39%]
+tests/fixtures/test_ts_react_next_fixture.py .                           [ 39%]
+tests/integration/test_context.py ....                                   [ 42%]
+tests/integration/test_context_results.py ....                           [ 45%]
+tests/integration/test_context_stats.py ..                               [ 46%]
+tests/integration/test_dashboard.py ......                               [ 51%]
+tests/integration/test_findings.py ......                                [ 55%]
+tests/integration/test_packs.py .                                        [ 55%]
+tests/integration/test_refactor_planning.py ...                          [ 58%]
+tests/integration/test_repo_index.py .......                             [ 62%]
+tests/integration/test_reports.py .                                      [ 63%]
+tests/integration/test_scan_code_health.py .                             [ 64%]
+tests/integration/test_search.py ......                                  [ 68%]
+tests/integration/test_storage.py ....                                   [ 71%]
+tests/integration/test_storage_concurrency.py .                          [ 72%]
+tests/integration/test_storage_migrations.py .                           [ 72%]
+tests/integration/test_subjective_review.py .                            [ 73%]
+tests/integration/test_ts_react_next_parser.py .                         [ 74%]
+tests/integration/test_ts_react_next_rules.py .                          [ 74%]
+tests/security/test_runtime_safety.py .......                            [ 79%]
+tests/smoke/test_lx_data_lake_smoke_config.py .                          [ 80%]
+tests/smoke/test_smoke_mcp_search.py .                                   [ 81%]
+tests/test_package_metadata.py ..                                        [ 82%]
+tests/unit/test_context_optimization.py ....                             [ 85%]
+tests/unit/test_errors.py ..                                             [ 86%]
+tests/unit/test_inventory.py ....                                        [ 89%]
+tests/unit/test_models.py ..........                                     [ 96%]
+tests/unit/test_python_parser.py ...                                     [ 98%]
+tests/unit/test_rules_python.py ..                                       [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.13.7-final-0 _______________
+
+Name                                                      Stmts   Miss Branch BrPart  Cover   Missing
+-----------------------------------------------------------------------------------------------------
+src/codescent/__init__.py                                     2      0      0      0   100%
+src/codescent/__main__.py                                     3      3      2      0     0%   1-4
+src/codescent/cli/__init__.py                                 2      0      0      0   100%
+src/codescent/cli/admin.py                                   87      7     24      8    86%   19->exit, 60, 75, 93, 116, 147, 154, 161
+src/codescent/cli/main.py                                    73     18     12      5    71%   36-37, 50-51, 55, 68-69, 82, 95-96, 109, 122-123, 150, 161-165
+src/codescent/cli/reporting.py                              108      6     18      6    89%   121-122, 137, 159, 175->exit, 209, 231
+src/codescent/core/__init__.py                                4      0      0      0   100%
+src/codescent/core/errors.py                                 37      0      0      0   100%
+src/codescent/core/models.py                                158      0      2      0   100%
+src/codescent/core/paths.py                                  16      0      2      0   100%
+src/codescent/core/public_surface.py                         34      2      0      0    94%   208, 214
+src/codescent/dashboard/__init__.py                           2      0      0      0   100%
+src/codescent/dashboard/payloads.py                          27      2     10      2    89%   25, 29
+src/codescent/dashboard/server.py                           145     15     24      8    86%   59, 64, 67, 169-170, 172-173, 187-188, 190-191, 195-199, 255-256
+src/codescent/engine/__init__.py                              2      0      0      0   100%
+src/codescent/engine/context/__init__.py                      2      0      0      0   100%
+src/codescent/engine/context/ranges.py                       15      0      0      0   100%
+src/codescent/engine/inventory.py                            62      5     22      4    89%   73, 112, 121, 130, 134
+src/codescent/engine/packs.py                                69      0     18      2    98%   24->exit, 28->exit
+src/codescent/engine/packs_ts.py                             88      3     36      3    95%   137, 148, 167
+src/codescent/engine/parsers/__init__.py                      2      0      0      0   100%
+src/codescent/engine/parsers/python.py                      138      6     12      2    95%   44, 62, 77, 105, 199->201, 244-245
+src/codescent/engine/rules/__init__.py                        2      0      0      0   100%
+src/codescent/engine/rules/model.py                          36      0      0      0   100%
+src/codescent/engine/rules/python.py                         64      2     16      0    98%   160-161
+src/codescent/engine/rules/python_patterns.py                59      3     14      1    95%   68-69, 126
+src/codescent/engine/rules/ts_react_next.py                  78      6     22      2    90%   102, 126, 178-181
+src/codescent/engine/rules/ts_react_next_patterns.py         48      2      8      2    93%   37, 116
+src/codescent/engine/search/__init__.py                       2      0      0      0   100%
+src/codescent/engine/search/ranking.py                       21      1      6      1    93%   30
+src/codescent/evals/__init__.py                               3      0      0      0   100%
+src/codescent/evals/deterministic.py                        115      3     14      4    95%   151->149, 160, 202, 217
+src/codescent/evals/scale.py                                 24      0      2      0   100%
+src/codescent/mcp/__init__.py                                 2      0      0      0   100%
+src/codescent/mcp/context_optimization_tools.py              39      0      0      0   100%
+src/codescent/mcp/context_tools.py                           88      2      0      0    98%   254-259
+src/codescent/mcp/envelopes.py                               29      0      2      1    97%   113->115
+src/codescent/mcp/finding_payloads.py                        82      0      0      0   100%
+src/codescent/mcp/finding_tools.py                           47      7      2      1    84%   112, 129-130, 139-140, 151-152
+src/codescent/mcp/planning_tools.py                          73      0      0      0   100%
+src/codescent/mcp/prompts.py                                 24      5      0      0    79%   56, 68, 80, 91, 103
+src/codescent/mcp/repo_tools.py                              80     12      6      2    84%   126-133, 139-146
+src/codescent/mcp/risk_tools.py                              42      0      0      0   100%
+src/codescent/mcp/search_tools.py                            94      0      0      0   100%
+src/codescent/mcp/server.py                                  24      2      2      1    88%   30, 34
+src/codescent/services/__init__.py                            3      0      0      0   100%
+src/codescent/services/ci.py                                 53      6     12      3    83%   61, 66-67, 73-75
+src/codescent/services/code_health.py                        68      0      6      0   100%
+src/codescent/services/config.py                             64      5     24      2    90%   40, 58, 99-101
+src/codescent/services/context.py                            74      0     14      1    99%   229->222
+src/codescent/services/context_optimization.py               55      0      4      0   100%
+src/codescent/services/context_optimization_models.py        66      0      0      0   100%
+src/codescent/services/context_optimization_payloads.py      97     10     36      7    86%   118-121, 134, 139, 155, 158, 205, 214
+src/codescent/services/context_support.py                   151      7     30      6    93%   157, 175, 189-190, 205, 245, 247
+src/codescent/services/findings.py                           79      2      8      1    97%   83, 148
+src/codescent/services/git.py                                67     13     30      7    79%   25, 44-47, 60, 80-81, 92, 102, 123, 134, 137
+src/codescent/services/refactor_planning.py                 121      6     14      5    92%   154-155, 209, 223, 227, 233
+src/codescent/services/repo_index.py                         68      1     12      1    98%   197
+src/codescent/services/reports.py                            56      1      2      1    97%   114
+src/codescent/services/risk.py                              111      5     20      4    93%   145, 173, 175, 178-179
+src/codescent/services/rules.py                              26      1      2      1    93%   32
+src/codescent/services/search.py                            110      5     32      1    94%   208-212
+src/codescent/services/search_queries.py                    110      4     44      6    94%   51, 82, 122->124, 124->126, 142, 169
+src/codescent/services/search_support.py                    123      7     24      1    95%   78-79, 118-119, 129, 203-204
+src/codescent/services/status.py                             40      1      2      1    95%   77
+src/codescent/services/subjective_review.py                  65      4     10      2    89%   42->exit, 44->exit, 115-118
+src/codescent/services/symbols.py                            19      0      0      0   100%
+src/codescent/services/verification.py                       37      1      2      1    95%   68
+src/codescent/smoke/__init__.py                               1      0      0      0   100%
+src/codescent/smoke/lx_data_lake_contract.py                 13      0      0      0   100%
+src/codescent/storage/__init__.py                             2      0      0      0   100%
+src/codescent/storage/repositories/__init__.py                2      0      0      0   100%
+src/codescent/storage/repositories/context_results.py        16      0      6      0   100%
+src/codescent/storage/repositories/findings.py               51      1      6      1    96%   122
+src/codescent/storage/repository.py                         107      6     14      0    95%   44-45, 82-83, 85-86
+src/codescent/storage/schema.py                              23      1     10      1    94%   250
+-----------------------------------------------------------------------------------------------------
+TOTAL                                                      4030    199    640    108    93%
+============================= 143 passed in 13.85s =============================
+COMMAND: uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-basic --out .omo/evidence/task-14-headroom-read-only.json
+{"ok": true}
+COMMAND: uv run pytest tests/smoke/test_smoke_mcp_search.py tests/security/test_runtime_safety.py -q
+........                                                                 [100%]
+8 passed in 7.43s
+
+EXIT:0

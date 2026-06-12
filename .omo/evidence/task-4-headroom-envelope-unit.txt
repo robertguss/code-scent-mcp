@@ -1,0 +1,12 @@
+Task 4 receipt: RED/GREEN unit coverage for envelope, result IDs, token estimates,
+retrieval hints, filters, and preservation behavior.
+
+Primary evidence:
+- .omo/evidence/task-3-5-headroom-storage-service-red.txt
+- .omo/evidence/task-3-9-headroom-storage-service-green.txt
+- .omo/evidence/task-17-headroom-full-verification.txt
+
+Verified by:
+- uv run pytest tests/unit/test_context_optimization.py -q
+- uv run pytest
+

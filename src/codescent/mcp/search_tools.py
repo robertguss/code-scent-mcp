@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, TypedDict
+from typing import TYPE_CHECKING, Final, Literal, NotRequired, TypedDict
 
+from codescent.mcp.envelopes import (
+    envelope_for_search_results,
+    envelope_for_test_results,
+)
 from codescent.services.search import SearchService
 
 if TYPE_CHECKING:
@@ -15,6 +19,11 @@ class SearchResultPayload(TypedDict):
     score: float
     reasons: tuple[str, ...]
     snippet: str | None
+
+
+class RetrievalHintPayload(TypedDict):
+    mode: Literal["exact", "summary", "filtered", "sample"]
+    description: str
 
 
 class TodoSearchResultPayload(TypedDict):
@@ -39,6 +48,15 @@ class SearchToolPayload(TypedDict):
     limit: int
     next_cursor: str | None
     results: tuple[SearchResultPayload, ...]
+    kind: NotRequired[str]
+    mode: NotRequired[str]
+    summary: NotRequired[str]
+    omitted_count: NotRequired[int]
+    original_result_id: NotRequired[str | None]
+    retrieval_available: NotRequired[bool]
+    retrieval_hints: NotRequired[tuple[RetrievalHintPayload, ...]]
+    confidence: NotRequired[str]
+    warnings: NotRequired[tuple[str, ...]]
 
 
 class MultiSearchToolPayload(TypedDict):
@@ -63,6 +81,15 @@ class TestSearchToolPayload(TypedDict):
     finding_id: str | None
     limit: int
     results: tuple[TestSearchResultPayload, ...]
+    kind: NotRequired[str]
+    mode: NotRequired[str]
+    summary: NotRequired[str]
+    omitted_count: NotRequired[int]
+    original_result_id: NotRequired[str | None]
+    retrieval_available: NotRequired[bool]
+    retrieval_hints: NotRequired[tuple[RetrievalHintPayload, ...]]
+    confidence: NotRequired[str]
+    warnings: NotRequired[tuple[str, ...]]
 
 
 def register_search_tools(mcp: FastMCP) -> None:
@@ -133,6 +160,7 @@ def search_content(
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: str | None = None,
+    session_id: str | None = None,
 ) -> SearchToolPayload:
     page = SearchService(repo).search_content_page(
         query,
@@ -140,12 +168,22 @@ def search_content(
         cursor=cursor,
         line_budget=1,
     )
+    envelope = envelope_for_search_results(
+        {
+            "tool_name": "search_content",
+            "repo": repo,
+            "session_id": session_id,
+            "query": query,
+        },
+        page["results"],
+    )
     return {
         "ok": True,
         "query": query,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "next_cursor": page["next_cursor"],
         "results": page["results"],
+        **envelope,
     }
 
 
@@ -203,6 +241,7 @@ def search_tests(  # noqa: PLR0913 - MCP tool exposes distinct target inputs.
     symbol: str | None = None,
     finding_id: str | None = None,
     limit: int = SAMPLE_FILE_LIMIT,
+    session_id: str | None = None,
 ) -> TestSearchToolPayload:
     results = SearchService(repo).search_tests(
         query,
@@ -210,6 +249,15 @@ def search_tests(  # noqa: PLR0913 - MCP tool exposes distinct target inputs.
         symbol=symbol,
         finding_id=finding_id,
         limit=limit,
+    )
+    envelope = envelope_for_test_results(
+        {
+            "tool_name": "search_tests",
+            "repo": repo,
+            "session_id": session_id,
+            "query": query,
+        },
+        results,
     )
     return {
         "ok": True,
@@ -219,4 +267,5 @@ def search_tests(  # noqa: PLR0913 - MCP tool exposes distinct target inputs.
         "finding_id": finding_id,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "results": results,
+        **envelope,
     }

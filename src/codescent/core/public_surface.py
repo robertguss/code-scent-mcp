@@ -88,6 +88,8 @@ POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "get_regressions",
         "review_diff_risk",
         "get_changed_file_health",
+        "retrieve_result",
+        "context_stats",
     },
 )
 
@@ -110,6 +112,8 @@ REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "verify_change",
         "review_diff_risk",
         "get_changed_file_health",
+        "retrieve_result",
+        "context_stats",
     },
 )
 
@@ -166,6 +170,8 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _registered_post_mvp_entry("find_callers", "context"),
         _registered_post_mvp_entry("find_callees", "context"),
         _registered_post_mvp_entry("get_related_files", "context"),
+        _registered_post_mvp_entry("retrieve_result", "context"),
+        _registered_post_mvp_entry("context_stats", "context"),
         _registered_post_mvp_entry("get_impact", "planning"),
         _registered_post_mvp_entry("get_finding", "health"),
         _registered_post_mvp_entry("explain_score", "health"),

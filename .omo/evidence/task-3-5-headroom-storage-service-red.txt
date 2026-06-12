@@ -1,0 +1,40 @@
+
+==================================== ERRORS ====================================
+__________ ERROR collecting tests/integration/test_context_results.py __________
+ImportError while importing test module '/Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_context_results.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_context_results.py:3: in <module>
+    from codescent.services.context_optimization import (
+E   ModuleNotFoundError: No module named 'codescent.services.context_optimization'
+___________ ERROR collecting tests/unit/test_context_optimization.py ___________
+ImportError while importing test module '/Users/robertguss/Projects/startups/code-scent-mcp/tests/unit/test_context_optimization.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_context_optimization.py:1: in <module>
+    from codescent.services.context_optimization import (
+E   ModuleNotFoundError: No module named 'codescent.services.context_optimization'
+___________ ERROR collecting tests/integration/test_context_stats.py ___________
+ImportError while importing test module '/Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_context_stats.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../../.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_context_stats.py:3: in <module>
+    from codescent.services.context_optimization import ContextOptimizationService
+E   ModuleNotFoundError: No module named 'codescent.services.context_optimization'
+=========================== short test summary info ============================
+ERROR tests/integration/test_context_results.py
+ERROR tests/unit/test_context_optimization.py
+ERROR tests/integration/test_context_stats.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+3 errors in 0.10s
+
+EXIT:2

@@ -39,6 +39,27 @@ def test_post_mvp_surface_tracks_registered_and_locked_tools() -> None:
     assert registered_mvp.isdisjoint(declared_post_mvp)
 
 
+def test_context_optimization_tools_are_registered_context_surface() -> None:
+    # Given: Headroom-inspired retrieval and stats are public MCP context tools.
+    expected_context_tools = {"retrieve_result", "context_stats"}
+
+    # When: the public surface registry is inspected.
+    registered_context_tools = {
+        entry.name
+        for entry in PUBLIC_SURFACE.mcp_tools
+        if entry.stage is SurfaceStage.POST_MVP
+        and entry.registered
+        and entry.group == "context"
+    }
+
+    # Then: the new tools register without later guidance/compression tools.
+    assert expected_context_tools <= registered_context_tools
+    assert "project_learnings" not in registered_context_tools
+    assert "project_guidance" not in registered_context_tools
+    assert "compress_generic_output" not in registered_context_tools
+    assert "retrieve_original_output" not in registered_context_tools
+
+
 def test_post_mvp_cli_commands_are_declared_but_locked() -> None:
     # Given: current CLI commands remain MVP-only at runtime.
     runtime_commands = {

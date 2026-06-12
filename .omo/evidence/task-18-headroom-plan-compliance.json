@@ -1,0 +1,33 @@
+{
+  "details": {
+    "tool_surface": {
+      "missing": [],
+      "ok": true,
+      "post_mvp_cli_declared": [
+        "ci",
+        "config",
+        "explain",
+        "export",
+        "findings",
+        "next",
+        "report",
+        "reset",
+        "review-diff",
+        "rules",
+        "watch"
+      ],
+      "post_mvp_declared": [],
+      "tool_count": 34,
+      "unexpected": []
+    },
+    "user_decisions": {
+      "missing": [],
+      "ok": true
+    }
+  },
+  "missing_evidence": [],
+  "ok": true,
+  "tool_surface_ok": true,
+  "unchecked_todos": [],
+  "user_decisions_ok": true
+}

@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "receipt": "retrieve_result service and MCP tool covered by contract tests and the real FastMCP smoke",
+  "primary_evidence": [
+    ".omo/evidence/task-8-9-headroom-mcp-tools-green.txt",
+    ".omo/evidence/task-16-headroom-fastmcp-smoke.json",
+    ".omo/evidence/task-17-headroom-full-verification.txt"
+  ],
+  "verified_by": [
+    "uv run pytest tests/contract/test_mcp_context_optimization_tools.py tests/integration/test_context_results.py -q",
+    "FastMCP Client(mcp) search_content -> retrieve_result filtered"
+  ]
+}
+

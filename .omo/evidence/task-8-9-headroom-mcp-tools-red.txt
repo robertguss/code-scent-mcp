@@ -1,0 +1,111 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+______ test_retrieve_result_mcp_returns_stored_filtered_payload[asyncio] _______
+
+tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-robertguss/pytest-36/test_retrieve_result_mcp_retur0')
+
+    @pytest.mark.anyio
+    async def test_retrieve_result_mcp_returns_stored_filtered_payload(
+        tmp_path: Path,
+    ) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        service = ContextOptimizationService(str(repo))
+        stored = service.store_result(
+            tool_name="find_references",
+            session_id="sess_mcp",
+            query="load_config",
+            raw_payload={
+                "items": (
+                    {
+                        "path": "src/app.py",
+                        "line": 3,
+                        "symbol": "load_config",
+                        "snippet": "def load_config(): pass",
+                    },
+                    {
+                        "path": "src/other.py",
+                        "line": 8,
+                        "symbol": "load_config",
+                        "snippet": "load_config()",
+                    },
+                ),
+            },
+            returned_payload={"summary": "2 references"},
+        )
+    
+        async with Client(mcp) as client:
+            result = await client.call_tool(
+                "retrieve_result",
+                {
+                    "repo": str(repo),
+                    "result_id": stored.result_id,
+                    "mode": "filtered",
+                    "file": "src/app.py",
+                    "symbol": "load_config",
+                    "limit": 1,
+                },
+            )
+    
+>       payload = RetrieveResultToolPayload.model_validate_json(
+            _text_content(result.content),
+        )
+E       pydantic_core._pydantic_core.ValidationError: 2 validation errors for RetrieveResultToolPayload
+E       session_id
+E         Field required [type=missing, input_value={'ok': False, 'result_id'...result_mcp_retur0/repo'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       payload
+E         Field required [type=missing, input_value={'ok': False, 'result_id'...result_mcp_retur0/repo'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+
+tests/contract/test_mcp_context_optimization_tools.py:100: ValidationError
+_________ test_context_stats_mcp_reports_real_session_counts[asyncio] __________
+
+tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-robertguss/pytest-36/test_context_stats_mcp_reports0')
+
+    @pytest.mark.anyio
+    async def test_context_stats_mcp_reports_real_session_counts(tmp_path: Path) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        service = ContextOptimizationService(str(repo))
+        stored = service.store_result(
+            tool_name="search_content",
+            session_id="sess_mcp",
+            query="load_config",
+            raw_payload={
+                "items": (
+                    {
+                        "path": "src/app.py",
+                        "line": 3,
+                        "symbol": "load_config",
+                        "snippet": "def load_config(): pass",
+                    },
+                ),
+            },
+            returned_payload={"summary": "1 match"},
+        )
+        _ = service.retrieve_result(stored.result_id, mode="summary")
+    
+        async with Client(mcp) as client:
+            result = await client.call_tool(
+                "context_stats",
+                {"repo": str(repo), "session_id": "sess_mcp"},
+            )
+    
+        payload = ContextStatsToolPayload.model_validate_json(
+            _text_content(result.content),
+        )
+    
+        assert payload.ok is True
+        assert payload.session_id == "sess_mcp"
+>       assert payload.tool_calls == 1
+E       AssertionError: assert 0 == 1
+E        +  where 0 = ContextStatsToolPayload(ok=True, session_id='sess_mcp', repo='/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T...=0, largest_summarized_results=(), most_used_tools=(), warnings=('context statistics storage is not implemented yet',)).tool_calls
+
+tests/contract/test_mcp_context_optimization_tools.py:148: AssertionError
+=========================== short test summary info ============================
+FAILED tests/contract/test_mcp_context_optimization_tools.py::test_retrieve_result_mcp_returns_stored_filtered_payload[asyncio]
+FAILED tests/contract/test_mcp_context_optimization_tools.py::test_context_stats_mcp_reports_real_session_counts[asyncio]
+2 failed in 0.47s
+
+EXIT:1

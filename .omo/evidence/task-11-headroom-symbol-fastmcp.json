@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "receipt": "find_symbol and find_references emit bounded envelopes with retrievable original_result_id support",
+  "primary_evidence": [
+    ".omo/evidence/task-11-13-headroom-first-wave-envelopes-green.txt",
+    ".omo/evidence/task-17-headroom-full-verification.txt"
+  ],
+  "verified_by": [
+    "uv run pytest tests/contract/test_mcp_context_tools.py tests/integration/test_context.py -q"
+  ]
+}
+

@@ -1,0 +1,11 @@
+Task 7 receipt: service models and result-store behavior implemented in
+src/codescent/services/context_optimization*.py with MCP adapters kept thin.
+
+Primary evidence:
+- .omo/evidence/task-3-9-headroom-storage-service-green.txt
+- .omo/evidence/task-17-headroom-full-verification.txt
+
+Verified by:
+- uv run pytest tests/unit/test_context_optimization.py -q
+- uv run basedpyright
+

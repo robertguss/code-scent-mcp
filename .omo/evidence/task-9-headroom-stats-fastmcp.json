@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "receipt": "context_stats service and MCP tool covered by contract tests, integration tests, and the real FastMCP smoke",
+  "primary_evidence": [
+    ".omo/evidence/task-8-9-headroom-mcp-tools-green.txt",
+    ".omo/evidence/task-16-headroom-fastmcp-smoke.json",
+    ".omo/evidence/task-17-headroom-full-verification.txt"
+  ],
+  "verified_by": [
+    "uv run pytest tests/integration/test_context_stats.py tests/contract/test_mcp_context_optimization_tools.py -q",
+    "FastMCP Client(mcp) context_stats(session_id='sess_headroom_smoke')"
+  ]
+}
+

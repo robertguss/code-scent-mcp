@@ -37,6 +37,8 @@ def test_migrates_mvp_schema_to_latest_without_data_loss(tmp_path: Path) -> None
         for statement in (
             "select 1 from call_edges limit 0",
             "select 1 from symbol_references limit 0",
+            "select 1 from stored_results limit 0",
+            "select 1 from session_events limit 0",
         ):
             cursor = connection.execute(statement)
             assert cursor.description is not None
