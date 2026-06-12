@@ -2,9 +2,9 @@ Command:
 uv run pytest tests/integration/test_packs.py::test_python_pack_registers_parser_rules_and_context_without_behavior_regression -q
 
 Observed before implementation:
-ERROR: found no collectors for /Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_packs.py::test_python_pack_registers_parser_rules_and_context_without_behavior_regression
+ERROR: found no collectors for <repo>/tests/integration/test_packs.py::test_python_pack_registers_parser_rules_and_context_without_behavior_regression
 
-ImportError while importing test module '/Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_packs.py'.
+ImportError while importing test module '<repo>/tests/integration/test_packs.py'.
 tests/integration/test_packs.py:4: in <module>
     from codescent.engine.packs import build_pack_registry
 E   ModuleNotFoundError: No module named 'codescent.engine.packs'

@@ -1,0 +1,49 @@
+{
+  "cleanup": {
+    "persistent_debugger": false,
+    "ports_opened": [],
+    "temp_artifacts": [
+      ".omo/evidence/prd-remainder-global-debug-cli-help.txt",
+      ".omo/evidence/prd-remainder-global-debug-mcp-loop.txt",
+      ".omo/evidence/prd-remainder-global-debug-mcp-loop.json",
+      ".omo/evidence/prd-remainder-global-debug-source-read-only.txt",
+      ".omo/evidence/prd-remainder-global-debug-source-read-only.json"
+    ]
+  },
+  "hypotheses": [
+    {
+      "claim": "MCP smoke might use stale --scenario interface.",
+      "evidence": "help shows positional TOOLS and full_loop invocation exited 0",
+      "id": "H1",
+      "verdict": "refuted"
+    },
+    {
+      "claim": "MCP full loop might mutate analyzed source files.",
+      "evidence": {
+        "allowed_runtime_state": ".codescent",
+        "changed_source_paths": [],
+        "source_hashes_unchanged": true
+      },
+      "id": "H2",
+      "verdict": "refuted"
+    },
+    {
+      "claim": "Source-read-only proof might report ok true while semantic fields disagree.",
+      "evidence": {
+        "changed_paths": [],
+        "network_attempts": 0,
+        "ok": true,
+        "source_hashes_unchanged": true
+      },
+      "id": "H3",
+      "verdict": "refuted"
+    }
+  ],
+  "manual_qa": {
+    "channel": "CLI direct commands",
+    "mcp_artifact": ".omo/evidence/prd-remainder-global-debug-mcp-loop.json",
+    "source_artifact": ".omo/evidence/prd-remainder-global-debug-source-read-only.json"
+  },
+  "ok": true,
+  "runtime": "Python via uv run"
+}

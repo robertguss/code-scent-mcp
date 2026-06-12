@@ -68,10 +68,10 @@ def main() -> None:
         ),
         "external_requests": _external_request_count(),
         "changed_source_paths": [*changed_source_paths, *created_source_paths],
-        "screenshot_path": str(paths.screenshot),
+        "screenshot_path": _display_path(paths.screenshot),
         "exports": {
-            "json": str(paths.export_json),
-            "markdown": str(paths.export_markdown),
+            "json": _display_path(paths.export_json),
+            "markdown": _display_path(paths.export_markdown),
         },
         "cleanup": cleanup,
     }
@@ -156,7 +156,10 @@ def _capture_screenshot(url: str, screenshot: Path) -> None:
             "REMOTE_PORT": str(remote_port),
         }
         completed = subprocess.run(
-            [node, "--input-type=module", "-e", _NODE_SCREENSHOT_SCRIPT],
+            [
+                node,
+                str(Path(__file__).with_name("dashboard_screenshot.mjs")),
+            ],
             check=False,
             capture_output=True,
             text=True,
@@ -208,6 +211,13 @@ def _remove_chrome_profiles() -> bool:
     return not profile.exists()
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return path.relative_to(Path.cwd()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def _free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -229,62 +239,6 @@ def _wait_for_chrome(port: int) -> None:
             connection.close()
     message = "Chrome DevTools endpoint did not start"
     raise RuntimeError(message)
-
-
-_NODE_SCREENSHOT_SCRIPT = r"""
-import fs from 'node:fs';
-const url = process.env.DASHBOARD_URL;
-const screenshotPath = process.env.SCREENSHOT_PATH;
-const remotePort = process.env.REMOTE_PORT;
-const pages = await fetch(
-  `http://127.0.0.1:${remotePort}/json/list`,
-).then((r) => r.json());
-const target = pages.find((page) => page.type === 'page') ?? pages[0];
-const ws = new WebSocket(target.webSocketDebuggerUrl);
-let id = 0;
-const pending = new Map();
-ws.addEventListener('message', (event) => {
-  const message = JSON.parse(event.data);
-  if (message.id && pending.has(message.id)) {
-    pending.get(message.id)(message);
-    pending.delete(message.id);
-  }
-});
-await new Promise((resolve) => ws.addEventListener('open', resolve, { once: true }));
-function send(method, params = {}) {
-  const commandId = ++id;
-  ws.send(JSON.stringify({ id: commandId, method, params }));
-  return new Promise((resolve) => pending.set(commandId, resolve));
-}
-async function evalValue(expression) {
-  const result = await send(
-    'Runtime.evaluate',
-    { expression, returnByValue: true, awaitPromise: true },
-  );
-  return result.result.result.value;
-}
-await send('Page.enable');
-await send('Runtime.enable');
-await send(
-  'Emulation.setDeviceMetricsOverride',
-  { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false },
-);
-await send('Page.navigate', { url });
-for (let attempt = 0; attempt < 30; attempt += 1) {
-  const ready = await evalValue(
-    "document.querySelectorAll('.trend-row').length >= 3"
-      + " && document.querySelectorAll('.rule-item').length >= 1",
-  );
-  if (ready) break;
-  await new Promise((resolve) => setTimeout(resolve, 250));
-}
-const screenshot = await send(
-  'Page.captureScreenshot',
-  { format: 'png', captureBeyondViewport: false },
-);
-fs.writeFileSync(screenshotPath, Buffer.from(screenshot.result.data, 'base64'));
-ws.close();
-"""
 
 
 if __name__ == "__main__":

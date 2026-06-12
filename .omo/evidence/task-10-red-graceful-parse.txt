@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
-rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: cov-7.1.0, anyio-4.13.0
 collected 1 item
@@ -10,7 +10,7 @@ tests/unit/test_python_parser.py F                                       [100%]
 =================================== FAILURES ===================================
 __________ test_malformed_python_file_does_not_abort_repo_extraction ___________
 
-tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-robertguss/pytest-113/test_malformed_python_file_doe0')
+tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-user/pytest-113/test_malformed_python_file_doe0')
 
     def test_malformed_python_file_does_not_abort_repo_extraction(tmp_path: Path) -> None:
         repo = tmp_path / "repo"
@@ -19,12 +19,12 @@ tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/p
         valid.parent.mkdir(parents=True)
         _ = valid.write_text("def ok() -> None:\n    pass\n")
         _ = broken.write_text("def broken(:\n")
-    
+
 >       result = SymbolService(repo).extract()
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_python_parser.py:74: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_python_parser.py:74:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 src/codescent/services/symbols.py:25: in extract
     parsed_files = tuple(
 src/codescent/services/symbols.py:26: in <genexpr>
@@ -32,7 +32,7 @@ src/codescent/services/symbols.py:26: in <genexpr>
 src/codescent/engine/parsers/python.py:117: in parse_python_file
     tree = ast.parse(source_path.read_text(), filename=relative_path)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 source = 'def broken(:\n', filename = 'src/pkg/broken.py', mode = 'exec'
 

@@ -1,14 +1,21 @@
 # CodeScent
 
 CodeScent is a local, MCP-first codebase improvement server for AI coding
-agents. This repository implements the Python-first MVP: Python indexing,
-search, context, deterministic code-health findings, refactor planning,
-suggested verification commands, finding lifecycle, and evals.
+agents. This repository implements the local PRD surface: Python and
+TypeScript/React/Next indexing, bounded search, graph/context tools,
+deterministic code-health findings, refactor planning, recommended verification
+commands, finding lifecycle, CI/PR reporting, opt-in subjective review, evals,
+and a loopback dashboard.
 
-CodeScent is local stdio only in this MVP. It writes only .codescent state in
-the analyzed repository and does not edit analyzed source files. The runtime no-network
-model applies to indexing, scanning, searching, context building, and eval
-execution.
+The first shipped slice was the Python-first MVP; the current local surface
+keeps those safety guarantees while adding the remaining PRD features.
+
+CodeScent is local stdio for MCP and loopback-only for the dashboard. It writes
+only `.codescent` state in the analyzed repository. It does not edit analyzed
+source files. Safety summary: writes only .codescent state and does not edit analyzed source files.
+The runtime no-network model applies to indexing, scanning, searching, context
+building, dashboard use, CI mode, and eval execution.
+Subjective LLM review remains opt-in and disabled by default.
 
 ## Install
 
@@ -24,6 +31,8 @@ uv run codescent init --repo tests/fixtures/python-basic
 uv run codescent index --repo tests/fixtures/python-basic --json
 uv run codescent status --repo tests/fixtures/python-basic --json
 uv run codescent scan --repo tests/fixtures/python-basic --json
+uv run codescent report --repo tests/fixtures/python-basic --format json
+uv run codescent ci --repo tests/fixtures/python-basic --format json
 uv run codescent doctor --repo tests/fixtures/python-basic --json
 ```
 
@@ -48,7 +57,8 @@ The first-run loop is:
    suggested tests, and rescan
 5. mark findings only after the user or agent has separate verification evidence
 
-See [docs/mcp-tools.md](docs/mcp-tools.md) for the exact MVP tool list.
+See [docs/mcp-tools.md](docs/mcp-tools.md) for the registered tool and command
+surface.
 
 ## Evals And Smoke
 
@@ -73,15 +83,23 @@ uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-bas
 See [docs/evals.md](docs/evals.md) for deterministic, agent-in-the-loop, real
 smoke, and safety eval details.
 
-## Out Of Scope
+## Implemented Local Surface
 
-- additional language support
-- dashboard UI or hosted service
-- HTTP/SSE MCP transport or auth
-- CI/PR review mode
-- subjective LLM review
-- automatic source edits
-- broad impact/reference/caller graph tools beyond the approved MVP surface
+- Python and TypeScript/React/Next language and rule packs.
+- Search expansion, references/callers/callees, related files, and impact.
+- Reports, backlog/progress/regression views, config/rules, and safe reset.
+- Recommend-only `verify_change`; it records plans and does not execute target
+  project commands.
+- Local CI/PR review commands with deterministic threshold behavior.
+- Opt-in subjective review with no runtime network unless explicitly enabled.
+- Loopback dashboard for health, findings, progress, rule config updates, and
+  exports.
+
+## Still Out Of Scope
+
+- automatic source edits or autofix
+- HTTP/SSE MCP transport, hosted service, remote dashboard access, or auth
+- runtime network by default
 
 ## Development
 

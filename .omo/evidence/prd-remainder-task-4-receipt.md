@@ -62,7 +62,7 @@ Result: 0 errors, 0 warnings, 0 notes.
 Command:
 
 ```bash
-tmux new-session -d -s ulw-qa-prd-4 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-basic --out .omo/evidence/prd-remainder-task-4-read-only.json'
+tmux new-session -d -s ulw-qa-prd-4 'cd <repo> && uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-basic --out .omo/evidence/prd-remainder-task-4-read-only.json'
 ```
 
 Result: `.omo/evidence/prd-remainder-task-4-read-only.json` reports `ok: true`, `changed_paths: []`, and `network_attempts: 0`.

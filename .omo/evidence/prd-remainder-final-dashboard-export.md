@@ -2,4 +2,4 @@
 
 - Read only: True
 - Index fresh: True
-- Findings: 0
+- Findings: 18

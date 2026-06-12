@@ -1,1 +1,1 @@
-{"deleted": false, "paths": ["/Users/robertguss/Projects/startups/code-scent-mcp/tests/fixtures/python-basic/.codescent"]}
+{"deleted": false, "paths": ["<repo>/tests/fixtures/python-basic/.codescent"]}

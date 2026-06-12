@@ -103,7 +103,7 @@ tests/fixtures/python-basic/tests/test_workflow.py
     "max_result_limit": 100,
     "default_source_line_cap": 80,
     "max_source_line_cap": 200,
-    "default_token_budget": 3000,
+    "default_budget_limit": 3000,
     "whole_files_by_default": false
   },
   "workflow_task": {

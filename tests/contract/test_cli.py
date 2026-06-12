@@ -1,124 +1,25 @@
+import shutil
 from pathlib import Path
-from typing import ClassVar
 
 import pytest
-from pydantic import BaseModel, ConfigDict
+from tests.contract.cli_payloads import (
+    CiPayload,
+    ConfigPayload,
+    DoctorPayload,
+    ErrorPayload,
+    IndexPayload,
+    InitPayload,
+    ResetPayload,
+    RulesPayload,
+    ScanPayload,
+    StatusPayload,
+    WatchPayload,
+)
 from typer.testing import CliRunner
 
 from codescent.cli.main import app
 
 RUNNER = CliRunner()
-
-
-class ScanPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    findings_created: int
-    rule_ids: tuple[str, ...]
-    finding_ids: tuple[str, ...] = ()
-
-
-class InitPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    state_dir: str
-
-
-class IndexPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    indexed_files: int
-
-
-class StatusPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    index_fresh: bool
-    indexed_files: int
-
-
-class DoctorChecks(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    database_ok: bool
-    config_ok: bool
-    mcp_available: bool
-
-
-class DoctorPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    ok: bool
-    checks: DoctorChecks
-
-
-class ErrorPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    code: str
-
-
-class ConfigPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    include: tuple[str, ...]
-    exclude: tuple[str, ...]
-    language_packs: tuple[str, ...]
-    framework_packs: tuple[str, ...]
-    rule_packs: tuple[str, ...]
-    commands: dict[str, tuple[str, ...]]
-    token_budgets: dict[str, int]
-    privacy: dict[str, bool]
-
-
-class RulesPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    enabled_rule_packs: tuple[str, ...]
-    disabled_rule_packs: tuple[str, ...]
-
-
-class WatchPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    indexed_files: int
-    changed_files: tuple[str, ...]
-
-
-class ResetPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    deleted: bool
-    paths: tuple[str, ...]
-
-
-class CiPayload(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
-
-    ok: bool
-    risk_level: str
-    changed_file_health: tuple[dict[str, object], ...]
-    suggested_tests: tuple[str, ...]
-
-
-def _scan_payload(output: str) -> ScanPayload:
-    return ScanPayload.model_validate_json(output)
-
-
-def _init_payload(output: str) -> InitPayload:
-    return InitPayload.model_validate_json(output)
-
-
-def _index_payload(output: str) -> IndexPayload:
-    return IndexPayload.model_validate_json(output)
-
-
-def _status_payload(output: str) -> StatusPayload:
-    return StatusPayload.model_validate_json(output)
-
-
-def _doctor_payload(output: str) -> DoctorPayload:
-    return DoctorPayload.model_validate_json(output)
 
 
 def test_cli_help_lists_mvp_commands() -> None:
@@ -147,11 +48,11 @@ def test_init_index_status_doctor_round_trip(tmp_path: Path) -> None:
     assert status_result.exit_code == 0
     assert doctor_result.exit_code == 0
 
-    init_payload = _init_payload(init_result.output)
-    index_payload = _index_payload(index_result.output)
-    scan_payload = _scan_payload(scan_result.output)
-    status_payload = _status_payload(status_result.output)
-    doctor_payload = _doctor_payload(doctor_result.output)
+    init_payload = InitPayload.model_validate_json(init_result.output)
+    index_payload = IndexPayload.model_validate_json(index_result.output)
+    scan_payload = ScanPayload.model_validate_json(scan_result.output)
+    status_payload = StatusPayload.model_validate_json(status_result.output)
+    doctor_payload = DoctorPayload.model_validate_json(doctor_result.output)
 
     assert init_payload.state_dir.endswith(".codescent")
     assert index_payload.indexed_files == 1
@@ -182,7 +83,7 @@ def load_config() -> str:
 """,
     )
     scan_result = RUNNER.invoke(app, ["scan", "--repo", str(repo), "--json"])
-    scan_payload = _scan_payload(scan_result.output)
+    scan_payload = ScanPayload.model_validate_json(scan_result.output)
     finding_id = scan_payload.finding_ids[0]
 
     report_result = RUNNER.invoke(
@@ -306,6 +207,11 @@ def test_reset_requires_explicit_yes() -> None:
 
 
 def test_ci_and_review_diff_emit_json_markdown_and_threshold_exit_codes() -> None:
+    shutil.rmtree(
+        Path("tests/fixtures/python-basic") / ".codescent",
+        ignore_errors=True,
+    )
+
     ci_result = RUNNER.invoke(
         app,
         [
@@ -356,7 +262,7 @@ def test_doctor_does_not_create_missing_state(tmp_path: Path) -> None:
     repo.mkdir()
 
     result = RUNNER.invoke(app, ["doctor", "--repo", str(repo), "--json"])
-    payload = _doctor_payload(result.output)
+    payload = DoctorPayload.model_validate_json(result.output)
 
     assert result.exit_code == 0
     assert payload.ok is False
@@ -392,7 +298,7 @@ def test_doctor_reports_mcp_availability(
     )
 
     result = RUNNER.invoke(app, ["doctor", "--repo", str(repo), "--json"])
-    payload = _doctor_payload(result.output)
+    payload = DoctorPayload.model_validate_json(result.output)
 
     assert result.exit_code == 0
     assert payload.ok is False

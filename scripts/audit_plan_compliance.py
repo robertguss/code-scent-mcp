@@ -26,6 +26,7 @@ from codescent.core.public_surface import (
     POST_MVP_CLI_COMMAND_NAMES,
     PUBLIC_SURFACE,
     REGISTERED_MCP_TOOL_NAMES,
+    SurfaceStage,
     registered_mcp_tool_names,
 )
 
@@ -43,7 +44,7 @@ DECISION_PHRASES: Final[tuple[str, ...]] = (
     "local stdio",
     "deterministic offline eval",
     "agent-in-the-loop eval",
-    "/users/robertguss/projects/wts-lx/lx_data_lake",
+    "lx_data_lake",
 )
 DOC_PATHS: Final[tuple[Path, ...]] = (
     Path("README.md"),
@@ -72,10 +73,8 @@ def audit(plan: Path, evidence: Path) -> AuditResult:
     tool_surface = _tool_surface()
     decisions = _decision_phrases()
     completion_ready = not unchecked_todos
-    is_prd_remainder = plan.name == "codescent-prd-remainder.md"
     ok = not missing_evidence and tool_surface["ok"] is True and decisions["ok"] is True
-    if not is_prd_remainder:
-        ok = ok and completion_ready
+    ok = ok and completion_ready
     return AuditResult(
         ok=ok,
         unchecked_todos=unchecked_todos,
@@ -108,10 +107,22 @@ def _checked_todo_numbers(plan_text: str) -> tuple[int, ...]:
 
 def _expected_evidence_prefixes(plan: Path, plan_text: str) -> tuple[str, ...]:
     if plan.name == "codescent-prd-remainder.md":
-        return tuple(
+        task_prefixes = tuple(
             f"prd-remainder-task-{number}-"
             for number in _checked_todo_numbers(plan_text)
         )
+        final_prefixes = tuple(
+            prefix
+            for checkbox, prefix in (
+                ("F1.", "prd-remainder-final-plan-compliance"),
+                ("F2.", "prd-remainder-final-code-quality"),
+                ("F3.", "prd-remainder-final-smoke"),
+                ("F4.", "prd-remainder-final-runtime-safety"),
+                ("F5.", "prd-remainder-final-dashboard"),
+            )
+            if f"- [x] {checkbox}" in plan_text
+        )
+        return task_prefixes + final_prefixes
     return tuple(f"task-{index}-" for index in range(1, 21))
 
 
@@ -121,7 +132,9 @@ def _tool_surface() -> dict[str, JsonValue]:
         entry.name for entry in PUBLIC_SURFACE.mcp_tools if not entry.registered
     )
     post_mvp_commands = frozenset(
-        entry.name for entry in PUBLIC_SURFACE.cli_commands if not entry.registered
+        entry.name
+        for entry in PUBLIC_SURFACE.cli_commands
+        if entry.stage is SurfaceStage.POST_MVP
     )
     return {
         "ok": (

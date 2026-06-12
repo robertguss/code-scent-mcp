@@ -47,7 +47,7 @@ def run_smoke(repo: Path, out: Path, *, dry_run: bool) -> dict[str, JsonValue]:
         payload: dict[str, JsonValue] = {
             "ok": True,
             "dry_run": True,
-            "repo": plan.repo.as_posix(),
+            "repo": _display_repo(plan.repo),
             "excluded_paths": list(plan.excluded_paths),
             "tool_calls": list(plan.tool_calls),
         }
@@ -62,25 +62,29 @@ def run_smoke(repo: Path, out: Path, *, dry_run: bool) -> dict[str, JsonValue]:
     after = _source_hashes(repo)
     status_after = _git_status_without_codescent(repo)
     inventory_paths = tuple(item.path for item in build_file_inventory(repo))
+    excluded_absence = _excluded_absence(inventory_paths, plan.excluded_paths)
+    changed_paths = sorted(
+        path for path in set(before) | set(after) if before.get(path) != after.get(path)
+    )
+    source_hashes_unchanged = before == after
+    git_status_unchanged = status_before == status_after
     payload: dict[str, JsonValue] = {
-        "ok": True,
-        "repo": repo.as_posix(),
+        "ok": (
+            source_hashes_unchanged
+            and not changed_paths
+            and git_status_unchanged
+            and all(excluded_absence.values())
+        ),
+        "repo": _display_repo(repo),
         "dry_run": False,
         "excluded_paths": list(plan.excluded_paths),
-        "excluded_paths_absent_from_inventory": _excluded_absence(
-            inventory_paths,
-            plan.excluded_paths,
-        ),
+        "excluded_paths_absent_from_inventory": excluded_absence,
         "tool_calls": calls,
         "findings": _finding_summary(calls),
         "telemetry": {"elapsed_ms": int((time.perf_counter() - start) * 1000)},
-        "source_hashes_unchanged": before == after,
-        "changed_paths": sorted(
-            path
-            for path in set(before) | set(after)
-            if before.get(path) != after.get(path)
-        ),
-        "git_status_unchanged_except_codescent": status_before == status_after,
+        "source_hashes_unchanged": source_hashes_unchanged,
+        "changed_paths": changed_paths,
+        "git_status_unchanged_except_codescent": git_status_unchanged,
         "git_status_before": list(status_before),
         "git_status_after": list(status_after),
         "allowed_changed_root": ".codescent",
@@ -243,6 +247,13 @@ def _jsonable(value: JsonValue) -> JsonValue:
 def _write_json(out: Path, payload: dict[str, JsonValue]) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     _ = out.write_text(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def _display_repo(repo: Path) -> str:
+    try:
+        return repo.resolve().relative_to(Path.cwd()).as_posix()
+    except ValueError:
+        return repo.name
 
 
 def main(

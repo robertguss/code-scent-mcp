@@ -72,6 +72,40 @@ def test_non_git_repo_degrades_cleanly(tmp_path: Path) -> None:
     assert status.database_ok is True
 
 
+def test_status_counts_open_findings(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("value = 1\n")
+    _ = RepoIndexService(repo).index_repo()
+    state = initialize_storage(repo)
+    with RepositoryStorage(state).write_transaction() as connection:
+        _ = connection.execute(
+            """
+            insert into findings (
+                id, stable_key, rule_id, severity, confidence, status,
+                title, message, evidence_json
+            )
+            values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "finding-1",
+                "stable-1",
+                "python.test",
+                "medium",
+                0.9,
+                "open",
+                "Finding",
+                "Message",
+                "{}",
+            ),
+        )
+
+    status = RepoStatusService(repo).get_status()
+
+    assert status.finding_count == 1
+
+
 def test_git_repo_reports_dirty_status(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     git_path = which("git")

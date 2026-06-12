@@ -5,10 +5,10 @@
     "server_stopped": true
   },
   "exports": {
-    "json": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-final-dashboard-timeout-export.json",
-    "markdown": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-final-dashboard-timeout-export.md"
+    "json": "<repo>/.omo/evidence/prd-remainder-final-dashboard-timeout-export.json",
+    "markdown": "<repo>/.omo/evidence/prd-remainder-final-dashboard-timeout-export.md"
   },
   "external_requests": 0,
   "ok": true,
-  "screenshot_path": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-final-dashboard-timeout-dashboard.png"
+  "screenshot_path": "<repo>/.omo/evidence/prd-remainder-final-dashboard-timeout-dashboard.png"
 }

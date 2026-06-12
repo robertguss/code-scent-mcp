@@ -1,0 +1,14 @@
+{
+  "changed_source_paths": [],
+  "cleanup": {
+    "chrome_profile_removed": true,
+    "server_stopped": true
+  },
+  "exports": {
+    "json": ".omo/evidence/review-work-qa2-dashboard-export.json",
+    "markdown": ".omo/evidence/review-work-qa2-dashboard-export.md"
+  },
+  "external_requests": 0,
+  "ok": true,
+  "screenshot_path": ".omo/evidence/review-work-qa2-dashboard-dashboard.png"
+}

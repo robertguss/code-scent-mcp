@@ -47,10 +47,10 @@
   ],
   "git_status_unchanged_except_codescent": true,
   "ok": true,
-  "repo": "/Users/robertguss/Projects/wts-lx/lx_data_lake",
+  "repo": "lx_data_lake",
   "source_hashes_unchanged": true,
   "telemetry": {
-    "elapsed_ms": 12418
+    "elapsed_ms": 12323
   },
   "tool_calls": [
     {
@@ -1256,7 +1256,7 @@
           "python.suspicious_slop_candidate",
           "python.too_many_imports"
         ],
-        "scan_id": "f8b35879511f4f35b582931ee42f030c",
+        "scan_id": "1dfe913cf1dc41e5944e1b12c11376c2",
         "status": "complete"
       },
       "tool": "scan_code_health"
@@ -8645,7 +8645,7 @@
           "python.suspicious_slop_candidate",
           "python.too_many_imports"
         ],
-        "scan_id": "ec635035301e468c823f0ccb9e7d308a",
+        "scan_id": "b840c2a3f6b54bc6b6457b99aa7949d1",
         "status": "complete"
       },
       "tool": "rescan"

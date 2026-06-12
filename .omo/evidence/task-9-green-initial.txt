@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
-rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: cov-7.1.0, anyio-4.13.0
 collected 4 items
@@ -11,7 +11,7 @@ tests/contract/test_mcp_search_tools.py F                                [100%]
 =================================== FAILURES ===================================
 ______________ test_search_tools_include_ranking_reasons[asyncio] ______________
 
-path = '/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-robertguss/pytest-91/test_search_tools_include_rank0/repo/src'
+path = '/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-user/pytest-91/test_search_tools_include_rank0/repo/src'
 exists = True
 
     def select_wildcard(path, exists=False):
@@ -40,7 +40,7 @@ reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
         reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
     ) -> CallInfo[TResult]:
         """Call func, wrapping the result in a CallInfo.
-    
+
         :param func:
             The function to call. Called without arguments.
         :type func: Callable[[], _pytest.runner.TResult]
@@ -56,8 +56,8 @@ reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 >           result: TResult | None = func()
                                      ^^^^^^
 
-.venv/lib/python3.13/site-packages/_pytest/runner.py:353: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.13/site-packages/_pytest/runner.py:353:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 .venv/lib/python3.13/site-packages/_pytest/runner.py:245: in <lambda>
     lambda: runtest_hook(item=item, **kwds),
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -79,7 +79,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     collect_unraisable(item.config)
 .venv/lib/python3.13/site-packages/_pytest/unraisableexception.py:79: in collect_unraisable
     raise errors[0]
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 config = <_pytest.config.Config object at 0x106467e00>
 
@@ -94,13 +94,13 @@ config = <_pytest.config.Config object at 0x106467e00>
                     meta = pop_unraisable()
                 except IndexError:
                     break
-    
+
                 if isinstance(meta, BaseException):
                     hook_error = RuntimeError("Failed to process unraisable exception")
                     hook_error.__cause__ = meta
                     errors.append(hook_error)
                     continue
-    
+
                 msg = meta.msg
                 try:
 >                   warnings.warn(pytest.PytestUnraisableExceptionWarning(msg))

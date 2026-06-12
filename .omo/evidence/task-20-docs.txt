@@ -64,7 +64,7 @@ erministic-eval.json
 Run the real repo smoke target:
 
 ```bash
-uv run python scripts/smoke_lx_data_lake.py --repo /Users/robertguss/Projects/wt
+uv run python scripts/smoke_lx_data_lake.py --repo <home>/Projects/wt
 s-lx/lx_data_lake --out .omo/evidence/task-18-lx-smoke.json
 ```
 
@@ -140,13 +140,13 @@ mechanism.
 Run:
 
 ```bash
-uv run python scripts/smoke_lx_data_lake.py --repo /Users/robertguss/Projects/wt
+uv run python scripts/smoke_lx_data_lake.py --repo <home>/Projects/wt
 s-lx/lx_data_lake --out .omo/evidence/task-18-lx-smoke.json
 ```
 
 The real smoke validates exclusions, tool calls, findings, telemetry,
 source-read-only proof, and filtered git status stability on
-`/Users/robertguss/Projects/wts-lx/lx_data_lake`.
+`<external:lx_data_lake>`.
 
 ## Source-Read-Only Safety
 

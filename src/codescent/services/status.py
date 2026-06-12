@@ -1,9 +1,13 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from pydantic import TypeAdapter
+
 from codescent.engine.inventory import build_file_inventory
 from codescent.services.git import detect_git_state
 from codescent.storage import RepositoryStorage, initialize_storage
+
+COUNT_ROW: TypeAdapter[tuple[int] | None] = TypeAdapter(tuple[int] | None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,5 +64,12 @@ def _load_hashes(storage: RepositoryStorage) -> dict[str, str]:
 
 
 def _finding_count(storage: RepositoryStorage) -> int:
-    _ = storage
-    return 0
+    with storage.read_connection() as connection:
+        row = COUNT_ROW.validate_python(
+            connection.execute(
+                "select count(*) from findings where status != 'resolved'",
+            ).fetchone(),
+        )
+    if row is None:
+        return 0
+    return row[0]

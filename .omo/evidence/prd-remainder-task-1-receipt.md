@@ -64,7 +64,7 @@ Result: 3 files already formatted.
 Command:
 
 ```bash
-tmux new-session -d -s ulw-qa-prd-1 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run python scripts/audit_plan_compliance.py --plan .omo/plans/codescent-prd-remainder.md --evidence .omo/evidence > .omo/evidence/prd-remainder-task-1-public-surface.json'
+tmux new-session -d -s ulw-qa-prd-1 'cd <repo> && uv run python scripts/audit_plan_compliance.py --plan .omo/plans/codescent-prd-remainder.md --evidence .omo/evidence > .omo/evidence/prd-remainder-task-1-public-surface.json'
 ```
 
 Result: `.omo/evidence/prd-remainder-task-1-public-surface.json` reports `ok: true`, `tool_surface_ok: true`, no missing evidence, and no user decision gaps.

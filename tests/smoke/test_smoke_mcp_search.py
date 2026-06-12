@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scripts.smoke_mcp import prepare_repo_for_tools
+from scripts.smoke_mcp_support import prepare_repo_for_tools
 
 
 def test_search_changed_smoke_resets_runtime_state(tmp_path: Path) -> None:

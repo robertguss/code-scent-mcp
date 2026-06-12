@@ -47,7 +47,7 @@
   ],
   "git_status_unchanged_except_codescent": true,
   "ok": true,
-  "repo": "/Users/robertguss/Projects/wts-lx/lx_data_lake",
+  "repo": "<external:lx_data_lake>",
   "source_hashes_unchanged": true,
   "telemetry": {
     "elapsed_ms": 11981

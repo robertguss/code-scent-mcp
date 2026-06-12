@@ -1,12 +1,28 @@
 const state = {
   findings: [],
   exportPayload: {},
+  enabledRulePacks: [],
 };
 
 const byId = (id) => document.getElementById(id);
 
 async function loadJson(path) {
   const response = await fetch(path, { headers: { Accept: "application/json" } });
+  if (!response.ok) {
+    throw new Error(`dashboard request failed: ${path}`);
+  }
+  return response.json();
+}
+
+async function sendJson(path, payload) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
   if (!response.ok) {
     throw new Error(`dashboard request failed: ${path}`);
   }
@@ -114,13 +130,43 @@ function renderRules(payload) {
   if (!rules) {
     return;
   }
+  state.enabledRulePacks = payload.enabled_rule_packs || [];
   rules.replaceChildren();
-  (payload.enabled_rule_packs || []).forEach((pack) => {
-    const item = document.createElement("div");
-    item.className = "rule-item";
-    item.textContent = pack;
+  state.enabledRulePacks.forEach((pack) => {
+    const item = ruleItem(pack, true);
     rules.append(item);
   });
+  (payload.disabled_rule_packs || []).forEach((pack) => {
+    const item = ruleItem(pack, false);
+    rules.append(item);
+  });
+}
+
+function ruleItem(pack, enabled) {
+  const item = document.createElement("div");
+  item.className = "rule-item";
+  const label = document.createElement("span");
+  label.textContent = pack;
+  const button = document.createElement("button");
+  button.className = "rule-toggle";
+  button.type = "button";
+  button.textContent = enabled ? "Disable" : "Enable";
+  button.addEventListener("click", () => updateRulePack(pack, !enabled));
+  item.append(label, button);
+  return item;
+}
+
+async function updateRulePack(pack, enabled) {
+  const current = new Set(state.enabledRulePacks);
+  if (enabled) {
+    current.add(pack);
+  } else {
+    current.delete(pack);
+  }
+  const payload = await sendJson("/api/rules", {
+    enabled_rule_packs: Array.from(current).sort(),
+  });
+  renderRules(payload);
 }
 
 function renderExport(payload) {

@@ -1,5 +1,5 @@
 {
-  "active_work_id": "codescent-prd-remainder",
+  "active_work_id": null,
   "schema_version": 2,
   "works": {
     "codescent-prd-remainder": {
@@ -8,7 +8,7 @@
       "session_ids": [
         "codex:019eb84c-6dab-7ae1-b307-78935f0dcf1b"
       ],
-      "status": "active",
+      "status": "completed",
       "work_id": "codescent-prd-remainder",
       "worktree_path": null
     },

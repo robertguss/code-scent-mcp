@@ -1,6 +1,6 @@
-[06/11/26 11:31:39] Error calling tool 'get_file_context'                       
+[06/11/26 11:31:39] Error calling tool 'get_file_context'
                     ╭─────────── Traceback (most recent call last) ────────────╮
-                    │ /Users/robertguss/Projects/startups/code-scent-mcp/src/c │
+                    │ <repo>/src/c │
                     │ odescent/core/paths.py:24 in normalize_repo_path         │
                     │                                                          │
                     │   21 │   candidate = (repo_root / requested).resolve()   │
@@ -11,7 +11,7 @@
                     │   26 │   │   raise CodeScentError(                       │
                     │   27 │   │   │   code=ErrorCode.PATH_OUTSIDE_ROOT,       │
                     │                                                          │
-                    │ /Users/robertguss/.local/share/uv/python/cpython-3.13.7- │
+                    │ <home>/.local/share/uv/python/cpython-3.13.7- │
                     │ macos-aarch64-none/lib/python3.13/pathlib/_local.py:385  │
                     │ in relative_to                                           │
                     │                                                          │
@@ -24,27 +24,27 @@
                     │   387 │   │   │   │   raise ValueError(f"'..' segment in │
                     │   388 │   │   else:                                      │
                     ╰──────────────────────────────────────────────────────────╯
-                    ValueError:                                                 
-                    '/Users/robertguss/Projects/startups/code-scent-mcp/tests/fi
-                    xtures/pyproject.toml' is not in the subpath of             
-                    '/Users/robertguss/Projects/startups/code-scent-mcp/tests/fi
-                    xtures/python-basic'                                        
-                                                                                
-                    The above exception was the direct cause of the following   
-                    exception:                                                  
-                                                                                
+                    ValueError:
+                    '<repo>/tests/fi
+                    xtures/pyproject.toml' is not in the subpath of
+                    '<repo>/tests/fi
+                    xtures/python-basic'
+
+                    The above exception was the direct cause of the following
+                    exception:
+
                     ╭─────────── Traceback (most recent call last) ────────────╮
-                    │ /Users/robertguss/Projects/startups/code-scent-mcp/.venv │
+                    │ <repo>/.venv │
                     │ /lib/python3.13/site-packages/fastmcp/server/server.py:1 │
                     │ 282 in call_tool                                         │
                     │                                                          │
-                    │ /Users/robertguss/Projects/startups/code-scent-mcp/.venv │
+                    │ <repo>/.venv │
                     │ /lib/python3.13/site-packages/fastmcp/tools/base.py:392  │
                     │ in _run                                                  │
                     │                                                          │
                     │                 ... 7 frames hidden ...                  │
                     │                                                          │
-                    │ /Users/robertguss/Projects/startups/code-scent-mcp/src/c │
+                    │ <repo>/src/c │
                     │ odescent/services/context.py:70 in get_file_context      │
                     │                                                          │
                     │    67 │   def get_file_context(self, path: str) -> FileC │
@@ -55,7 +55,7 @@
                     │    72 │   │   files = SymbolService(repo_root).extract() │
                     │    73 │   │   parsed = _file_by_path(files, relative_pat │
                     │                                                          │
-                    │ /Users/robertguss/Projects/startups/code-scent-mcp/src/c │
+                    │ <repo>/src/c │
                     │ odescent/core/paths.py:26 in normalize_repo_path         │
                     │                                                          │
                     │   23 │   try:                                            │
@@ -66,10 +66,10 @@
                     │   28 │   │   │   message="Path escapes the repository ro │
                     │   29 │   │   │   severity=ErrorSeverity.ERROR,           │
                     ╰──────────────────────────────────────────────────────────╯
-                    CodeScentError: path_outside_root: Path escapes the         
-                    repository root.                                            
+                    CodeScentError: path_outside_root: Path escapes the
+                    repository root.
 ╭───────────────────── Traceback (most recent call last) ──────────────────────╮
-│ /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:77   │
+│ <repo>/scripts/smoke_mcp.py:77   │
 │ in main                                                                      │
 │                                                                              │
 │   74 │   repo: Annotated[str, typer.Option()],                               │
@@ -80,7 +80,7 @@
 │   79                                                                         │
 │   80 if __name__ == "__main__":                                              │
 │                                                                              │
-│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ <repo>/.venv/lib/python3.13/site │
 │ -packages/anyio/_core/_eventloop.py:77 in run                                │
 │                                                                              │
 │    74 │                                                                      │
@@ -88,10 +88,10 @@
 │    76 │   │   backend_options = backend_options or {}                        │
 │ ❱  77 │   │   return async_backend.run(func, args, {}, backend_options)      │
 │    78 │   finally:                                                           │
-│    79 │   │   reset_current_async_library(token)                             │
+│    79 │   │   reset_current_async_library(marker)                             │
 │    80                                                                        │
 │                                                                              │
-│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ <repo>/.venv/lib/python3.13/site │
 │ -packages/anyio/_backends/_asyncio.py:2358 in run                            │
 │                                                                              │
 │   2355 │   │   │   │   loop_factory = winloop.new_event_loop                 │
@@ -101,9 +101,9 @@
 │ ❱ 2358 │   │   │   return runner.run(wrapper())                              │
 │   2359 │                                                                     │
 │   2360 │   @classmethod                                                      │
-│   2361 │   def current_token(cls) -> object:                                 │
+│   2361 │   def current_marker(cls) -> object:                                 │
 │                                                                              │
-│ /Users/robertguss/.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/l │
+│ <home>/.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/l │
 │ ib/python3.13/asyncio/runners.py:118 in run                                  │
 │                                                                              │
 │   115 │   │                                                                  │
@@ -114,7 +114,7 @@
 │   120 │   │   │   if self._interrupt_count > 0:                              │
 │   121 │   │   │   │   uncancel = getattr(task, "uncancel", None)             │
 │                                                                              │
-│ /Users/robertguss/.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/l │
+│ <home>/.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/l │
 │ ib/python3.13/asyncio/base_events.py:725 in run_until_complete               │
 │                                                                              │
 │    722 │   │   if not future.done():                                         │
@@ -126,7 +126,7 @@
 │    727 │   def stop(self):                                                   │
 │    728 │   │   """Stop running the event loop.                               │
 │                                                                              │
-│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ <repo>/.venv/lib/python3.13/site │
 │ -packages/anyio/_backends/_asyncio.py:2341 in wrapper                        │
 │                                                                              │
 │   2338 │   │   │   _task_states[task] = TaskState(None, None)                │
@@ -137,7 +137,7 @@
 │   2343 │   │   │   │   del _task_states[task]                                │
 │   2344                                                                       │
 │                                                                              │
-│ /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:49   │
+│ <repo>/scripts/smoke_mcp.py:49   │
 │ in _call_tools                                                               │
 │                                                                              │
 │   46 │   async with Client(mcp) as client:                                   │
@@ -149,7 +149,7 @@
 │   51 │   │   │   │   {                                                       │
 │   52 │   │   │   │   │   "tool": tool_call.name,                             │
 │                                                                              │
-│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ <repo>/.venv/lib/python3.13/site │
 │ -packages/fastmcp/client/mixins/tools.py:312 in call_tool                    │
 │                                                                              │
 │   309 │   │   │   progress_handler=progress_handler,                         │
@@ -160,7 +160,7 @@
 │   314 │   │   )                                                              │
 │   315                                                                        │
 │                                                                              │
-│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ <repo>/.venv/lib/python3.13/site │
 │ -packages/fastmcp/client/mixins/tools.py:201 in _parse_call_tool_result      │
 │                                                                              │
 │   198 │   │   │   CallToolResult: Parsed result with structured data         │
@@ -171,7 +171,7 @@
 │   203 │   │   │   result=result,                                             │
 │   204 │   │   │   tool_output_schemas=self.session._tool_output_schemas,     │
 │                                                                              │
-│ /Users/robertguss/Projects/startups/code-scent-mcp/.venv/lib/python3.13/site │
+│ <repo>/.venv/lib/python3.13/site │
 │ -packages/fastmcp/client/mixins/tools.py:426 in _parse_call_tool_result      │
 │                                                                              │
 │   423 │   │   │   msg = result.content[0].text                               │
@@ -182,7 +182,7 @@
 │   428 │   │   try:                                                           │
 │   429 │   │   │   raw_fastmcp_meta = (result.meta or {}).get("fastmcp")      │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-ToolError: Error calling tool 'get_file_context': path_outside_root: Path 
+ToolError: Error calling tool 'get_file_context': path_outside_root: Path
 escapes the repository root.
 
 EXPECTED_FAILURE

@@ -1,13 +1,13 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
-rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: cov-7.1.0, anyio-4.13.0
 collected 1 item / 1 error
 
 ==================================== ERRORS ====================================
 ______________ ERROR collecting tests/integration/test_search.py _______________
-ImportError while importing test module '/Users/robertguss/Projects/startups/code-scent-mcp/tests/integration/test_search.py'.
+ImportError while importing test module '<repo>/tests/integration/test_search.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 ../../../.local/share/uv/python/cpython-3.13.7-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module

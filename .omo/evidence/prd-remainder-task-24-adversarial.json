@@ -18,7 +18,7 @@
     "stdout_excerpt": ".                                                                        [100%]\n1 passed in 0.05s\n"
   },
   "hung_or_long_commands": {
-    "cmd": "timeout 10 uv run codescent index --repo /Users/robertguss/Projects/startups/code-scent-mcp/tests/fixtures/ts-react-next-basic --json",
+    "cmd": "timeout 10 uv run codescent index --repo <repo>/tests/fixtures/ts-react-next-basic --json",
     "passed": true,
     "returncode": 0,
     "stderr_excerpt": "",

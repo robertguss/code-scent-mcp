@@ -24,7 +24,7 @@
   },
   "malformed_input": {
     "missing_repo_exit": 1,
-    "output_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 /Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_mcp.py:242  \u2502\n\u2502 in main                                                                      \u2502\n\u2502                                                        ",
+    "output_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 <repo>/scripts/smoke_mcp.py:242  \u2502\n\u2502 in main                                                                      \u2502\n\u2502                                                        ",
     "passed": true
   },
   "misleading_success_output": {

@@ -6,7 +6,7 @@ F
 >       assert FIXTURE_ROOT.is_dir()
 E       AssertionError: assert False
 E        +  where False = is_dir()
-E        +    where is_dir = PosixPath('/Users/robertguss/Projects/startups/code-scent-mcp/tests/fixtures/ts-react-next-basic').is_dir
+E        +    where is_dir = PosixPath('<repo>/tests/fixtures/ts-react-next-basic').is_dir
 
 Result:
 RED for the intended reason: the TypeScript/React/Next fixture root did not exist.

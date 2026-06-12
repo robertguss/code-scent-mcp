@@ -12,7 +12,7 @@
     "data"
   ],
   "ok": true,
-  "repo": "/Users/robertguss/Projects/wts-lx/lx_data_lake",
+  "repo": "<external:lx_data_lake>",
   "tool_calls": [
     "get_repo_map",
     "get_repo_status",

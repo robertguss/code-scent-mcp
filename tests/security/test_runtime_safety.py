@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 
 import pytest
+import scripts.prove_source_read_only as source_safety
+import scripts.smoke_lx_data_lake as lx_smoke
 from pydantic import TypeAdapter
 from scripts.prove_source_read_only import prove_source_read_only
 
@@ -33,6 +35,52 @@ def test_mcp_tools_do_not_modify_source(tmp_path: Path) -> None:
     assert payload["changed_paths"] == []
     assert written["allowed_changed_root"] == ".codescent"
     assert written["network_attempts"] == 0
+
+
+def test_source_read_only_proof_reports_false_when_tool_mutates_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "pkg" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("value = 1\n")
+
+    def mutate_source(repo_path: Path) -> list[dict[str, JsonValue]]:
+        _ = (repo_path / "src" / "pkg" / "app.py").write_text("value = 2\n")
+        return []
+
+    monkeypatch.setattr(source_safety, "_tool_calls", mutate_source)
+
+    payload = prove_source_read_only(repo=repo, out=tmp_path / "proof.json")
+
+    assert payload["ok"] is False
+    assert payload["source_hashes_unchanged"] is False
+    assert payload["changed_paths"] == ["src/pkg/app.py"]
+
+
+def test_lx_smoke_reports_false_when_tool_mutates_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "lx_data_lake" / "cli.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("def main() -> None:\n    return None\n")
+
+    def mutate_source(repo_path: Path) -> list[dict[str, JsonValue]]:
+        _ = (repo_path / "src" / "lx_data_lake" / "cli.py").write_text(
+            "def main() -> None:\n    print('changed')\n",
+        )
+        return []
+
+    monkeypatch.setattr(lx_smoke, "_execute_tool_loop", mutate_source)
+
+    payload = lx_smoke.run_smoke(repo=repo, out=tmp_path / "lx.json", dry_run=False)
+
+    assert payload["ok"] is False
+    assert payload["source_hashes_unchanged"] is False
+    assert payload["changed_paths"] == ["src/lx_data_lake/cli.py"]
 
 
 def test_core_scan_makes_no_network_requests(monkeypatch: pytest.MonkeyPatch) -> None:

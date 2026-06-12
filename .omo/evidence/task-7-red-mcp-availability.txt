@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
-rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: cov-7.1.0, anyio-4.13.0
 collected 1 item
@@ -10,7 +10,7 @@ tests/contract/test_cli.py F                                             [100%]
 =================================== FAILURES ===================================
 _____________________ test_doctor_reports_mcp_availability _____________________
 
-tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-robertguss/pytest-71/test_doctor_reports_mcp_availa0')
+tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-user/pytest-71/test_doctor_reports_mcp_availa0')
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d50ac40>
 
     def test_doctor_reports_mcp_availability(
@@ -21,10 +21,10 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d50ac40>
         repo.mkdir()
         _ = RUNNER.invoke(app, ["init", "--repo", str(repo), "--json"])
         monkeypatch.setattr("codescent.cli.main.mcp_available", lambda: False, raising=False)
-    
+
         result = RUNNER.invoke(app, ["doctor", "--repo", str(repo), "--json"])
         payload = _doctor_payload(result.output)
-    
+
         assert result.exit_code == 0
 >       assert payload.ok is False
 E       assert True is False

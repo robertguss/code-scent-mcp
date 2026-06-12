@@ -41,13 +41,16 @@ def prove_source_read_only(repo: Path, out: Path) -> dict[str, JsonValue]:
     finally:
         socket.socket = original_socket
     after = _source_hashes(repo)
+    changed_paths = _changed_paths(before, after)
+    source_hashes_unchanged = before == after
+    network_attempts = len(attempts)
     payload: dict[str, JsonValue] = {
-        "ok": True,
-        "repo": repo.as_posix(),
+        "ok": source_hashes_unchanged and not changed_paths and network_attempts == 0,
+        "repo": _display_repo(repo),
         "allowed_changed_root": ".codescent",
-        "source_hashes_unchanged": before == after,
-        "changed_paths": _changed_paths(before, after),
-        "network_attempts": len(attempts),
+        "source_hashes_unchanged": source_hashes_unchanged,
+        "changed_paths": changed_paths,
+        "network_attempts": network_attempts,
         "tool_calls": calls,
     }
     _write_json(out, payload)
@@ -136,6 +139,13 @@ def _jsonable(value: JsonValue) -> JsonValue:
 def _write_json(out: Path, payload: dict[str, JsonValue]) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     _ = out.write_text(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def _display_repo(repo: Path) -> str:
+    try:
+        return repo.resolve().relative_to(Path.cwd()).as_posix()
+    except ValueError:
+        return repo.name
 
 
 def main(

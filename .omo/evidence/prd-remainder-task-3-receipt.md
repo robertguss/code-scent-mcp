@@ -64,7 +64,7 @@ Result: 0 errors, 0 warnings, 0 notes.
 Command:
 
 ```bash
-tmux new-session -d -s ulw-qa-prd-3 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run python - <<"PY" > .omo/evidence/prd-remainder-task-3-pagination.txt
+tmux new-session -d -s ulw-qa-prd-3 'cd <repo> && uv run python - <<"PY" > .omo/evidence/prd-remainder-task-3-pagination.txt
 from codescent.core.models import PageOptions
 print(PageOptions(limit=999).model_dump())
 PY'

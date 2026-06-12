@@ -23,17 +23,17 @@
     "stdout_excerpt": ".                                                                        [100%]\n1 passed in 1.90s\n"
   },
   "hung_or_long_commands": {
-    "cmd": "timeout 20 uv run python scripts/smoke_dashboard.py --repo /Users/robertguss/Projects/startups/code-scent-mcp/tests/fixtures/python-basic --out /Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-task-32-timeout-smoke.json",
+    "cmd": "timeout 20 uv run python scripts/smoke_dashboard.py --repo <repo>/tests/fixtures/python-basic --out <repo>/.omo/evidence/prd-remainder-task-32-timeout-smoke.json",
     "passed": true,
     "returncode": 0,
     "stderr_excerpt": "127.0.0.1 - - [11/Jun/2026 21:40:33] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:33] \"GET /api/status HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:33] \"GET /api/exports HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:34] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:34] \"GET /static/dashboard.css HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:34] \"GET /static/dashboard.js HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:34] \"GET /api/status HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:34] \"GET /api/findings HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:34] \"GET /api/progress HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:34] \"GET /api/rules HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:34] \"GET /api/reports HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:34] \"GET /api/exports HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:34] \"GET /favicon.ico HTTP/1.1\" 404 -\n",
     "stdout_excerpt": ""
   },
   "malformed_input": {
-    "cmd": "uv run python scripts/smoke_dashboard.py --repo /var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/codescent-missing-repo-task32 --out /Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-task-32-missing.json",
+    "cmd": "uv run python scripts/smoke_dashboard.py --repo /var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/codescent-missing-repo-task32 --out <repo>/.omo/evidence/prd-remainder-task-32-missing.json",
     "passed": true,
     "returncode": 1,
-    "stderr_excerpt": "Traceback (most recent call last):\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_dashboard.py\", line 291, in <module>\n    main()\n    ~~~~^^\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/scripts/smoke_dashboard.py\", line 43, in main\n    _ = CodeHealthService(repo).scan()\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/services/code_health.py\", line 41, in scan\n    index_result = RepoIndexService(self.repo_root).index_repo()\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/services/repo_index.py\", line 38, in index_repo\n    state = initialize_storage(self.repo_root)\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/storage/repository.py\", line 32, in initialize_storage\n    repo_root = resolve_repo_root(root)\n  File \"/Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/core/paths.py\", line 10, in resolve_repo_root\n    raise CodeScentError(\n    ...<4 lines>...\n    )\ncodescent.core.errors.CodeScentError: invalid_repo_root: Repository root must be an existing directory.\n",
+    "stderr_excerpt": "Traceback (most recent call last):\n  File \"<repo>/scripts/smoke_dashboard.py\", line 291, in <module>\n    main()\n    ~~~~^^\n  File \"<repo>/scripts/smoke_dashboard.py\", line 43, in main\n    _ = CodeHealthService(repo).scan()\n  File \"<repo>/src/codescent/services/code_health.py\", line 41, in scan\n    index_result = RepoIndexService(self.repo_root).index_repo()\n  File \"<repo>/src/codescent/services/repo_index.py\", line 38, in index_repo\n    state = initialize_storage(self.repo_root)\n  File \"<repo>/src/codescent/storage/repository.py\", line 32, in initialize_storage\n    repo_root = resolve_repo_root(root)\n  File \"<repo>/src/codescent/core/paths.py\", line 10, in resolve_repo_root\n    raise CodeScentError(\n    ...<4 lines>...\n    )\ncodescent.core.errors.CodeScentError: invalid_repo_root: Repository root must be an existing directory.\n",
     "stdout_excerpt": ""
   },
   "misleading_success_output": {
@@ -45,12 +45,12 @@
         "server_stopped": true
       },
       "exports": {
-        "json": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-task-32-dashboard-smoke-export.json",
-        "markdown": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-task-32-dashboard-smoke-export.md"
+        "json": "<repo>/.omo/evidence/prd-remainder-task-32-dashboard-smoke-export.json",
+        "markdown": "<repo>/.omo/evidence/prd-remainder-task-32-dashboard-smoke-export.md"
       },
       "external_requests": 0,
       "ok": true,
-      "screenshot_path": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-task-32-dashboard-smoke-dashboard.png"
+      "screenshot_path": "<repo>/.omo/evidence/prd-remainder-task-32-dashboard-smoke-dashboard.png"
     }
   },
   "ok": true,
@@ -68,7 +68,7 @@
     "reason": "smoke script has bounded subprocess timeouts and no resumable checkpoint state"
   },
   "stale_state": {
-    "cmd": "uv run python scripts/smoke_dashboard.py --repo /Users/robertguss/Projects/startups/code-scent-mcp/tests/fixtures/python-basic --out /Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-task-32-stale-smoke.json",
+    "cmd": "uv run python scripts/smoke_dashboard.py --repo <repo>/tests/fixtures/python-basic --out <repo>/.omo/evidence/prd-remainder-task-32-stale-smoke.json",
     "passed": true,
     "returncode": 0,
     "stderr_excerpt": "127.0.0.1 - - [11/Jun/2026 21:40:36] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:36] \"GET /api/status HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:36] \"GET /api/exports HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:37] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:37] \"GET /static/dashboard.css HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:37] \"GET /static/dashboard.js HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:37] \"GET /api/status HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:37] \"GET /api/findings HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:37] \"GET /api/progress HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:37] \"GET /api/rules HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:37] \"GET /api/reports HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:37] \"GET /api/exports HTTP/1.1\" 200 -\n127.0.0.1 - - [11/Jun/2026 21:40:37] \"GET /favicon.ico HTTP/1.1\" 404 -\n",

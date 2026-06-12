@@ -1,7 +1,7 @@
 $ uv run pytest tests/security/test_runtime_safety.py
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
-rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: cov-7.1.0, anyio-4.13.0
 collected 3 items

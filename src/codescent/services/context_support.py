@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict
+
+from pydantic import TypeAdapter
 
 from codescent.engine.context import source_range
 from codescent.services.repo_index import RepoIndexService
@@ -27,6 +29,7 @@ RELATED_REASON_WEIGHTS = {
     "directory_proximity": 0.35,
     "search_similarity": 0.3,
 }
+COUNT_ROW: TypeAdapter[tuple[int] | None] = TypeAdapter(tuple[int] | None)
 
 
 class SymbolMatchPayload(TypedDict):
@@ -197,7 +200,7 @@ def graph_row_count(connection: sqlite3.Connection) -> int:
 
 
 def count_rows(connection: sqlite3.Connection, sql: str) -> int:
-    row = cast("tuple[int] | None", connection.execute(sql).fetchone())
+    row = COUNT_ROW.validate_python(connection.execute(sql).fetchone())
     if row is None:
         return 0
     return row[0]

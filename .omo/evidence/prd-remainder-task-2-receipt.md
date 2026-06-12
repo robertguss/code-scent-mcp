@@ -56,7 +56,7 @@ Result: 0 errors, 0 warnings, 0 notes.
 Command:
 
 ```bash
-tmux new-session -d -s ulw-qa-prd-2 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent status --repo tests/fixtures/python-basic --json > .omo/evidence/prd-remainder-task-2-migration.txt'
+tmux new-session -d -s ulw-qa-prd-2 'cd <repo> && uv run codescent status --repo tests/fixtures/python-basic --json > .omo/evidence/prd-remainder-task-2-migration.txt'
 ```
 
 Result: `.omo/evidence/prd-remainder-task-2-migration.txt` reports `database_ok: true`.

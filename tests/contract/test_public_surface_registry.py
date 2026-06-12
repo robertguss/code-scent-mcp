@@ -1,6 +1,7 @@
 from codescent.core.public_surface import (
     LOCKED_POST_MVP_MCP_TOOL_NAMES,
     MVP_MCP_TOOL_NAMES,
+    POST_MVP_CLI_COMMAND_NAMES,
     POST_MVP_MCP_TOOL_NAMES,
     PUBLIC_SURFACE,
     REGISTERED_POST_MVP_MCP_TOOL_NAMES,
@@ -63,3 +64,19 @@ def test_post_mvp_cli_commands_are_declared_but_locked() -> None:
         "explain",
     }
     assert runtime_commands.isdisjoint(declared_post_mvp)
+
+
+def test_registered_post_mvp_cli_commands_satisfy_plan_audit() -> None:
+    registered_post_mvp = {
+        entry.name
+        for entry in PUBLIC_SURFACE.cli_commands
+        if entry.stage is SurfaceStage.POST_MVP and entry.registered
+    }
+    locked_post_mvp = {
+        entry.name
+        for entry in PUBLIC_SURFACE.cli_commands
+        if entry.stage is SurfaceStage.POST_MVP and not entry.registered
+    }
+
+    assert registered_post_mvp >= POST_MVP_CLI_COMMAND_NAMES
+    assert locked_post_mvp == set()

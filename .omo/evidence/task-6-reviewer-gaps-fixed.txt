@@ -1,10 +1,10 @@
-   Building codescent @ file:///Users/robertguss/Projects/startups/code-scent-mcp
-      Built codescent @ file:///Users/robertguss/Projects/startups/code-scent-mcp
+   Building codescent @ file://<repo>
+      Built codescent @ file://<repo>
 Uninstalled 1 package in 0.95ms
 Installed 1 package in 1ms
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
-rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: cov-7.1.0, anyio-4.13.0
 collected 2 items

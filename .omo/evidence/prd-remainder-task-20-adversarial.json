@@ -20,13 +20,13 @@
     "passed": true,
     "returncode": 0,
     "stderr_excerpt": "",
-    "stdout_excerpt": "{\"include\": [\".\"], \"exclude\": [\".codescent\", \".git\", \".venv\", \"__pycache__\", \".ruff_cache\", \".pytest_cache\", \"data\", \"archive\", \"dist\", \"build\", \"coverage\"], \"generated\": [], \"vendor\": [], \"build\": [], \"language_packs\": [\"python\"], \"framework_packs\": [], \"rule_packs\": [\"python-maintainability\"], \"commands\": {\"test\": [], \"typecheck\": [], \"lint\": [], \"build\": []}, \"token_budgets\": {\"context\": 3000, \"file\": 800, \"dashboard\": 10000}, \"privacy\": {\"runtime_network\": false, \"allow_llm_review\": false}, \"llm\": null}\n"
+    "stdout_excerpt": "{\"include\": [\".\"], \"exclude\": [\".codescent\", \".git\", \".venv\", \"__pycache__\", \".ruff_cache\", \".pytest_cache\", \"data\", \"archive\", \"dist\", \"build\", \"coverage\"], \"generated\": [], \"vendor\": [], \"build\": [], \"language_packs\": [\"python\"], \"framework_packs\": [], \"rule_packs\": [\"python-maintainability\"], \"commands\": {\"test\": [], \"typecheck\": [], \"lint\": [], \"build\": []}, \"budget_limits\": {\"context\": 3000, \"file\": 800, \"dashboard\": 10000}, \"privacy\": {\"runtime_network\": false, \"allow_llm_review\": false}, \"llm\": null}\n"
   },
   "malformed_input": {
     "cmd": "uv run codescent config --repo /tmp/codescent-missing-repo-task20 --json",
     "passed": true,
     "returncode": 1,
-    "stderr_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 /Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/cli/main.py \u2502\n\u2502 :313 in config                                                               \u2502\n\u2502                                                                              \u2502\n\u2502   310 \u2502   \u2502   typer.Option(\"--json\", help=\"Print JSON project config.\"),     \u2502\n\u2502   311 \u2502   ] = False,                                                         \u2502\n\u2502   312 ) -> None:                                                             \u2502\n\u2502 \u2771 313 \u2502   project_config = ConfigService(repo).load()                        \u2502\n\u2502   314 \u2502   payload = project_config.model_dump(mode=\"json\")                   \u2502\n\u2502   315 \u2502   if json_output:                                                    \u2502\n\u2502   316 \u2502   \u2502   typer.echo(json.dumps(payload))                                \u2502\n\u2502        ",
+    "stderr_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 <repo>/src/codescent/cli/main.py \u2502\n\u2502 :313 in config                                                               \u2502\n\u2502                                                                              \u2502\n\u2502   310 \u2502   \u2502   typer.Option(\"--json\", help=\"Print JSON project config.\"),     \u2502\n\u2502   311 \u2502   ] = False,                                                         \u2502\n\u2502   312 ) -> None:                                                             \u2502\n\u2502 \u2771 313 \u2502   project_config = ConfigService(repo).load()                        \u2502\n\u2502   314 \u2502   payload = project_config.model_dump(mode=\"json\")                   \u2502\n\u2502   315 \u2502   if json_output:                                                    \u2502\n\u2502   316 \u2502   \u2502   typer.echo(json.dumps(payload))                                \u2502\n\u2502        ",
     "stdout_excerpt": ""
   },
   "misleading_success_output": {
@@ -41,7 +41,7 @@
       "allow_llm_review": false,
       "runtime_network": false
     },
-    "token_budgets": {
+    "budget_limits": {
       "context": 3000,
       "dashboard": 10000,
       "file": 800

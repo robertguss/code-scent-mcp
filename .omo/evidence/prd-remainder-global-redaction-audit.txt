@@ -1,0 +1,2 @@
+redaction scan: checked evidence, ledger, and test-results with audit files excluded
+matches:

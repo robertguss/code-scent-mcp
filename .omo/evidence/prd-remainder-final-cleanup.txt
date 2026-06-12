@@ -1,6 +1,3 @@
 F4 cleanup receipt:
-- tmux session ulw-qa-prd-f4 killed or absent after capture.
-- Prompt-injection and dirty-worktree temp repos removed.
-- tests/fixtures/python-basic/.codescent removed.
-- /Users/robertguss/Projects/wts-lx/lx_data_lake/.codescent removed.
-- Python caches removed after evidence capture.
+- repo-local __pycache__, .pytest_cache, and fixture .codescent directories removed.
+- remaining generated state scan:

@@ -1,9 +1,8 @@
 # CodeScent Public Surface
 
-CodeScent currently registers the MVP MCP tools below. Post-MVP tools are
-declared in `codescent.core.public_surface` so docs, contract tests, and plan
-audits can track upcoming public surface without exposing it at runtime before
-its implementation lands.
+CodeScent registers the MVP MCP tools and the completed local PRD-remainder
+tools below. Surface entries stay versioned in `codescent.core.public_surface`
+so docs, contract tests, and plan audits can detect drift.
 
 ## Current Registered MCP Tools
 
@@ -22,9 +21,6 @@ its implementation lands.
 - `suggest_tests`
 - `mark_finding`
 - `rescan`
-
-The post-MVP plan intentionally does not register future tools until their
-implementation, tests, documentation, and smoke evidence are complete.
 
 ## Registered Post-MVP MCP Tools
 
@@ -48,7 +44,7 @@ implementation, tests, documentation, and smoke evidence are complete.
 
 ## Locked Post-MVP MCP Tools
 
-No MCP tools are locked in the current verification/risk stage.
+No MCP tools are locked in the current local PRD-remainder stage.
 
 ## Current Registered CLI Commands
 
@@ -58,9 +54,6 @@ No MCP tools are locked in the current verification/risk stage.
 - `scan`
 - `status`
 - `doctor`
-
-## Locked Post-MVP CLI Commands
-
 - `report`
 - `reset`
 - `watch`
@@ -72,6 +65,10 @@ No MCP tools are locked in the current verification/risk stage.
 - `rules`
 - `ci`
 - `review-diff`
+
+## Locked Post-MVP CLI Commands
+
+No CLI commands are locked in the current local PRD-remainder stage.
 
 ## Tool Groups
 
@@ -104,6 +101,6 @@ All tools are local and source-read-only for analyzed source. Tools may create
 or update `.codescent` state for indexing, scan runs, findings, lifecycle
 events, and telemetry.
 
-Locked post-MVP tools and commands remain unregistered until their stage passes
-contract tests, real-surface QA, source-read-only proof, and the required
-evidence capture.
+Future tools and commands remain unregistered until their stage passes contract
+tests, real-surface QA, source-read-only proof, and the required evidence
+capture.

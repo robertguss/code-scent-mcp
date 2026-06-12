@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
-rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: cov-7.1.0, anyio-4.13.0
 collected 2 items
@@ -10,7 +10,7 @@ tests/integration/test_repo_index.py FF                                  [100%]
 =================================== FAILURES ===================================
 _________________ test_deleted_indexed_file_is_reported_stale __________________
 
-tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-robertguss/pytest-40/test_deleted_indexed_file_is_r0')
+tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-user/pytest-40/test_deleted_indexed_file_is_r0')
 
     def test_deleted_indexed_file_is_reported_stale(tmp_path: Path) -> None:
         repo = tmp_path / "repo"
@@ -18,21 +18,21 @@ tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/p
         source.parent.mkdir(parents=True)
         _ = source.write_text("value = 1\n")
         _ = RepoIndexService(repo).index_repo()
-    
+
         source.unlink()
         status = RepoStatusService(repo).get_status()
-    
+
         assert status.index_fresh is False
 >       assert status.changed_files == ("src/app.py",)
 E       AssertionError: assert () == ('src/app.py',)
-E         
+E
 E         Right contains one more item: 'src/app.py'
 E         Use -v to get more diff
 
 tests/integration/test_repo_index.py:56: AssertionError
 ______________________ test_git_repo_reports_dirty_status ______________________
 
-tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-robertguss/pytest-40/test_git_repo_reports_dirty_st0')
+tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-user/pytest-40/test_git_repo_reports_dirty_st0')
 
     def test_git_repo_reports_dirty_status(tmp_path: Path) -> None:
         repo = tmp_path / "repo"
@@ -53,16 +53,16 @@ tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/p
                 "GIT_COMMITTER_EMAIL": "codescent@example.test",
             },
         )
-    
+
         _ = RepoIndexService(repo).index_repo()
         clean = RepoStatusService(repo).get_status()
         _ = source.write_text("value = 2\n")
         dirty = RepoStatusService(repo).get_status()
-    
+
         assert clean.git_available is True
 >       assert clean.git_status == "clean"
 E       AssertionError: assert 'available' == 'clean'
-E         
+E
 E         - clean
 E         + available
 

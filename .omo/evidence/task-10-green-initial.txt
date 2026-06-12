@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
-rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: cov-7.1.0, anyio-4.13.0
 collected 2 items
@@ -10,7 +10,7 @@ tests/unit/test_python_parser.py .F                                      [100%]
 =================================== FAILURES ===================================
 _______________ test_uncertain_relationships_have_low_confidence _______________
 
-tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-robertguss/pytest-104/test_uncertain_relationships_h0')
+tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-user/pytest-104/test_uncertain_relationships_h0')
 
     def test_uncertain_relationships_have_low_confidence(tmp_path: Path) -> None:
         source = tmp_path / "src" / "service.py"
@@ -21,13 +21,13 @@ tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/p
         handler(payload)
     """,
         )
-    
+
         parsed = parse_python_file(source, "src/service.py")
-    
+
         assert parsed.references
 >       assert parsed.references[0].name == "handler"
 E       AssertionError: assert 'globals' == 'handler'
-E         
+E
 E         - handler
 E         + globals
 

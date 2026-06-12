@@ -9,11 +9,17 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import urlparse
 
+from codescent.dashboard.payloads import (
+    DASHBOARD_API_ROUTES,
+    JSON_OBJECT,
+    JsonObject,
+    asset_text,
+    json_int_map,
+    string_list,
+)
 from codescent.services.findings import FindingsService
 from codescent.services.rules import RulesService
 from codescent.services.status import RepoStatusService
-
-JsonObject = dict[str, object]
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +58,29 @@ class DashboardApplication:
         if payload_factory is None:
             return HTTPStatus.NOT_FOUND, {"error": "not_found", "read_only": True}
         return HTTPStatus.OK, payload_factory()
+
+    def post(self, path: str, payload: JsonObject) -> tuple[HTTPStatus, JsonObject]:
+        if path != "/api/rules":
+            return HTTPStatus.NOT_FOUND, {"error": "not_found", "read_only": True}
+        enabled = string_list(payload.get("enabled_rule_packs"))
+        if enabled is None:
+            return HTTPStatus.BAD_REQUEST, {
+                "error": "invalid_rule_packs",
+                "read_only": True,
+            }
+        service = RulesService(self.repo_root)
+        enabled_packs = tuple(enabled)
+        if not service.is_valid_rule_pack_selection(enabled_packs):
+            return HTTPStatus.BAD_REQUEST, {
+                "error": "invalid_rule_packs",
+                "read_only": True,
+            }
+        rules = service.update_rules(enabled_packs)
+        return HTTPStatus.OK, {
+            "read_only": False,
+            "enabled_rule_packs": list(rules.enabled_rule_packs),
+            "disabled_rule_packs": list(rules.disabled_rule_packs),
+        }
 
     def status(self) -> JsonObject:
         status = RepoStatusService(self.repo_root).get_status()
@@ -93,7 +122,7 @@ class DashboardApplication:
             "open_count": progress.open_count,
             "resolved_count": progress.resolved_count,
             "regressed_count": progress.regressed_count,
-            "status_counts": progress.status_counts,
+            "status_counts": json_int_map(progress.status_counts),
         }
 
     def rules(self) -> JsonObject:
@@ -109,7 +138,7 @@ class DashboardApplication:
         return {
             "read_only": True,
             "open_count": report.open_count,
-            "status_counts": report.status_counts,
+            "status_counts": json_int_map(report.status_counts),
             "finding_count": len(report.findings),
         }
 
@@ -117,14 +146,7 @@ class DashboardApplication:
         return {
             "read_only": True,
             "format": "json",
-            "routes": [
-                "/api/status",
-                "/api/findings",
-                "/api/progress",
-                "/api/rules",
-                "/api/reports",
-                "/api/exports",
-            ],
+            "routes": list(DASHBOARD_API_ROUTES),
         }
 
 
@@ -151,13 +173,32 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             return
         parsed = urlparse(self.path)
         if parsed.path == "/":
-            self._send_text(HTTPStatus.OK, _asset_text("templates/dashboard.html"))
+            self._send_text(HTTPStatus.OK, asset_text("templates/dashboard.html"))
             return
         if parsed.path.startswith("/static/"):
             self._send_static(parsed.path.removeprefix("/static/"))
             return
         status, payload = http_server.dashboard.route(parsed.path)
         self._send_json(status, payload)
+
+    def do_POST(self) -> None:
+        http_server = self.server
+        if not isinstance(http_server, DashboardHttpServer):
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+        if http_server.dashboard is None:
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+        parsed = urlparse(self.path)
+        payload = self._read_json_body()
+        if payload is None:
+            self._send_json(
+                HTTPStatus.BAD_REQUEST,
+                {"error": "invalid_json", "read_only": True},
+            )
+            return
+        status, response = http_server.dashboard.post(parsed.path, payload)
+        self._send_json(status, response)
 
     def _send_json(self, status: HTTPStatus, payload: JsonObject) -> None:
         body = json.dumps(payload).encode()
@@ -189,7 +230,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         asset_path = f"static/{path}"
         suffix = Path(path).suffix
         try:
-            body = _asset_text(asset_path)
+            body = asset_text(asset_path)
         except FileNotFoundError:
             self._send_json(
                 HTTPStatus.NOT_FOUND,
@@ -204,6 +245,15 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 "text/plain; charset=utf-8",
             ),
         )
+
+    def _read_json_body(self) -> JsonObject | None:
+        content_length = self.headers.get("content-length", "0")
+        try:
+            length = int(content_length)
+            raw = self.rfile.read(length)
+            return JSON_OBJECT.validate_json(raw)
+        except (ValueError, json.JSONDecodeError):
+            return None
 
 
 def start_dashboard_server(
@@ -225,8 +275,3 @@ def start_dashboard_server(
         _httpd=httpd,
         _thread=thread,
     )
-
-
-def _asset_text(relative_path: str) -> str:
-    asset_root = Path(__file__).parent
-    return (asset_root / relative_path).read_text()

@@ -20,7 +20,7 @@
     "stdout_excerpt": ".                                                                        [100%]\n1 passed in 0.37s\n"
   },
   "hung_or_long_commands": {
-    "cmd": "timeout 10 uv run codescent doctor --repo /Users/robertguss/Projects/startups/code-scent-mcp/tests/fixtures/python-basic --json",
+    "cmd": "timeout 10 uv run codescent doctor --repo <repo>/tests/fixtures/python-basic --json",
     "passed": true,
     "returncode": 0,
     "stderr_excerpt": "",

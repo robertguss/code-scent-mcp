@@ -5,10 +5,10 @@
     "server_stopped": true
   },
   "exports": {
-    "json": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-task-32-dashboard-smoke-export.json",
-    "markdown": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-task-32-dashboard-smoke-export.md"
+    "json": "<repo>/.omo/evidence/prd-remainder-task-32-dashboard-smoke-export.json",
+    "markdown": "<repo>/.omo/evidence/prd-remainder-task-32-dashboard-smoke-export.md"
   },
   "external_requests": 0,
   "ok": true,
-  "screenshot_path": "/Users/robertguss/Projects/startups/code-scent-mcp/.omo/evidence/prd-remainder-task-32-dashboard-smoke-dashboard.png"
+  "screenshot_path": "<repo>/.omo/evidence/prd-remainder-task-32-dashboard-smoke-dashboard.png"
 }

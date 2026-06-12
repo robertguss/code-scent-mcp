@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
-rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: cov-7.1.0, anyio-4.13.0
 collected 2 items
@@ -14,9 +14,9 @@ ______________________ test_mcp_lists_repo_tools[asyncio] ______________________
     async def test_mcp_lists_repo_tools() -> None:
         async with Client(mcp) as client:
             tools = await client.list_tools()
-    
+
         repo_tools = {tool.name: tool for tool in tools}
-    
+
 >       assert {"get_repo_map", "get_repo_status"} <= repo_tools.keys()
 E       AssertionError: assert {'get_repo_map', 'get_repo_status'} <= dict_keys([])
 E        +  where dict_keys([]) = <built-in method keys of dict object at 0x108d9f2c0>()
@@ -25,7 +25,7 @@ E        +    where <built-in method keys of dict object at 0x108d9f2c0> = {}.ke
 tests/contract/test_mcp_repo_tools.py:45: AssertionError
 ______________ test_get_repo_map_and_status_are_bounded[asyncio] _______________
 
-tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-robertguss/pytest-79/test_get_repo_map_and_status_a0')
+tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-user/pytest-79/test_get_repo_map_and_status_a0')
 
     @pytest.mark.anyio
     async def test_get_repo_map_and_status_are_bounded(tmp_path: Path) -> None:
@@ -36,18 +36,18 @@ tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/p
         test_file.parent.mkdir()
         _ = source.write_text("SECRET_SENTINEL = 'do not leak source'\n")
         _ = test_file.write_text("def test_cli() -> None:\n    assert True\n")
-    
+
         async with Client(mcp) as client:
 >           map_result = await client.call_tool("get_repo_map", {"repo": str(repo)})
                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/contract/test_mcp_repo_tools.py:64: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/contract/test_mcp_repo_tools.py:64:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 .venv/lib/python3.13/site-packages/fastmcp/client/mixins/tools.py:312: in call_tool
     return await self._parse_call_tool_result(
 .venv/lib/python3.13/site-packages/fastmcp/client/mixins/tools.py:201: in _parse_call_tool_result
     return await _parse_call_tool_result(
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 name = 'get_repo_map'
 result = CallToolResult(meta=None, content=[TextContent(type='text', text="Unknown tool: 'get_repo_map'", annotations=None, meta=None)], structuredContent=None, isError=True)
@@ -64,7 +64,7 @@ client_name = 'Client-618b', raise_on_error = True
         raise_on_error: bool = False,
     ) -> CallToolResult:
         """Parse an mcp.types.CallToolResult into our CallToolResult dataclass.
-    
+
         Args:
             name: Tool name (for schema lookup)
             result: Raw MCP protocol result
@@ -72,7 +72,7 @@ client_name = 'Client-618b', raise_on_error = True
             list_tools_fn: Async function to refresh tool schemas if needed
             client_name: Optional client name for logging
             raise_on_error: Whether to raise ToolError on errors
-    
+
         Returns:
             CallToolResult: Parsed result with structured data
         """
@@ -80,7 +80,7 @@ client_name = 'Client-618b', raise_on_error = True
         # avoid a circular import (client.client -> mixins.tools -> client.client),
         # but we need the concrete class here to construct the return value.
         from fastmcp.client.client import CallToolResult
-    
+
         data = None
         if result.isError and raise_on_error:
             if result.content and isinstance(result.content[0], mcp.types.TextContent):

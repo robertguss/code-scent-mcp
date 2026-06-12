@@ -31,16 +31,16 @@ def _mvp_entry(name: str, group: str) -> SurfaceEntry:
     )
 
 
-def _post_mvp_entry(name: str, group: str) -> SurfaceEntry:
+def _registered_post_mvp_entry(name: str, group: str) -> SurfaceEntry:
     return SurfaceEntry(
         name=name,
         stage=SurfaceStage.POST_MVP,
         group=group,
-        registered=False,
+        registered=True,
     )
 
 
-def _registered_post_mvp_entry(name: str, group: str) -> SurfaceEntry:
+def _registered_post_mvp_cli_entry(name: str, group: str) -> SurfaceEntry:
     return SurfaceEntry(
         name=name,
         stage=SurfaceStage.POST_MVP,
@@ -183,17 +183,17 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _mvp_entry("scan", "health"),
         _mvp_entry("status", "repository"),
         _mvp_entry("doctor", "diagnostics"),
-        _post_mvp_entry("report", "reports"),
-        _post_mvp_entry("reset", "repository"),
-        _post_mvp_entry("watch", "repository"),
-        _post_mvp_entry("findings", "health"),
-        _post_mvp_entry("next", "health"),
-        _post_mvp_entry("explain", "health"),
-        _post_mvp_entry("export", "reports"),
-        _post_mvp_entry("config", "configuration"),
-        _post_mvp_entry("rules", "configuration"),
-        _post_mvp_entry("ci", "ci"),
-        _post_mvp_entry("review-diff", "ci"),
+        _registered_post_mvp_cli_entry("report", "reports"),
+        _registered_post_mvp_cli_entry("reset", "repository"),
+        _registered_post_mvp_cli_entry("watch", "repository"),
+        _registered_post_mvp_cli_entry("findings", "health"),
+        _registered_post_mvp_cli_entry("next", "health"),
+        _registered_post_mvp_cli_entry("explain", "health"),
+        _registered_post_mvp_cli_entry("export", "reports"),
+        _registered_post_mvp_cli_entry("config", "configuration"),
+        _registered_post_mvp_cli_entry("rules", "configuration"),
+        _registered_post_mvp_cli_entry("ci", "ci"),
+        _registered_post_mvp_cli_entry("review-diff", "ci"),
     ),
 )
 
