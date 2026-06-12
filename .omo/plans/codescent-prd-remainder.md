@@ -304,7 +304,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic verify_change --out .omo/evidence/prd-remainder-task-17-verify-change.json`; PASS if artifact has `executes: false`, recommended commands, and persisted recommendation ID. Evidence `.omo/evidence/prd-remainder-task-17-verify-change.json`.
   Commit: Y | `feat(verification): add recommend-only verify change` | Files `src/codescent/services/verification.py`, `src/codescent/mcp/planning_tools.py`, `src/codescent/storage/schema.py`, `tests/contract/test_mcp_planning_tools.py`
 
-- [ ] 18. Add diff-aware risk reports
+- [x] 18. Add diff-aware risk reports
   What to do / Must NOT do: Implement `review_diff_risk` and `get_changed_file_health` using git changed files, impact, findings, and verification recommendations. Do not require GitHub or network.
   Parallelization: Can parallel Y | Wave 5 | Blocks CI/PR
   References: `docs/prd.md:1261`, `docs/prd.md:1268`, `docs/architecture.md:593`

@@ -38,6 +38,8 @@ MVP_TOOL_NAMES = {
     "verify_change",
     "mark_finding",
     "rescan",
+    "review_diff_risk",
+    "get_changed_file_health",
 }
 
 
@@ -85,6 +87,8 @@ async def test_no_post_mvp_tools_exposed() -> None:
     assert "get_backlog" in tool_names
     assert "get_progress" in tool_names
     assert "get_regressions" in tool_names
+    assert "review_diff_risk" in tool_names
+    assert "get_changed_file_health" in tool_names
     assert "report" not in tool_names
     assert "reset" not in tool_names
 

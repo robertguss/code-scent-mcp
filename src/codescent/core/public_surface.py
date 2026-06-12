@@ -108,6 +108,8 @@ REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "search_tests",
         "search_todos",
         "verify_change",
+        "review_diff_risk",
+        "get_changed_file_health",
     },
 )
 
@@ -171,8 +173,8 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _registered_post_mvp_entry("get_backlog", "health"),
         _registered_post_mvp_entry("get_progress", "health"),
         _registered_post_mvp_entry("get_regressions", "health"),
-        _post_mvp_entry("review_diff_risk", "risk"),
-        _post_mvp_entry("get_changed_file_health", "risk"),
+        _registered_post_mvp_entry("review_diff_risk", "risk"),
+        _registered_post_mvp_entry("get_changed_file_health", "risk"),
     ),
     cli_commands=(
         _mvp_entry("init", "repository"),

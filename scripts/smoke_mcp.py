@@ -96,6 +96,9 @@ VERIFY_CHANGE_TOOLS: Final[tuple[str, ...]] = (
     "scan_code_health",
     "verify_change",
 )
+DIFF_RISK_TOOLS: Final[tuple[str, ...]] = (
+    "review_diff_risk",
+)
 EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("full_loop",): FULL_LOOP_TOOLS,
     ("search_expansion",): SEARCH_EXPANSION_TOOLS,
@@ -109,6 +112,7 @@ EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("explain_score",): EXPLAIN_SCORE_TOOLS,
     ("backlog_progress",): BACKLOG_PROGRESS_TOOLS,
     ("verify_change",): VERIFY_CHANGE_TOOLS,
+    ("diff_risk",): DIFF_RISK_TOOLS,
 }
 
 
@@ -182,7 +186,11 @@ def _parse_tool_call(raw_tool: str, repo: str) -> ToolCall:
             name=tool_name,
             arguments={"repo": repo, "queries": _to_json_value(queries)},
         )
-    if tool_name in {"get_file_context", "get_related_files"}:
+    if tool_name in {
+        "get_file_context",
+        "get_related_files",
+        "get_changed_file_health",
+    }:
         return ToolCall(name=tool_name, arguments={"repo": repo, "path": query})
     if tool_name == "get_symbol_context":
         return ToolCall(
@@ -249,6 +257,8 @@ def _expanded_tools(tools: tuple[str, ...]) -> tuple[str, ...]:
 
 def prepare_repo_for_tools(repo: Path, tools: tuple[str, ...]) -> None:
     if tools == ("search_changed",):
+        shutil.rmtree(repo / ".codescent", ignore_errors=True)
+    if tools == ("diff_risk",):
         shutil.rmtree(repo / ".codescent", ignore_errors=True)
     if tools == ("graph_context",):
         shutil.rmtree(repo / ".codescent", ignore_errors=True)

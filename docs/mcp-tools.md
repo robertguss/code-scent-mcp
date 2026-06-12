@@ -43,11 +43,12 @@ implementation, tests, documentation, and smoke evidence are complete.
 - `get_backlog`
 - `get_progress`
 - `get_regressions`
+- `review_diff_risk`
+- `get_changed_file_health`
 
 ## Locked Post-MVP MCP Tools
 
-- `review_diff_risk`
-- `get_changed_file_health`
+No MCP tools are locked in the current verification/risk stage.
 
 ## Current Registered CLI Commands
 
@@ -94,6 +95,10 @@ Planning tools:
 
 `get_finding_context`, `plan_refactor`, `suggest_tests`, `get_impact`,
 `verify_change`
+
+Risk tools:
+
+`review_diff_risk`, `get_changed_file_health`
 
 All tools are local and source-read-only for analyzed source. Tools may create
 or update `.codescent` state for indexing, scan runs, findings, lifecycle
