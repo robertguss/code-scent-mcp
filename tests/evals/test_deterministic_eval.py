@@ -30,6 +30,23 @@ def test_eval_scores_fixture_workflow(tmp_path: Path) -> None:
     assert payload.workflow.success is True
 
 
+def test_ts_react_next_pack_meets_expected_eval_thresholds(tmp_path: Path) -> None:
+    out = tmp_path / "ts-eval.json"
+
+    result = run_deterministic_eval(
+        repo=Path("tests/fixtures/ts-react-next-basic"),
+        expected=Path("evals/fixtures/ts-react-next.expected.json"),
+        out=out,
+    )
+    payload = EvalOutput.model_validate_json(out.read_text())
+
+    assert result.passed is True
+    assert result.score >= 0.9
+    assert payload.metrics["finding_precision"] == 1.0
+    assert payload.metrics["source_read_only"] == 1.0
+    assert payload.workflow.success is True
+
+
 def test_eval_fails_on_missing_expected_finding(tmp_path: Path) -> None:
     expected = tmp_path / "expected.json"
     source = ExpectedManifest.model_validate_json(

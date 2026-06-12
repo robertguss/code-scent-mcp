@@ -1,0 +1,100 @@
+{
+  "fixture_root": "tests/fixtures/ts-react-next-basic",
+  "language": "typescript",
+  "files": [
+    "app/api/tasks/route.ts",
+    "app/tasks/page.tsx",
+    "components/task-card.jsx",
+    "components/task-list.tsx",
+    "hooks/useTasks.ts",
+    "lib/tasks.js",
+    "pages/legacy.jsx",
+    "tests/task-list.test.tsx"
+  ],
+  "findings": [
+    {
+      "id": "TSNEXT-ROUTE-HANDLER",
+      "rule_id": "next.route_handler_too_much",
+      "file": "app/api/tasks/route.ts",
+      "symbol": "app.api.tasks.route.GET"
+    },
+    {
+      "id": "TSNEXT-MISSING-TEST-ROUTE",
+      "rule_id": "typescript.missing_nearby_test",
+      "file": "app/api/tasks/route.ts",
+      "symbol": "app.api.tasks.route.GET"
+    },
+    {
+      "id": "TSNEXT-MISSING-TEST-PAGE",
+      "rule_id": "typescript.missing_nearby_test",
+      "file": "app/tasks/page.tsx",
+      "symbol": "app.tasks.page.TasksPage"
+    },
+    {
+      "id": "TSNEXT-LARGE-CARD",
+      "rule_id": "typescript.large_component",
+      "file": "components/task-card.jsx",
+      "symbol": "components.task-card.TaskCard"
+    },
+    {
+      "id": "TSNEXT-LARGE-COMPONENT",
+      "rule_id": "typescript.large_component",
+      "file": "components/task-list.tsx",
+      "symbol": "components.task-list.TaskList"
+    },
+    {
+      "id": "TSNEXT-TOO-MANY-HOOKS",
+      "rule_id": "react.too_many_hooks",
+      "file": "hooks/useTasks.ts",
+      "symbol": "hooks.useTasks.useTasks"
+    },
+    {
+      "id": "TSNEXT-MISSING-TEST",
+      "rule_id": "typescript.missing_nearby_test",
+      "file": "components/task-card.jsx",
+      "symbol": "components.task-card.TaskCard"
+    },
+    {
+      "id": "TSNEXT-MISSING-TEST-HOOK",
+      "rule_id": "typescript.missing_nearby_test",
+      "file": "hooks/useTasks.ts",
+      "symbol": "hooks.useTasks.useTasks"
+    },
+    {
+      "id": "TSNEXT-MISSING-TEST-LIB",
+      "rule_id": "typescript.missing_nearby_test",
+      "file": "lib/tasks.js",
+      "symbol": "lib.tasks.loadTasks"
+    },
+    {
+      "id": "TSNEXT-MISSING-TEST-LEGACY",
+      "rule_id": "typescript.missing_nearby_test",
+      "file": "pages/legacy.jsx",
+      "symbol": "pages.legacy.LegacyTasksPage"
+    }
+  ],
+  "search_queries": [
+    {
+      "query": "TaskList",
+      "expected_files": [
+        "components/task-list.tsx",
+        "tests/task-list.test.tsx"
+      ]
+    },
+    {
+      "query": "loadTasks",
+      "expected_files": [
+        "app/api/tasks/route.ts",
+        "app/tasks/page.tsx",
+        "lib/tasks.js"
+      ]
+    }
+  ],
+  "workflow_task": {
+    "goal": "Split hook and component responsibilities without changing rendered task behavior.",
+    "target_finding_id": "TSNEXT-TOO-MANY-HOOKS",
+    "expected_verification": [
+      "vitest run tests/task-list.test.tsx"
+    ]
+  }
+}

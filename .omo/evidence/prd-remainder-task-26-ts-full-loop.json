@@ -1,0 +1,158 @@
+{
+  "calls": [
+    {
+      "data": {
+        "finding_ids": [
+          "next.route_handler_too_much:91a4f11b02bf",
+          "typescript.missing_nearby_test:6b873fc49056",
+          "typescript.missing_nearby_test:31565f8388df",
+          "typescript.large_component:375cbf0d52c0",
+          "typescript.missing_nearby_test:a34844312fba",
+          "typescript.large_component:e410cdb2f365",
+          "react.too_many_hooks:a286f0a9dbd9",
+          "typescript.missing_nearby_test:1deabe44a344",
+          "typescript.missing_nearby_test:29f6532127e8",
+          "typescript.missing_nearby_test:110d6427fff1"
+        ],
+        "findings_created": 10,
+        "ok": true,
+        "rule_ids": [
+          "next.route_handler_too_much",
+          "react.too_many_hooks",
+          "typescript.large_component",
+          "typescript.missing_nearby_test"
+        ],
+        "scan_id": "1cc77fd4c0a847d5b86c1c15ffbf2586",
+        "status": "complete"
+      },
+      "tool": "scan_code_health"
+    },
+    {
+      "data": {
+        "file_path": "app/api/tasks/route.ts",
+        "finding_id": "next.route_handler_too_much:91a4f11b02bf",
+        "ok": true,
+        "rule_id": "next.route_handler_too_much",
+        "suggested_action": "Move route work into a service and keep the handler thin."
+      },
+      "tool": "get_next_improvement"
+    },
+    {
+      "data": {
+        "affected_files": [
+          "app/api/tasks/route.ts"
+        ],
+        "finding_id": "next.route_handler_too_much:91a4f11b02bf",
+        "next_tools": [
+          "plan_refactor",
+          "suggest_tests"
+        ],
+        "ok": true,
+        "relevant_symbols": [
+          "app.api.tasks.route.GET"
+        ],
+        "relevant_tests": [],
+        "risk_notes": [
+          "low-confidence references omitted from caller/callee claims"
+        ],
+        "rule_id": "next.route_handler_too_much",
+        "source_ranges": [
+          {
+            "end_line": 6,
+            "path": "app/api/tasks/route.ts",
+            "source": "export async function GET(): Promise<Response> {\n  const tasks = await loadTasks(\"open\");\n  return Response.json({ tasks });\n}",
+            "start_line": 3
+          }
+        ],
+        "suggested_action": "Move route work into a service and keep the handler thin.",
+        "summary": "next.route_handler_too_much in app/api/tasks/route.ts; evidence: line_count, threshold."
+      },
+      "tool": "get_finding_context"
+    },
+    {
+      "data": {
+        "affected_files": [
+          "app/api/tasks/route.ts"
+        ],
+        "expected_behavior_preservation": [
+          "Keep existing imports and call sites working.",
+          "Preserve test-observed behavior for likely related tests."
+        ],
+        "fallback": "Revert the source change and keep the finding open.",
+        "finding_id": "next.route_handler_too_much:91a4f11b02bf",
+        "goal": "Address next.route_handler_too_much in app/api/tasks/route.ts.",
+        "non_goals": [
+          "Do not edit source files automatically.",
+          "Do not change public behavior without tests."
+        ],
+        "ok": true,
+        "relevant_symbols": [
+          "app.api.tasks.route.GET"
+        ],
+        "risk": "low",
+        "steps": [
+          "Review the bounded finding context and current tests.",
+          "Make the smallest source change that removes the smell.",
+          "Run the suggested verification commands.",
+          "Rescan with CodeScent and update the finding lifecycle."
+        ],
+        "verification_recommendations": [
+          "pytest"
+        ]
+      },
+      "tool": "plan_refactor"
+    },
+    {
+      "data": {
+        "commands": [
+          "pytest"
+        ],
+        "executes_in_v1": false,
+        "likely_tests": [],
+        "ok": true
+      },
+      "tool": "suggest_tests"
+    },
+    {
+      "data": {
+        "finding_ids": [
+          "next.route_handler_too_much:91a4f11b02bf",
+          "typescript.missing_nearby_test:6b873fc49056",
+          "typescript.missing_nearby_test:31565f8388df",
+          "typescript.large_component:375cbf0d52c0",
+          "typescript.missing_nearby_test:a34844312fba",
+          "typescript.large_component:e410cdb2f365",
+          "react.too_many_hooks:a286f0a9dbd9",
+          "typescript.missing_nearby_test:1deabe44a344",
+          "typescript.missing_nearby_test:29f6532127e8",
+          "typescript.missing_nearby_test:110d6427fff1"
+        ],
+        "findings_created": 10,
+        "ok": true,
+        "regressed_finding_ids": [],
+        "rule_ids": [
+          "next.route_handler_too_much",
+          "react.too_many_hooks",
+          "typescript.large_component",
+          "typescript.missing_nearby_test"
+        ],
+        "scan_id": "0940c7ee52464d1b89a1dd84c2fa3f06",
+        "status": "complete"
+      },
+      "tool": "rescan"
+    },
+    {
+      "data": {
+        "finding_id": "next.route_handler_too_much:91a4f11b02bf",
+        "ok": true,
+        "status": "needs_review"
+      },
+      "tool": "mark_finding"
+    }
+  ],
+  "source_read_only": {
+    "allowed_runtime_state": ".codescent",
+    "changed_source_paths": [],
+    "source_hashes_unchanged": true
+  }
+}

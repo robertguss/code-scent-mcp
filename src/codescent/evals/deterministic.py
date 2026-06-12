@@ -108,7 +108,7 @@ def run_deterministic_eval(
     finding_by_rule = {finding.rule_id: finding.id for finding in scan.findings}
     metrics = {
         "retrieval_top_k": _retrieval_score(repo, manifest.search_queries),
-        "context_bounds": _context_score(repo),
+        "context_bounds": _context_score(repo, manifest),
         "finding_precision": _finding_score(scan.findings, manifest.findings),
         "stable_finding_ids": _stable_key_score(scan.finding_ids),
         "workflow_success": _workflow_score(repo, manifest, finding_by_rule),
@@ -153,8 +153,8 @@ def _retrieval_score(
     return _ratio(matches, total)
 
 
-def _context_score(repo: Path) -> float:
-    context = ContextService(repo).get_file_context("src/acme_tasks/workflow.py")
+def _context_score(repo: Path, manifest: ExpectedManifest) -> float:
+    context = ContextService(repo).get_file_context(manifest.files[0])
     source_ranges = context["source_ranges"]
     if len(source_ranges) > MAX_CONTEXT_RANGES:
         return 0.0

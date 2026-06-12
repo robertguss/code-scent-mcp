@@ -29,7 +29,6 @@ class SymbolService:
         parsed_files = tuple(
             parser(repo_root / item.path, item.path)
             for item in build_file_inventory(repo_root)
-            if item.language == "python"
             for parser in (registry.parser_for_language(item.language),)
             if parser is not None
         )

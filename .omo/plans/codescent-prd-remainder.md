@@ -368,7 +368,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-25 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent scan --repo tests/fixtures/ts-react-next-basic --json'`; PASS if JSON includes expected React/Next rule IDs with evidence. Evidence `.omo/evidence/prd-remainder-task-25-ts-rules.txt`.
   Commit: Y | `feat(packs): add ts react next rules` | Files `src/codescent/engine/rules/ts_react_next.py`, `tests/integration/test_ts_react_next_rules.py`
 
-- [ ] 26. Add TypeScript/React/Next MCP and eval smoke
+- [x] 26. Add TypeScript/React/Next MCP and eval smoke
   What to do / Must NOT do: Extend deterministic evals and MCP smoke scripts to prove the TS/React/Next pack completes the improvement loop without source edits.
   Parallelization: Can parallel N | Wave 7 | Blocks CI/dashboard pack coverage
   References: `docs/prd.md:1120`, `docs/prd.md:1170`, `docs/evals.md`
