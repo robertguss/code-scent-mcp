@@ -1,0 +1,53 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "dashboard UI render has no checkpointed resumable state"
+  },
+  "dirty_worktree": {
+    "passed": true,
+    "source_hashes_unchanged": true,
+    "status": 200
+  },
+  "flaky_tests": {
+    "cmd": "uv run pytest tests/integration/test_dashboard.py::test_dashboard_ui_renders_findings_trends_rules_and_exports -q",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": ".                                                                        [100%]\n1 passed in 0.57s\n"
+  },
+  "hung_or_long_commands": {
+    "cmd": "timeout 10 uv run pytest tests/integration/test_dashboard.py::test_dashboard_ui_renders_findings_trends_rules_and_exports -q",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": ".                                                                        [100%]\n1 passed in 0.57s\n"
+  },
+  "malformed_input": {
+    "body_excerpt": "{\"error\": \"not_found\", \"read_only\": true}",
+    "passed": true,
+    "status": 404
+  },
+  "misleading_success_output": {
+    "content_type": "text/html; charset=utf-8",
+    "no_external_urls": true,
+    "passed": true,
+    "required_labels": true,
+    "status": 200
+  },
+  "ok": true,
+  "prompt_injection": {
+    "body_has_dashboard": true,
+    "passed": true,
+    "status": 200
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "browser UI has no long-running interruption state in this task"
+  },
+  "stale_state": {
+    "first_status": 200,
+    "passed": true,
+    "same_body": true,
+    "second_status": 200
+  }
+}

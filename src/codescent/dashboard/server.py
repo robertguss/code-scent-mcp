@@ -4,17 +4,14 @@ import json
 import threading
 from dataclasses import dataclass
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import TYPE_CHECKING, ClassVar
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from typing import ClassVar
 from urllib.parse import urlparse
 
 from codescent.services.findings import FindingsService
 from codescent.services.rules import RulesService
 from codescent.services.status import RepoStatusService
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 JsonObject = dict[str, object]
 
@@ -33,7 +30,7 @@ class DashboardServer:
         self._thread.join(timeout=5)
 
 
-class DashboardHttpServer(ThreadingHTTPServer):
+class DashboardHttpServer(HTTPServer):
     dashboard: DashboardApplication | None = None
 
 
@@ -133,10 +130,15 @@ class DashboardApplication:
 
 class DashboardRequestHandler(BaseHTTPRequestHandler):
     server_version: str = "CodeScentDashboard/0.1"
-    protocol_version: str = "HTTP/1.1"
+    protocol_version: str = "HTTP/1.0"
     _JSON_HEADERS: ClassVar[dict[str, str]] = {
         "content-type": "application/json; charset=utf-8",
         "cache-control": "no-store",
+    }
+    _TEXT_TYPES: ClassVar[dict[str, str]] = {
+        ".css": "text/css; charset=utf-8",
+        ".html": "text/html; charset=utf-8",
+        ".js": "application/javascript; charset=utf-8",
     }
 
     def do_GET(self) -> None:
@@ -148,6 +150,12 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR)
             return
         parsed = urlparse(self.path)
+        if parsed.path == "/":
+            self._send_text(HTTPStatus.OK, _asset_text("templates/dashboard.html"))
+            return
+        if parsed.path.startswith("/static/"):
+            self._send_static(parsed.path.removeprefix("/static/"))
+            return
         status, payload = http_server.dashboard.route(parsed.path)
         self._send_json(status, payload)
 
@@ -156,9 +164,46 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.send_response(status.value)
         for key, value in self._JSON_HEADERS.items():
             self.send_header(key, value)
+        self.send_header("connection", "close")
         self.send_header("content-length", str(len(body)))
         self.end_headers()
         _ = self.wfile.write(body)
+
+    def _send_text(
+        self,
+        status: HTTPStatus,
+        body: str,
+        *,
+        content_type: str = "text/html; charset=utf-8",
+    ) -> None:
+        encoded = body.encode()
+        self.send_response(status.value)
+        self.send_header("content-type", content_type)
+        self.send_header("cache-control", "no-store")
+        self.send_header("connection", "close")
+        self.send_header("content-length", str(len(encoded)))
+        self.end_headers()
+        _ = self.wfile.write(encoded)
+
+    def _send_static(self, path: str) -> None:
+        asset_path = f"static/{path}"
+        suffix = Path(path).suffix
+        try:
+            body = _asset_text(asset_path)
+        except FileNotFoundError:
+            self._send_json(
+                HTTPStatus.NOT_FOUND,
+                {"error": "not_found", "read_only": True},
+            )
+            return
+        self._send_text(
+            HTTPStatus.OK,
+            body,
+            content_type=self._TEXT_TYPES.get(
+                suffix,
+                "text/plain; charset=utf-8",
+            ),
+        )
 
 
 def start_dashboard_server(
@@ -180,3 +225,8 @@ def start_dashboard_server(
         _httpd=httpd,
         _thread=thread,
     )
+
+
+def _asset_text(relative_path: str) -> str:
+    asset_root = Path(__file__).parent
+    return (asset_root / relative_path).read_text()

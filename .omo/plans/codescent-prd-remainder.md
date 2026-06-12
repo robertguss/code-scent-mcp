@@ -408,7 +408,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: HTTP call: `curl -i http://127.0.0.1:<port>/api/status`; PASS if status is 200, content-type JSON, and body has `read_only: true`. Evidence `.omo/evidence/prd-remainder-task-30-dashboard-api.txt`.
   Commit: Y | `feat(dashboard): add local dashboard service` | Files `src/codescent/dashboard/**`, `src/codescent/cli/main.py`, `tests/integration/test_dashboard.py`
 
-- [ ] 31. Add dashboard UI for health, findings, trends, rules, and exports
+- [x] 31. Add dashboard UI for health, findings, trends, rules, and exports
   What to do / Must NOT do: Build the actual local dashboard UI with finding list/detail, trend charts, rule config read/update, search/index status, progress, and export controls. Use restrained operational UI. Do not build a marketing landing page.
   Parallelization: Can parallel N | Wave 9 | Blocks browser QA
   References: `docs/prd.md:1371`, `docs/prd.md:1374`, `docs/prd.md:1380`

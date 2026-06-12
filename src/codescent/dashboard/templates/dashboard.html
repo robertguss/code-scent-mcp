@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CodeScent Dashboard</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">CodeScent</p>
+          <h1>Health dashboard</h1>
+        </div>
+        <div class="status-strip" id="statusStrip">
+          <span>Index</span>
+          <strong id="indexState">Loading</strong>
+        </div>
+      </header>
+
+      <section class="summary-grid" aria-label="Repository health summary">
+        <div class="metric">
+          <span>Findings</span>
+          <strong id="findingCount">0</strong>
+        </div>
+        <div class="metric">
+          <span>Open</span>
+          <strong id="openCount">0</strong>
+        </div>
+        <div class="metric">
+          <span>Resolved</span>
+          <strong id="resolvedCount">0</strong>
+        </div>
+        <div class="metric">
+          <span>Git</span>
+          <strong id="gitState">Unknown</strong>
+        </div>
+      </section>
+
+      <section class="workbench">
+        <section class="panel findings-panel" aria-labelledby="findingsTitle">
+          <div class="panel-head">
+            <h2 id="findingsTitle">Findings list</h2>
+            <span id="readOnlyBadge" class="badge">Read only</span>
+          </div>
+          <div id="findingsList" class="findings-list"></div>
+        </section>
+
+        <section class="panel detail-panel" aria-labelledby="detailTitle">
+          <div class="panel-head">
+            <h2 id="detailTitle">Selected finding detail</h2>
+          </div>
+          <article id="findingDetail" class="detail">
+            <h3>No finding selected</h3>
+            <p>Select a finding to inspect rule, severity, status, and action.</p>
+          </article>
+        </section>
+      </section>
+
+      <section class="lower-grid">
+        <section class="panel" aria-labelledby="progressTitle">
+          <div class="panel-head">
+            <h2 id="progressTitle">Progress trend</h2>
+          </div>
+          <div class="trend" id="progressTrend"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="rulesTitle">
+          <div class="panel-head">
+            <h2 id="rulesTitle">Rule config</h2>
+          </div>
+          <div id="ruleConfig" class="rule-list"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="exportTitle">
+          <div class="panel-head">
+            <h2 id="exportTitle">Export control</h2>
+          </div>
+          <p class="muted">Current dashboard API export: JSON.</p>
+          <button id="exportJson" class="icon-button" type="button" aria-label="Download JSON export">
+            <span aria-hidden="true">↓</span>
+            <span>JSON</span>
+          </button>
+        </section>
+      </section>
+    </main>
+    <script src="/static/dashboard.js"></script>
+  </body>
+</html>

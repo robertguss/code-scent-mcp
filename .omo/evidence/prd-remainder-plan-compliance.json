@@ -29,7 +29,6 @@
   "ok": true,
   "tool_surface_ok": true,
   "unchecked_todos": [
-    "- [ ] 30. Add local dashboard service and read API",
     "- [ ] 31. Add dashboard UI for health, findings, trends, rules, and exports",
     "- [ ] 32. Add dashboard smoke, no-network, and cleanup proof",
     "- [ ] F1. Plan compliance audit",

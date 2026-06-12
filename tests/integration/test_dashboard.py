@@ -22,6 +22,13 @@ class HttpJsonResponse:
     payload: dict[str, object]
 
 
+@dataclass(frozen=True, slots=True)
+class HttpTextResponse:
+    status: int
+    content_type: str
+    body: str
+
+
 JSON_OBJECT = TypeAdapter(dict[str, object])
 
 
@@ -52,6 +59,33 @@ def test_dashboard_binds_loopback_and_serves_local_read_api(tmp_path: Path) -> N
     assert export.payload["format"] == "json"
 
 
+def test_dashboard_ui_renders_findings_trends_rules_and_exports(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_finding(tmp_path)
+    _ = CodeHealthService(repo).scan()
+
+    server = start_dashboard_server(repo, port=0)
+    try:
+        page = _get_text(f"{server.base_url}/")
+        css = _get_text(f"{server.base_url}/static/dashboard.css")
+        script = _get_text(f"{server.base_url}/static/dashboard.js")
+    finally:
+        server.shutdown()
+
+    combined = f"{page.body}\n{css.body}\n{script.body}".lower()
+    assert page.status == 200
+    assert page.content_type.startswith("text/html")
+    assert "findings list" in combined
+    assert "selected finding detail" in combined
+    assert "progress trend" in combined
+    assert "rule config" in combined
+    assert "export control" in combined
+    assert "marketing" not in combined
+    assert "https://" not in combined
+    assert "http://" not in combined
+
+
 def _get_json(url: str) -> HttpJsonResponse:
     parsed = urlparse(url)
     connection = HTTPConnection(parsed.hostname or "127.0.0.1", parsed.port or 80)
@@ -68,6 +102,21 @@ def _get_json(url: str) -> HttpJsonResponse:
             status=response.status,
             content_type=response.headers.get("content-type", ""),
             payload=payload,
+        )
+    finally:
+        connection.close()
+
+
+def _get_text(url: str) -> HttpTextResponse:
+    parsed = urlparse(url)
+    connection = HTTPConnection(parsed.hostname or "127.0.0.1", parsed.port or 80)
+    try:
+        connection.request("GET", parsed.path)
+        response = connection.getresponse()
+        return HttpTextResponse(
+            status=response.status,
+            content_type=response.headers.get("content-type", ""),
+            body=response.read().decode(),
         )
     finally:
         connection.close()
