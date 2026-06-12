@@ -900,8 +900,8 @@ Recommended starting point:
 This ecosystem is common among AI-generated projects and provides many obvious
 code smell patterns.
 
-Python-first MVP supersession, approved during planning on June 11, 2026:
-the TypeScript/JavaScript/React starting point above is superseded for this
+Python-first MVP supersession, approved during planning on June 11, 2026: the
+TypeScript/JavaScript/React starting point above is superseded for this
 implementation milestone. The MVP now targets Python first, with other language
 packs deferred until after the Python vertical loop is proven.
 

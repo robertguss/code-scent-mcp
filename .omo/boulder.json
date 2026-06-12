@@ -5,9 +5,7 @@
     "codescent-prd-remainder": {
       "active_plan": ".omo/plans/codescent-prd-remainder.md",
       "plan_name": "codescent-prd-remainder",
-      "session_ids": [
-        "codex:019eb84c-6dab-7ae1-b307-78935f0dcf1b"
-      ],
+      "session_ids": ["codex:019eb84c-6dab-7ae1-b307-78935f0dcf1b"],
       "status": "completed",
       "work_id": "codescent-prd-remainder",
       "worktree_path": null
@@ -15,9 +13,7 @@
     "codescent-documentation-changelog": {
       "active_plan": ".omo/plans/codescent-documentation-changelog.md",
       "plan_name": "codescent-documentation-changelog",
-      "session_ids": [
-        "codex:019ebc1c-4c94-72a3-bffe-2d3af82ef513"
-      ],
+      "session_ids": ["codex:019ebc1c-4c94-72a3-bffe-2d3af82ef513"],
       "status": "active",
       "work_id": "codescent-documentation-changelog",
       "worktree_path": null
@@ -25,9 +21,7 @@
     "codescent-python-mvp": {
       "active_plan": ".omo/plans/codescent-python-mvp.md",
       "plan_name": "codescent-python-mvp",
-      "session_ids": [
-        "codex:019eb68e-8b68-7152-93e3-45fc33aee7de"
-      ],
+      "session_ids": ["codex:019eb68e-8b68-7152-93e3-45fc33aee7de"],
       "status": "completed",
       "work_id": "codescent-python-mvp",
       "worktree_path": null

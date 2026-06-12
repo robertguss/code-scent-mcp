@@ -33,9 +33,7 @@
     "passed": true,
     "payload": {
       "deleted": false,
-      "paths": [
-        "<repo>/tests/fixtures/python-basic/.codescent"
-      ]
+      "paths": ["<repo>/tests/fixtures/python-basic/.codescent"]
     }
   },
   "ok": true,

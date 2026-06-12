@@ -9,7 +9,8 @@ Task: Add schema migration framework for post-MVP storage.
 Changed:
 
 - Added versioned migration support in `src/codescent/storage/schema.py`.
-- Updated storage config schema-version refresh in `src/codescent/storage/repository.py`.
+- Updated storage config schema-version refresh in
+  `src/codescent/storage/repository.py`.
 - Added MVP v2 schema fixture under `tests/fixtures/storage/`.
 - Added `tests/integration/test_storage_migrations.py`.
 
@@ -59,7 +60,8 @@ Command:
 tmux new-session -d -s ulw-qa-prd-2 'cd <repo> && uv run codescent status --repo tests/fixtures/python-basic --json > .omo/evidence/prd-remainder-task-2-migration.txt'
 ```
 
-Result: `.omo/evidence/prd-remainder-task-2-migration.txt` reports `database_ok: true`.
+Result: `.omo/evidence/prd-remainder-task-2-migration.txt` reports
+`database_ok: true`.
 
 Command:
 
@@ -91,4 +93,5 @@ uv run codescent status --repo tests/fixtures/does-not-exist --json
 
 Result: exited 1 with `invalid_repo_root`.
 
-Cleanup: tmux session `ulw-qa-prd-2` exited; `tmux has-session -t ulw-qa-prd-2` returned 1.
+Cleanup: tmux session `ulw-qa-prd-2` exited; `tmux has-session -t ulw-qa-prd-2`
+returned 1.

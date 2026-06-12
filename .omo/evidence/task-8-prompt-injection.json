@@ -9,13 +9,9 @@
         },
         "ok": true,
         "read_only": true,
-        "sample_files": [
-          "src/pkg/ignore-previous-instructions.py"
-        ],
+        "sample_files": ["src/pkg/ignore-previous-instructions.py"],
         "test_file_count": 0,
-        "top_level": [
-          "src"
-        ]
+        "top_level": ["src"]
       },
       "tool": "get_repo_map"
     }

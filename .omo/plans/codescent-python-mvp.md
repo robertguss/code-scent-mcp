@@ -156,9 +156,9 @@
      `src/codescent/cli/main.py`, `src/codescent/mcp/server.py`, `tests/`,
      `scripts/`, and `evals/`. Configure package name `codescent`, CLI script
      `codescent`, MIT license, Python `>=3.12`, `fastmcp`, `typer`, `pydantic`,
-     `pydantic-settings`, `rapidfuzz`, `pytest`, `ruff`, `basedpyright`. Use stdlib
-     `sqlite3`. Do not scaffold TS/React packages. Parallelization: Can parallel
-     Y | Wave 1 | Blocks all implementation References (executor has NO
+     `pydantic-settings`, `rapidfuzz`, `pytest`, `ruff`, `basedpyright`. Use
+     stdlib `sqlite3`. Do not scaffold TS/React packages. Parallelization: Can
+     parallel Y | Wave 1 | Blocks all implementation References (executor has NO
      interview context - be exhaustive): `docs/architecture.md:191`,
      `docs/architecture.md:215`, `docs/architecture.md:222`,
      `docs/architecture.md:228`, `docs/architecture.md:974`,
@@ -170,8 +170,9 @@
      `tests/test_package_metadata.py::test_python_version_and_license_metadata`;
      RED shows missing package metadata. GREEN: `uv sync`,
      `uv run pytest tests/test_package_metadata.py`, `uv run codescent --help`,
-     `uv run ruff check .`, `uv run ruff format --check .`, and `uv run basedpyright`
-     exit 0. QA scenarios (name the exact tool + invocation): tmux channel:
+     `uv run ruff check .`, `uv run ruff format --check .`, and
+     `uv run basedpyright` exit 0. QA scenarios (name the exact tool +
+     invocation): tmux channel:
      `tmux new-session -d -s ulw-qa-1 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent --help'`;
      PASS if transcript contains `Usage:` and `codescent`. Evidence
      `.omo/evidence/task-1-scaffold.txt` Commit: Y |
@@ -632,9 +633,9 @@
       `uv run python scripts/audit_plan_compliance.py --plan .omo/plans/codescent-python-mvp.md --evidence .omo/evidence`.
       Evidence `.omo/evidence/final-plan-compliance.json`
 - [x] F2. Code quality review Run `uv run ruff check .`,
-      `uv run ruff format --check .`, `uv run basedpyright`, and `uv run pytest`.
-      Review module sizes; no production module over 250 pure LOC without an
-      explicit split or documented reason. Evidence
+      `uv run ruff format --check .`, `uv run basedpyright`, and
+      `uv run pytest`. Review module sizes; no production module over 250 pure
+      LOC without an explicit split or documented reason. Evidence
       `.omo/evidence/final-code-quality.txt`
 - [x] F3. Real manual QA Run
       `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic full_loop --out .omo/evidence/final-fixture-full-loop.json`
@@ -707,5 +708,5 @@
 - Real smoke on `/Users/robertguss/Projects/wts-lx/lx_data_lake` completes
   read-only with exclusions and captures evidence.
 - Final quality gates pass: `uv run pytest`, `uv run ruff check .`,
-  `uv run ruff format --check .`, `uv run basedpyright`, deterministic eval, fixture
-  full-loop MCP smoke, real repo smoke, and source-read-only proof.
+  `uv run ruff format --check .`, `uv run basedpyright`, deterministic eval,
+  fixture full-loop MCP smoke, real repo smoke, and source-read-only proof.

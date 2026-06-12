@@ -99,9 +99,7 @@
         ],
         "findings_created": 13,
         "ok": true,
-        "regressed_finding_ids": [
-          "python.todo_cluster:ef36e5854db8"
-        ],
+        "regressed_finding_ids": ["python.todo_cluster:ef36e5854db8"],
         "rule_ids": [
           "python.deep_nesting",
           "python.duplicate_literal",
@@ -137,9 +135,7 @@
     {
       "data": {
         "count": 1,
-        "finding_ids": [
-          "python.todo_cluster:ef36e5854db8"
-        ],
+        "finding_ids": ["python.todo_cluster:ef36e5854db8"],
         "ok": true
       },
       "tool": "get_regressions"

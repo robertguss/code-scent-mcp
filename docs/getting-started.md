@@ -61,11 +61,10 @@ See [Workflows](workflows.md) for the complete source-read-only loop.
 
 ## Common First Errors
 
-- `doctor` reports missing database or config: run `uv run codescent init --repo
-  "$tmp/repo"` before diagnostics.
+- `doctor` reports missing database or config: run
+  `uv run codescent init --repo "$tmp/repo"` before diagnostics.
 - `reset` fails without confirmation: reset requires --dry-run or --yes.
-- `report` or `ci` rejects a format: use `--format json` or
-  `--format markdown`.
+- `report` or `ci` rejects a format: use `--format json` or `--format markdown`.
 
 ## Next Docs
 

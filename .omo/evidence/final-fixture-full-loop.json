@@ -54,14 +54,9 @@
     },
     {
       "data": {
-        "affected_files": [
-          "src/acme_tasks/oversized.py"
-        ],
+        "affected_files": ["src/acme_tasks/oversized.py"],
         "finding_id": "python.deep_nesting:ba977cbdee86",
-        "next_tools": [
-          "plan_refactor",
-          "suggest_tests"
-        ],
+        "next_tools": ["plan_refactor", "suggest_tests"],
         "ok": true,
         "relevant_symbols": [
           "acme_tasks.oversized.export_field_names",
@@ -100,9 +95,7 @@
     },
     {
       "data": {
-        "affected_files": [
-          "src/acme_tasks/oversized.py"
-        ],
+        "affected_files": ["src/acme_tasks/oversized.py"],
         "expected_behavior_preservation": [
           "Keep existing imports and call sites working.",
           "Preserve test-observed behavior for likely related tests."
@@ -133,17 +126,13 @@
           "Run the suggested verification commands.",
           "Rescan with CodeScent and update the finding lifecycle."
         ],
-        "verification_recommendations": [
-          "pytest"
-        ]
+        "verification_recommendations": ["pytest"]
       },
       "tool": "plan_refactor"
     },
     {
       "data": {
-        "commands": [
-          "pytest"
-        ],
+        "commands": ["pytest"],
         "executes_in_v1": false,
         "likely_tests": [],
         "ok": true

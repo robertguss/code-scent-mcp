@@ -258,8 +258,8 @@ Initial parser scope should target:
 Future parser adapters can support Python, Go, Rust, Ruby, Elixir, PHP, and
 other languages.
 
-Python-first MVP supersession, approved during planning on June 11, 2026:
-the TypeScript/JavaScript/React starting point above is superseded for this
+Python-first MVP supersession, approved during planning on June 11, 2026: the
+TypeScript/JavaScript/React starting point above is superseded for this
 implementation milestone. The first parser adapter is the Python `ast` adapter;
 other parser adapters remain post-MVP language packs.
 

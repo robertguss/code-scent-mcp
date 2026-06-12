@@ -45,15 +45,11 @@
     {
       "data": {
         "executes": false,
-        "likely_tests": [
-          "tests/test_config.py"
-        ],
+        "likely_tests": ["tests/test_config.py"],
         "missing_characterization_tests": [],
         "ok": true,
         "recommendation_id": 1,
-        "recommended_commands": [
-          "pytest tests/test_config.py"
-        ]
+        "recommended_commands": ["pytest tests/test_config.py"]
       },
       "tool": "verify_change"
     }

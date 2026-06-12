@@ -4,15 +4,11 @@
     "reason": "diff risk is a bounded local report with no resumable job"
   },
   "dirty_worktree": {
-    "changed_files": [
-      "src/pkg/config.py"
-    ],
+    "changed_files": ["src/pkg/config.py"],
     "health_ok": true,
     "note": "main repo codescent-mcp-test-results.md remains untracked and untouched",
     "passed": true,
-    "recommended_commands": [
-      "pytest tests/test_config.py"
-    ]
+    "recommended_commands": ["pytest tests/test_config.py"]
   },
   "flaky_tests": {
     "cmd": "uv run pytest tests/contract/test_mcp_finding_tools.py::test_diff_risk_tools_report_changed_file_health_locally -q",
@@ -45,9 +41,7 @@
       "changed_source_paths": [],
       "source_hashes_unchanged": true
     },
-    "tools": [
-      "review_diff_risk"
-    ]
+    "tools": ["review_diff_risk"]
   },
   "ok": true,
   "prompt_injection": {

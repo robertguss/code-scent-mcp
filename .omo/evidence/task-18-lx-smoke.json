@@ -160,11 +160,7 @@
           "src/lx_data_lake/pipelines/__init__.py"
         ],
         "test_file_count": 42,
-        "top_level": [
-          "scripts",
-          "src",
-          "tests"
-        ]
+        "top_level": ["scripts", "src", "tests"]
       },
       "tool": "get_repo_map"
     },
@@ -211,161 +207,121 @@
         "results": [
           {
             "path": "src/lx_data_lake/cli.py",
-            "reasons": [
-              "exact_path"
-            ],
+            "reasons": ["exact_path"],
             "score": 100.0,
             "snippet": null
           },
           {
             "path": "src/lx_data_lake/verify/cli.py",
-            "reasons": [
-              "exact_path"
-            ],
+            "reasons": ["exact_path"],
             "score": 100.0,
             "snippet": null
           },
           {
             "path": "tests/test_cli.py",
-            "reasons": [
-              "exact_path"
-            ],
+            "reasons": ["exact_path"],
             "score": 100.0,
             "snippet": null
           },
           {
             "path": "tests/verify/test_cli.py",
-            "reasons": [
-              "exact_path"
-            ],
+            "reasons": ["exact_path"],
             "score": 100.0,
             "snippet": null
           },
           {
             "path": "scripts/analysis/canvas_online_instructors.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "scripts/analysis/populi_online_instructors.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "scripts/analysis/verify_eval_normalization.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "scripts/explore/__init__.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "scripts/explore/populi.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "scripts/generate_populi_docs.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "scripts/verify/data_verification.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "scripts/verify/verify_populi_import.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "scripts/verify/verify_watermark_import.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "scripts/watermark/transform_watermark_exports.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "src/lx_data_lake/__init__.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "src/lx_data_lake/catalog/__init__.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "src/lx_data_lake/catalog/introspect.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "src/lx_data_lake/catalog/render.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "src/lx_data_lake/catalog/validate_fks.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           },
           {
             "path": "src/lx_data_lake/db.py",
-            "reasons": [
-              "fuzzy_path"
-            ],
+            "reasons": ["fuzzy_path"],
             "score": 66.66666666666667,
             "snippet": null
           }
@@ -381,41 +337,31 @@
         "results": [
           {
             "path": "scripts/explore/populi.py",
-            "reasons": [
-              "content_match"
-            ],
+            "reasons": ["content_match"],
             "score": 100.0,
             "snippet": "app = typer.Typer("
           },
           {
             "path": "src/lx_data_lake/cli.py",
-            "reasons": [
-              "content_match"
-            ],
+            "reasons": ["content_match"],
             "score": 100.0,
             "snippet": "app = typer.Typer("
           },
           {
             "path": "src/lx_data_lake/cli.py",
-            "reasons": [
-              "content_match"
-            ],
+            "reasons": ["content_match"],
             "score": 100.0,
             "snippet": "catalog_app = typer.Typer(help=\"Data catalog documentation commands.\")"
           },
           {
             "path": "src/lx_data_lake/reports/instructor_performance.py",
-            "reasons": [
-              "content_match"
-            ],
+            "reasons": ["content_match"],
             "score": 100.0,
             "snippet": "app = typer.Typer(add_completion=False)"
           },
           {
             "path": "src/lx_data_lake/verify/cli.py",
-            "reasons": [
-              "content_match"
-            ],
+            "reasons": ["content_match"],
             "score": 100.0,
             "snippet": "app = typer.Typer(add_completion=False, no_args_is_help=False)"
           }
@@ -491,10 +437,7 @@
           "pathlib:Path",
           "lx_data_lake.catalog.validate_fks:validate_fks"
         ],
-        "likely_tests": [
-          "tests/test_cli.py",
-          "tests/verify/test_cli.py"
-        ],
+        "likely_tests": ["tests/test_cli.py", "tests/verify/test_cli.py"],
         "next_tools": [
           "get_symbol_context:lx_data_lake.cli._exit_legacy_postgres",
           "get_symbol_context:lx_data_lake.cli._validate_resources",
@@ -509,10 +452,7 @@
         ],
         "ok": true,
         "path": "src/lx_data_lake/cli.py",
-        "related_files": [
-          "tests/test_cli.py",
-          "tests/verify/test_cli.py"
-        ],
+        "related_files": ["tests/test_cli.py", "tests/verify/test_cli.py"],
         "risk_notes": [
           "low-confidence references omitted from caller/callee claims"
         ],
@@ -7928,14 +7868,9 @@
     },
     {
       "data": {
-        "affected_files": [
-          "scripts/analysis/canvas_online_instructors.py"
-        ],
+        "affected_files": ["scripts/analysis/canvas_online_instructors.py"],
         "finding_id": "python.changed_source_without_related_test:c7175848e509",
-        "next_tools": [
-          "plan_refactor",
-          "suggest_tests"
-        ],
+        "next_tools": ["plan_refactor", "suggest_tests"],
         "ok": true,
         "relevant_symbols": [
           "scripts.analysis.canvas_online_instructors._write_sheet",
@@ -7967,9 +7902,7 @@
     },
     {
       "data": {
-        "affected_files": [
-          "scripts/analysis/canvas_online_instructors.py"
-        ],
+        "affected_files": ["scripts/analysis/canvas_online_instructors.py"],
         "expected_behavior_preservation": [
           "Keep existing imports and call sites working.",
           "Preserve test-observed behavior for likely related tests."
@@ -7993,17 +7926,13 @@
           "Run the suggested verification commands.",
           "Rescan with CodeScent and update the finding lifecycle."
         ],
-        "verification_recommendations": [
-          "pytest"
-        ]
+        "verification_recommendations": ["pytest"]
       },
       "tool": "plan_refactor"
     },
     {
       "data": {
-        "commands": [
-          "pytest"
-        ],
+        "commands": ["pytest"],
         "executes_in_v1": false,
         "likely_tests": [],
         "ok": true

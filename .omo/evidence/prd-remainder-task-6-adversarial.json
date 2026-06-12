@@ -7,11 +7,7 @@
     },
     "dirty_worktree": {
       "passed": true,
-      "paths": [
-        "src/app.py",
-        "src/new.py",
-        "tests/test_app.py"
-      ]
+      "paths": ["src/app.py", "src/new.py", "tests/test_app.py"]
     },
     "flaky_tests": {
       "exit_code": 0,
@@ -46,9 +42,7 @@
     },
     "stale_state": {
       "passed": true,
-      "paths": [
-        "src/plain.py"
-      ]
+      "paths": ["src/plain.py"]
     }
   }
 }

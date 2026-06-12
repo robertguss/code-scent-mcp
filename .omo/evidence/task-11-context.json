@@ -27,20 +27,14 @@
     },
     {
       "data": {
-        "imports": [
-          "__future__:annotations"
-        ],
-        "likely_tests": [
-          "tests/test_workflow.py"
-        ],
+        "imports": ["__future__:annotations"],
+        "likely_tests": ["tests/test_workflow.py"],
         "next_tools": [
           "get_symbol_context:acme_tasks.workflow.build_daily_plan"
         ],
         "ok": true,
         "path": "src/acme_tasks/workflow.py",
-        "related_files": [
-          "tests/test_workflow.py"
-        ],
+        "related_files": ["tests/test_workflow.py"],
         "risk_notes": [
           "low-confidence references omitted from caller/callee claims"
         ],
@@ -53,17 +47,13 @@
           }
         ],
         "summary": "src/acme_tasks/workflow.py defines build_daily_plan.",
-        "symbols": [
-          "build_daily_plan"
-        ]
+        "symbols": ["build_daily_plan"]
       },
       "tool": "get_file_context"
     },
     {
       "data": {
-        "likely_tests": [
-          "tests/test_workflow.py"
-        ],
+        "likely_tests": ["tests/test_workflow.py"],
         "ok": true,
         "risk_notes": [
           "low-confidence references omitted from caller/callee claims"

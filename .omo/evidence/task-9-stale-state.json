@@ -8,10 +8,7 @@
         "results": [
           {
             "path": "src/pkg/app.py",
-            "reasons": [
-              "exact_path",
-              "changed_file"
-            ],
+            "reasons": ["exact_path", "changed_file"],
             "score": 125.0,
             "snippet": null
           }

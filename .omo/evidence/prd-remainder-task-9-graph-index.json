@@ -21,25 +21,10 @@
   "ok": true,
   "reference_count": 36,
   "sample_references": [
-    [
-      "append",
-      0.4
-    ],
-    [
-      "append",
-      0.4
-    ],
-    [
-      "append",
-      0.4
-    ],
-    [
-      "append",
-      0.4
-    ],
-    [
-      "append",
-      0.4
-    ]
+    ["append", 0.4],
+    ["append", 0.4],
+    ["append", 0.4],
+    ["append", 0.4],
+    ["append", 0.4]
   ]
 }

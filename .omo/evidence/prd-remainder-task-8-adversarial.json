@@ -6,14 +6,8 @@
       "passed": true
     },
     "dirty_worktree": {
-      "after": [
-        "src/beta_target.py",
-        "src/alpha_target.py"
-      ],
-      "before": [
-        "src/alpha_target.py",
-        "src/beta_target.py"
-      ],
+      "after": ["src/beta_target.py", "src/alpha_target.py"],
+      "before": ["src/alpha_target.py", "src/beta_target.py"],
       "passed": true
     },
     "flaky_tests": {
@@ -32,11 +26,7 @@
       "has_cursor_field": true,
       "has_frecency_reason": true,
       "passed": true,
-      "tools": [
-        "search_files",
-        "search_files",
-        "search_content"
-      ]
+      "tools": ["search_files", "search_files", "search_content"]
     },
     "prompt_injection": {
       "exit_code": 0,

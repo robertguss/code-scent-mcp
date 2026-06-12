@@ -2,9 +2,7 @@
   "calls": [
     {
       "data": {
-        "changed_files": [
-          "src/pkg/cli.py"
-        ],
+        "changed_files": ["src/pkg/cli.py"],
         "database_ok": true,
         "finding_count": 0,
         "git_available": false,

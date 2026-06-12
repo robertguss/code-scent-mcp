@@ -36,9 +36,7 @@
     "changed_count": 6,
     "passed": true,
     "risk_level": "high",
-    "suggested_tests": [
-      "pytest"
-    ]
+    "suggested_tests": ["pytest"]
   },
   "ok": true,
   "prompt_injection": {

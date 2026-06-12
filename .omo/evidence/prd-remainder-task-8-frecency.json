@@ -9,19 +9,13 @@
         "results": [
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": [
-              "exact_path",
-              "changed_file"
-            ],
+            "reasons": ["exact_path", "changed_file"],
             "score": 125.0,
             "snippet": null
           },
           {
             "path": "tests/test_workflow.py",
-            "reasons": [
-              "exact_path",
-              "changed_file"
-            ],
+            "reasons": ["exact_path", "changed_file"],
             "score": 125.0,
             "snippet": null
           }
@@ -38,21 +32,13 @@
         "results": [
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": [
-              "exact_path",
-              "changed_file",
-              "frecency"
-            ],
+            "reasons": ["exact_path", "changed_file", "frecency"],
             "score": 155.0,
             "snippet": null
           },
           {
             "path": "tests/test_workflow.py",
-            "reasons": [
-              "exact_path",
-              "changed_file",
-              "frecency"
-            ],
+            "reasons": ["exact_path", "changed_file", "frecency"],
             "score": 155.0,
             "snippet": null
           }
@@ -69,67 +55,43 @@
         "results": [
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": [
-              "content_match",
-              "changed_file",
-              "frecency"
-            ],
+            "reasons": ["content_match", "changed_file", "frecency"],
             "score": 185.0,
             "snippet": "plan.append(f\"{user}: review pending-review queue\")"
           },
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": [
-              "content_match",
-              "changed_file",
-              "frecency"
-            ],
+            "reasons": ["content_match", "changed_file", "frecency"],
             "score": 185.0,
             "snippet": "plan.append(f\"{user}: review pending-review reminders\")"
           },
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": [
-              "content_match",
-              "changed_file",
-              "frecency"
-            ],
+            "reasons": ["content_match", "changed_file", "frecency"],
             "score": 185.0,
             "snippet": "plan.append(f\"{user}: review pending-review exports\")"
           },
           {
             "path": "src/acme_tasks/config.py",
-            "reasons": [
-              "content_match",
-              "changed_file"
-            ],
+            "reasons": ["content_match", "changed_file"],
             "score": 125.0,
             "snippet": "DEFAULT_STATUS = \"pending-review\""
           },
           {
             "path": "src/acme_tasks/config.py",
-            "reasons": [
-              "content_match",
-              "changed_file"
-            ],
+            "reasons": ["content_match", "changed_file"],
             "score": 125.0,
             "snippet": "ESCALATION_STATUS = \"pending-review\""
           },
           {
             "path": "src/acme_tasks/config.py",
-            "reasons": [
-              "content_match",
-              "changed_file"
-            ],
+            "reasons": ["content_match", "changed_file"],
             "score": 125.0,
             "snippet": "NOTIFICATION_STATUS = \"pending-review\""
           },
           {
             "path": "src/acme_tasks/report.py",
-            "reasons": [
-              "content_match",
-              "changed_file"
-            ],
+            "reasons": ["content_match", "changed_file"],
             "score": 125.0,
             "snippet": "status = \"pending-review\""
           }

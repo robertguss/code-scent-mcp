@@ -23,7 +23,8 @@ Command:
 uv run pytest tests/unit/test_models.py::test_pagination_bounds_are_enforced
 ```
 
-Result: failed during collection with `ImportError: cannot import name 'PageOptions'`.
+Result: failed during collection with
+`ImportError: cannot import name 'PageOptions'`.
 
 ## Green
 
@@ -70,7 +71,8 @@ print(PageOptions(limit=999).model_dump())
 PY'
 ```
 
-Result: `.omo/evidence/prd-remainder-task-3-pagination.txt` contains `{'limit': 100, 'offset': 0}`.
+Result: `.omo/evidence/prd-remainder-task-3-pagination.txt` contains
+`{'limit': 100, 'offset': 0}`.
 
 Command:
 
@@ -93,4 +95,5 @@ uv run pytest tests/unit/test_models.py::test_pagination_bounds_are_enforced -q
 
 Result: 1 passed.
 
-Cleanup: tmux session `ulw-qa-prd-3` exited; `tmux has-session -t ulw-qa-prd-3` returned 1.
+Cleanup: tmux session `ulw-qa-prd-3` exited; `tmux has-session -t ulw-qa-prd-3`
+returned 1.

@@ -41,13 +41,9 @@
     ],
     "finding_count": 13,
     "ok": false,
-    "recommended_commands": [
-      "pytest"
-    ],
+    "recommended_commands": ["pytest"],
     "risk_level": "high",
-    "suggested_tests": [
-      "pytest"
-    ]
+    "suggested_tests": ["pytest"]
   },
   "expected_exit_code": 1,
   "ok": true,

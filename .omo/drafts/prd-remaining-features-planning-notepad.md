@@ -13,11 +13,10 @@ Use `omo:ulw-plan` to create a plan to implement the remaining features from
   Python-first repo, but not used for implementation in this planner turn.
 - `omo:ultraresearch` / `librarian`: relevant pattern for broad research, but
   `ulw-plan` already mandates collect/verify/design/adversarial lanes.
-- `omo:review-work`: relevant after implementation, not for this plan-only
-  turn.
-- `github:*`, `linear:*`, `vercel:*`, iOS/macOS/frontend/browser skills:
-  not selected; the requested scope is local repo product planning, not PR,
-  issue tracker, deployment, platform app, or UI implementation.
+- `omo:review-work`: relevant after implementation, not for this plan-only turn.
+- `github:*`, `linear:*`, `vercel:*`, iOS/macOS/frontend/browser skills: not
+  selected; the requested scope is local repo product planning, not PR, issue
+  tracker, deployment, platform app, or UI implementation.
 
 ## Goal
 
@@ -96,36 +95,30 @@ test-results markdown as user-provided evidence.
 
 Plan the remaining PRD features as staged post-MVP releases:
 
-1. Search expansion:
-   `multi_search_content`, `search_changed_files`, `search_todos`,
-   `search_tests`, smart-case, pagination, frecency/search history, richer
-   ranking reasons.
-2. Code intelligence expansion:
-   `find_references`, `find_callers`, `find_callees`, `get_related_files`,
-   `get_impact`, reference/call-edge persistence, improved related-file and
-   test matching.
-3. Reporting and scoring:
-   `get_finding`, `explain_score`, report/export CLI, JSON/Markdown reports,
-   clearer score/evidence breakdown.
-4. Durable backlog/progress workflow:
-   `get_backlog`, `get_progress`, `get_regressions`, richer lifecycle states,
-   resolved/regressed trend history, CLI `findings`, `next`, `explain`.
-5. Verification and risk:
-   `verify_change` as recommend-only first, verification run records,
-   relevant-test ranking, risk scoring, branch/diff-aware reports.
-6. Configuration and extensibility:
-   config/rules CLI, rule enable/disable, command hints, language/framework/rule
-   pack interfaces. Use the current Python pack as the first migrated pack.
-7. Language/framework expansion:
-   after the pack interface exists, choose the first non-Python pack.
-   Candidate from PRD: TypeScript/JavaScript/React/Next.js.
-8. CI/PR mode:
-   CI command, diff mode, Markdown/JSON outputs, quality thresholds.
-9. Optional subjective LLM review:
-   opt-in only, privacy notice, provider config, clearly separated subjective
-   findings.
-10. Local dashboard:
-    local web UI for findings, trends, rules, index status, and exports.
+1. Search expansion: `multi_search_content`, `search_changed_files`,
+   `search_todos`, `search_tests`, smart-case, pagination, frecency/search
+   history, richer ranking reasons.
+2. Code intelligence expansion: `find_references`, `find_callers`,
+   `find_callees`, `get_related_files`, `get_impact`, reference/call-edge
+   persistence, improved related-file and test matching.
+3. Reporting and scoring: `get_finding`, `explain_score`, report/export CLI,
+   JSON/Markdown reports, clearer score/evidence breakdown.
+4. Durable backlog/progress workflow: `get_backlog`, `get_progress`,
+   `get_regressions`, richer lifecycle states, resolved/regressed trend history,
+   CLI `findings`, `next`, `explain`.
+5. Verification and risk: `verify_change` as recommend-only first, verification
+   run records, relevant-test ranking, risk scoring, branch/diff-aware reports.
+6. Configuration and extensibility: config/rules CLI, rule enable/disable,
+   command hints, language/framework/rule pack interfaces. Use the current
+   Python pack as the first migrated pack.
+7. Language/framework expansion: after the pack interface exists, choose the
+   first non-Python pack. Candidate from PRD:
+   TypeScript/JavaScript/React/Next.js.
+8. CI/PR mode: CI command, diff mode, Markdown/JSON outputs, quality thresholds.
+9. Optional subjective LLM review: opt-in only, privacy notice, provider config,
+   clearly separated subjective findings.
+10. Local dashboard: local web UI for findings, trends, rules, index status, and
+    exports.
 
 ## Recommended Approach
 

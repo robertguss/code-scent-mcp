@@ -2,9 +2,7 @@
   "calls": [
     {
       "data": {
-        "entrypoints": [
-          "src/acme_tasks/cli.py"
-        ],
+        "entrypoints": ["src/acme_tasks/cli.py"],
         "file_count": 10,
         "languages": {
           "python": 10
@@ -24,10 +22,7 @@
           "tests/test_workflow.py"
         ],
         "test_file_count": 3,
-        "top_level": [
-          "src",
-          "tests"
-        ]
+        "top_level": ["src", "tests"]
       },
       "tool": "get_repo_map"
     },

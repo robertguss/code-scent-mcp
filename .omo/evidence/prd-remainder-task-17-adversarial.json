@@ -39,10 +39,7 @@
       "changed_source_paths": [],
       "source_hashes_unchanged": true
     },
-    "tools": [
-      "scan_code_health",
-      "verify_change"
-    ]
+    "tools": ["scan_code_health", "verify_change"]
   },
   "ok": true,
   "prompt_injection": {

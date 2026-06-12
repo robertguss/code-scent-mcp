@@ -10,10 +10,7 @@
             "line": 17,
             "marker": "TODO",
             "path": "src/acme_tasks/config.py",
-            "reasons": [
-              "todo_marker",
-              "marker:TODO"
-            ],
+            "reasons": ["todo_marker", "marker:TODO"],
             "score": 125.0,
             "snippet": "# TODO: move queue names into deployment config."
           },
@@ -21,10 +18,7 @@
             "line": 18,
             "marker": "FIXME",
             "path": "src/acme_tasks/config.py",
-            "reasons": [
-              "todo_marker",
-              "marker:FIXME"
-            ],
+            "reasons": ["todo_marker", "marker:FIXME"],
             "score": 107.0,
             "snippet": "# FIXME: preserve migration compatibility before renaming status values."
           },
@@ -32,10 +26,7 @@
             "line": 16,
             "marker": "TODO",
             "path": "src/acme_tasks/config.py",
-            "reasons": [
-              "todo_marker",
-              "marker:TODO"
-            ],
+            "reasons": ["todo_marker", "marker:TODO"],
             "score": 105.0,
             "snippet": "# TODO: split staging and local credentials."
           }
@@ -64,17 +55,13 @@
           },
           {
             "path": "tests/test_cli.py",
-            "reasons": [
-              "likely_test"
-            ],
+            "reasons": ["likely_test"],
             "score": 40.0,
             "snippet": null
           },
           {
             "path": "tests/test_config.py",
-            "reasons": [
-              "likely_test"
-            ],
+            "reasons": ["likely_test"],
             "score": 40.0,
             "snippet": null
           }

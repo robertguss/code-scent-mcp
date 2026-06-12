@@ -8,8 +8,8 @@ an external plugin API.
 ### Python
 
 The Python pack covers inventory, symbol extraction, bounded context,
-deterministic maintainability findings, test proximity, and the Python-first
-MVP workflow.
+deterministic maintainability findings, test proximity, and the Python-first MVP
+workflow.
 
 ### TypeScript/React/Next
 
@@ -21,8 +21,7 @@ an external plugin API.
 
 The TypeScript/JavaScript pack uses a local deterministic parser adapter. The
 adapter must run from installed local dependencies, require no runtime network,
-and degrade gracefully when a grammar cannot produce high-confidence
-references.
+and degrade gracefully when a grammar cannot produce high-confidence references.
 
 This keeps parsing source-read-only and gives CodeScent one parser strategy for
 plain JavaScript, JSX, TypeScript, and TSX instead of separate ad hoc regex

@@ -40,10 +40,7 @@
       "source_hashes_unchanged": true
     },
     "subjective": false,
-    "tools": [
-      "scan_code_health",
-      "explain_score"
-    ]
+    "tools": ["scan_code_health", "explain_score"]
   },
   "ok": true,
   "prompt_injection": {

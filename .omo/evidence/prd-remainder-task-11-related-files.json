@@ -18,59 +18,37 @@
           {
             "confidence": 1.0,
             "path": "tests/test_workflow.py",
-            "reasons": [
-              "import_graph",
-              "search_similarity",
-              "test_match"
-            ]
+            "reasons": ["import_graph", "search_similarity", "test_match"]
           },
           {
             "confidence": 0.6499999999999999,
             "path": "src/acme_tasks/__init__.py",
-            "reasons": [
-              "directory_proximity",
-              "search_similarity"
-            ]
+            "reasons": ["directory_proximity", "search_similarity"]
           },
           {
             "confidence": 0.6499999999999999,
             "path": "src/acme_tasks/config.py",
-            "reasons": [
-              "directory_proximity",
-              "search_similarity"
-            ]
+            "reasons": ["directory_proximity", "search_similarity"]
           },
           {
             "confidence": 0.6499999999999999,
             "path": "src/acme_tasks/oversized.py",
-            "reasons": [
-              "directory_proximity",
-              "search_similarity"
-            ]
+            "reasons": ["directory_proximity", "search_similarity"]
           },
           {
             "confidence": 0.6499999999999999,
             "path": "src/acme_tasks/payroll.py",
-            "reasons": [
-              "directory_proximity",
-              "search_similarity"
-            ]
+            "reasons": ["directory_proximity", "search_similarity"]
           },
           {
             "confidence": 0.6499999999999999,
             "path": "src/acme_tasks/report.py",
-            "reasons": [
-              "directory_proximity",
-              "search_similarity"
-            ]
+            "reasons": ["directory_proximity", "search_similarity"]
           },
           {
             "confidence": 0.6499999999999999,
             "path": "src/acme_tasks/storage.py",
-            "reasons": [
-              "directory_proximity",
-              "search_similarity"
-            ]
+            "reasons": ["directory_proximity", "search_similarity"]
           }
         ]
       },

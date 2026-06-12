@@ -7,14 +7,8 @@
     },
     "dirty_worktree": {
       "passed": true,
-      "test_paths": [
-        "tests/test_workflow.py"
-      ],
-      "todo_paths": [
-        "src/workflow.py",
-        "src/workflow.py",
-        "src/workflow.py"
-      ]
+      "test_paths": ["tests/test_workflow.py"],
+      "todo_paths": ["src/workflow.py", "src/workflow.py", "src/workflow.py"]
     },
     "flaky_tests": {
       "exit_code": 0,
@@ -32,10 +26,7 @@
       "passed": true,
       "test_count": 3,
       "todo_count": 3,
-      "tools": [
-        "search_todos",
-        "search_tests"
-      ]
+      "tools": ["search_todos", "search_tests"]
     },
     "prompt_injection": {
       "exit_code": 0,

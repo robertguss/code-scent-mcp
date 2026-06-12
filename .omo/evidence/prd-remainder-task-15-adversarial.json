@@ -38,9 +38,7 @@
     },
     "regressions": {
       "count": 1,
-      "finding_ids": [
-        "python.todo_cluster:ef36e5854db8"
-      ],
+      "finding_ids": ["python.todo_cluster:ef36e5854db8"],
       "ok": true
     },
     "source_read_only": {

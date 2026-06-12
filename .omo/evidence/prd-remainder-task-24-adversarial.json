@@ -33,16 +33,8 @@
   },
   "misleading_success_output": {
     "graph_counts": {
-      "kinds": [
-        "component",
-        "function",
-        "hook",
-        "route"
-      ],
-      "languages": [
-        "javascript",
-        "typescript"
-      ],
+      "kinds": ["component", "function", "hook", "route"],
+      "languages": ["javascript", "typescript"],
       "references": 32,
       "symbols": 7
     },

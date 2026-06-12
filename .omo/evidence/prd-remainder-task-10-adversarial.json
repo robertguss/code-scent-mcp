@@ -28,11 +28,7 @@
       "changed_source_paths": [],
       "source_hashes_unchanged": true
     },
-    "tools": [
-      "find_references",
-      "find_callers",
-      "find_callees"
-    ]
+    "tools": ["find_references", "find_callers", "find_callees"]
   },
   "ok": true,
   "prompt_injection": {

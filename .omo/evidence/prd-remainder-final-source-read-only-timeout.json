@@ -8,9 +8,7 @@
   "tool_calls": [
     {
       "data": {
-        "entrypoints": [
-          "src/acme_tasks/cli.py"
-        ],
+        "entrypoints": ["src/acme_tasks/cli.py"],
         "file_count": 11,
         "languages": {
           "python": 11
@@ -31,10 +29,7 @@
           "tests/test_workflow.py"
         ],
         "test_file_count": 3,
-        "top_level": [
-          "src",
-          "tests"
-        ]
+        "top_level": ["src", "tests"]
       },
       "tool": "get_repo_map"
     },
@@ -73,19 +68,13 @@
         "results": [
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": [
-              "exact_path",
-              "changed_file"
-            ],
+            "reasons": ["exact_path", "changed_file"],
             "score": 125.0,
             "snippet": null
           },
           {
             "path": "tests/test_workflow.py",
-            "reasons": [
-              "exact_path",
-              "changed_file"
-            ],
+            "reasons": ["exact_path", "changed_file"],
             "score": 125.0,
             "snippet": null
           }
@@ -102,67 +91,43 @@
         "results": [
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": [
-              "content_match",
-              "changed_file",
-              "frecency"
-            ],
+            "reasons": ["content_match", "changed_file", "frecency"],
             "score": 155.0,
             "snippet": "plan.append(f\"{user}: review pending-review queue\")"
           },
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": [
-              "content_match",
-              "changed_file",
-              "frecency"
-            ],
+            "reasons": ["content_match", "changed_file", "frecency"],
             "score": 155.0,
             "snippet": "plan.append(f\"{user}: review pending-review reminders\")"
           },
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": [
-              "content_match",
-              "changed_file",
-              "frecency"
-            ],
+            "reasons": ["content_match", "changed_file", "frecency"],
             "score": 155.0,
             "snippet": "plan.append(f\"{user}: review pending-review exports\")"
           },
           {
             "path": "src/acme_tasks/config.py",
-            "reasons": [
-              "content_match",
-              "changed_file"
-            ],
+            "reasons": ["content_match", "changed_file"],
             "score": 125.0,
             "snippet": "DEFAULT_STATUS = \"pending-review\""
           },
           {
             "path": "src/acme_tasks/config.py",
-            "reasons": [
-              "content_match",
-              "changed_file"
-            ],
+            "reasons": ["content_match", "changed_file"],
             "score": 125.0,
             "snippet": "ESCALATION_STATUS = \"pending-review\""
           },
           {
             "path": "src/acme_tasks/config.py",
-            "reasons": [
-              "content_match",
-              "changed_file"
-            ],
+            "reasons": ["content_match", "changed_file"],
             "score": 125.0,
             "snippet": "NOTIFICATION_STATUS = \"pending-review\""
           },
           {
             "path": "src/acme_tasks/report.py",
-            "reasons": [
-              "content_match",
-              "changed_file"
-            ],
+            "reasons": ["content_match", "changed_file"],
             "score": 125.0,
             "snippet": "status = \"pending-review\""
           }
@@ -388,21 +353,12 @@
     },
     {
       "data": {
-        "affected_files": [
-          "src/acme_tasks/config.py"
-        ],
+        "affected_files": ["src/acme_tasks/config.py"],
         "finding_id": "python.todo_cluster:ef36e5854db8",
-        "next_tools": [
-          "plan_refactor",
-          "suggest_tests"
-        ],
+        "next_tools": ["plan_refactor", "suggest_tests"],
         "ok": true,
-        "relevant_symbols": [
-          "acme_tasks.config.load_config"
-        ],
-        "relevant_tests": [
-          "tests/test_config.py"
-        ],
+        "relevant_symbols": ["acme_tasks.config.load_config"],
+        "relevant_tests": ["tests/test_config.py"],
         "risk_notes": [],
         "rule_id": "python.todo_cluster",
         "source_ranges": [
@@ -420,9 +376,7 @@
     },
     {
       "data": {
-        "affected_files": [
-          "src/acme_tasks/config.py"
-        ],
+        "affected_files": ["src/acme_tasks/config.py"],
         "expected_behavior_preservation": [
           "Keep existing imports and call sites working.",
           "Preserve test-observed behavior for likely related tests."
@@ -435,9 +389,7 @@
           "Do not change public behavior without tests."
         ],
         "ok": true,
-        "relevant_symbols": [
-          "acme_tasks.config.load_config"
-        ],
+        "relevant_symbols": ["acme_tasks.config.load_config"],
         "risk": "low",
         "steps": [
           "Review the bounded finding context and current tests.",
@@ -445,21 +397,15 @@
           "Run the suggested verification commands.",
           "Rescan with CodeScent and update the finding lifecycle."
         ],
-        "verification_recommendations": [
-          "pytest tests/test_config.py"
-        ]
+        "verification_recommendations": ["pytest tests/test_config.py"]
       },
       "tool": "plan_refactor"
     },
     {
       "data": {
-        "commands": [
-          "pytest tests/test_config.py"
-        ],
+        "commands": ["pytest tests/test_config.py"],
         "executes_in_v1": false,
-        "likely_tests": [
-          "tests/test_config.py"
-        ],
+        "likely_tests": ["tests/test_config.py"],
         "ok": true
       },
       "tool": "suggest_tests"

@@ -56,9 +56,7 @@
           "src/acme_tasks/workflow.py"
         ],
         "confidence": 0.6937499999999999,
-        "likely_tests": [
-          "tests/test_config.py"
-        ],
+        "likely_tests": ["tests/test_config.py"],
         "ok": true,
         "risk_notes": [
           "confidence is bounded by deterministic local graph signals"

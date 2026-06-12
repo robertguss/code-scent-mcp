@@ -34,11 +34,7 @@
     "stdout_excerpt": "{\"code\": \"invalid_repo_root\", \"message\": \"Repository root must be an existing directory.\", \"severity\": \"error\", \"details\": {\"root\": \"/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/codescent-missing-repo-task29\"}}\n"
   },
   "misleading_success_output": {
-    "auto_write_values": [
-      false,
-      false,
-      false
-    ],
+    "auto_write_values": [false, false, false],
     "passed": true,
     "template_count": 3
   },

@@ -26,9 +26,9 @@ An MCP client should prefer CodeScent tools before broad shell search:
 - finding context and next improvement;
 - refactor planning and suggested verification commands.
 
-CodeScent recommendations are not proof by themselves. Verification commands
-are recommendations; CodeScent does not execute target project tests as part of
-the V1 improvement loop.
+CodeScent recommendations are not proof by themselves. Verification commands are
+recommendations; CodeScent does not execute target project tests as part of the
+V1 improvement loop.
 
 ## Reporting Loop
 

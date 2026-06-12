@@ -32,9 +32,7 @@
             ],
             "ok": true,
             "path": "src/acme_tasks/__init__.py",
-            "recommended_commands": [
-              "pytest"
-            ],
+            "recommended_commands": ["pytest"],
             "risk_level": "medium",
             "risk_notes": [
               "changed file: src/acme_tasks/__init__.py",
@@ -48,9 +46,7 @@
             "findings": [],
             "ok": true,
             "path": "src/acme_tasks/cli.py",
-            "recommended_commands": [
-              "pytest tests/test_cli.py"
-            ],
+            "recommended_commands": ["pytest tests/test_cli.py"],
             "risk_level": "low",
             "risk_notes": [
               "changed file: src/acme_tasks/cli.py",
@@ -58,9 +54,7 @@
               "some related files are low-confidence candidates"
             ],
             "risk_score": 0.3444444444444444,
-            "suggested_tests": [
-              "tests/test_cli.py"
-            ]
+            "suggested_tests": ["tests/test_cli.py"]
           },
           {
             "finding_ids": [
@@ -87,18 +81,14 @@
             ],
             "ok": true,
             "path": "src/acme_tasks/config.py",
-            "recommended_commands": [
-              "pytest tests/test_config.py"
-            ],
+            "recommended_commands": ["pytest tests/test_config.py"],
             "risk_level": "high",
             "risk_notes": [
               "changed file: src/acme_tasks/config.py",
               "confidence is bounded by deterministic local graph signals"
             ],
             "risk_score": 0.9,
-            "suggested_tests": [
-              "tests/test_config.py"
-            ]
+            "suggested_tests": ["tests/test_config.py"]
           },
           {
             "finding_ids": [
@@ -179,9 +169,7 @@
             ],
             "ok": true,
             "path": "src/acme_tasks/oversized.py",
-            "recommended_commands": [
-              "pytest"
-            ],
+            "recommended_commands": ["pytest"],
             "risk_level": "high",
             "risk_notes": [
               "changed file: src/acme_tasks/oversized.py",
@@ -216,9 +204,7 @@
             ],
             "ok": true,
             "path": "src/acme_tasks/payroll.py",
-            "recommended_commands": [
-              "pytest"
-            ],
+            "recommended_commands": ["pytest"],
             "risk_level": "medium",
             "risk_notes": [
               "changed file: src/acme_tasks/payroll.py",
@@ -252,9 +238,7 @@
             ],
             "ok": true,
             "path": "src/acme_tasks/report.py",
-            "recommended_commands": [
-              "pytest"
-            ],
+            "recommended_commands": ["pytest"],
             "risk_level": "medium",
             "risk_notes": [
               "changed file: src/acme_tasks/report.py",
@@ -288,9 +272,7 @@
             ],
             "ok": true,
             "path": "src/acme_tasks/storage.py",
-            "recommended_commands": [
-              "pytest"
-            ],
+            "recommended_commands": ["pytest"],
             "risk_level": "medium",
             "risk_notes": [
               "changed file: src/acme_tasks/storage.py",
@@ -301,9 +283,7 @@
             "suggested_tests": []
           },
           {
-            "finding_ids": [
-              "python.large_function:51a81f47dacc"
-            ],
+            "finding_ids": ["python.large_function:51a81f47dacc"],
             "findings": [
               {
                 "confidence": 0.9,
@@ -316,45 +296,35 @@
             ],
             "ok": true,
             "path": "src/acme_tasks/workflow.py",
-            "recommended_commands": [
-              "pytest tests/test_workflow.py"
-            ],
+            "recommended_commands": ["pytest tests/test_workflow.py"],
             "risk_level": "high",
             "risk_notes": [
               "changed file: src/acme_tasks/workflow.py",
               "confidence is bounded by deterministic local graph signals"
             ],
             "risk_score": 0.9,
-            "suggested_tests": [
-              "tests/test_workflow.py"
-            ]
+            "suggested_tests": ["tests/test_workflow.py"]
           },
           {
             "finding_ids": [],
             "findings": [],
             "ok": true,
             "path": "tests/test_cli.py",
-            "recommended_commands": [
-              "pytest tests/test_cli.py"
-            ],
+            "recommended_commands": ["pytest tests/test_cli.py"],
             "risk_level": "low",
             "risk_notes": [
               "changed file: tests/test_cli.py",
               "confidence is bounded by deterministic local graph signals"
             ],
             "risk_score": 0.375,
-            "suggested_tests": [
-              "tests/test_cli.py"
-            ]
+            "suggested_tests": ["tests/test_cli.py"]
           },
           {
             "finding_ids": [],
             "findings": [],
             "ok": true,
             "path": "tests/test_config.py",
-            "recommended_commands": [
-              "pytest tests/test_config.py"
-            ],
+            "recommended_commands": ["pytest tests/test_config.py"],
             "risk_level": "low",
             "risk_notes": [
               "changed file: tests/test_config.py",
@@ -362,18 +332,14 @@
               "some related files are low-confidence candidates"
             ],
             "risk_score": 0.31875,
-            "suggested_tests": [
-              "tests/test_config.py"
-            ]
+            "suggested_tests": ["tests/test_config.py"]
           },
           {
             "finding_ids": [],
             "findings": [],
             "ok": true,
             "path": "tests/test_workflow.py",
-            "recommended_commands": [
-              "pytest tests/test_workflow.py"
-            ],
+            "recommended_commands": ["pytest tests/test_workflow.py"],
             "risk_level": "low",
             "risk_notes": [
               "changed file: tests/test_workflow.py",
@@ -381,9 +347,7 @@
               "some related files are low-confidence candidates"
             ],
             "risk_score": 0.2625,
-            "suggested_tests": [
-              "tests/test_workflow.py"
-            ]
+            "suggested_tests": ["tests/test_workflow.py"]
           }
         ],
         "findings": [

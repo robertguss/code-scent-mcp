@@ -2,9 +2,8 @@
 
 ## Request
 
-Use `omo:ulw-plan` after completing all of `docs/prd.md` to create
-documentation for the project and create a root changelog for tracking changes
-over time.
+Use `omo:ulw-plan` after completing all of `docs/prd.md` to create documentation
+for the project and create a root changelog for tracking changes over time.
 
 ## Planner Scope
 
@@ -24,8 +23,8 @@ user approves the proposed approach and a worker executes the plan.
   implements the documentation/changelog changes.
 - `omo:visual-qa`: relevant only if the worker updates dashboard docs and wants
   to re-run browser/dashboard proof.
-- GitHub/Linear/Vercel/iOS/macOS/browser skills: not selected for planning;
-  this is local repo documentation planning, not a PR, issue, deployment, or
+- GitHub/Linear/Vercel/iOS/macOS/browser skills: not selected for planning; this
+  is local repo documentation planning, not a PR, issue, deployment, or
   platform-app task.
 
 ## Grounded Facts
@@ -45,13 +44,13 @@ user approves the proposed approach and a worker executes the plan.
   - `docs/prd.md`: product vision and requirements, not a user guide.
   - `docs/architecture.md`: high-level architecture and design rationale.
   - `docs/mcp-tools.md`: current MCP and CLI public-surface inventory.
-  - `docs/evals.md`: deterministic eval, agent-in-the-loop eval, real smoke,
-    and source-read-only proof.
+  - `docs/evals.md`: deterministic eval, agent-in-the-loop eval, real smoke, and
+    source-read-only proof.
   - `docs/language-packs.md`: language-pack/parser direction; currently terse.
   - `docs/agent-routing.md`: routing-template overview.
   - `scripts/run_agent_eval.md`: operational eval transcript runbook.
-  - `templates/AGENTS.md`, `templates/CLAUDE.md`, `templates/CODEX.md`:
-    optional routing templates.
+  - `templates/AGENTS.md`, `templates/CLAUDE.md`, `templates/CODEX.md`: optional
+    routing templates.
 - Existing docs tests in `tests/docs/test_docs.py` pin README safety language,
   no unsupported `serve --repo` docs, PRD/architecture supersession language,
   MCP docs headings, eval docs, and routing-template behavior.
@@ -74,21 +73,20 @@ Three read-only subagents were spawned and closed:
 3. Risk/QA lane:
    - Confirmed docs correctness currently runs through `tests/docs/test_docs.py`
      and adjacent CLI/MCP/public-surface contract tests.
-   - Recommended adding changelog validation because no changelog-specific
-     test exists.
+   - Recommended adding changelog validation because no changelog-specific test
+     exists.
 
 ## Recommended Documentation Set
 
 Use a pragmatic post-PRD-complete doc set:
 
 1. Keep `README.md` as the concise landing page and docs map.
-2. Add `docs/getting-started.md` for the first local workflow:
-   install, `init`, `index`, `scan`, `report`, `serve`, and dashboard entry.
+2. Add `docs/getting-started.md` for the first local workflow: install, `init`,
+   `index`, `scan`, `report`, `serve`, and dashboard entry.
 3. Add `docs/cli-reference.md` for all shipped CLI commands, examples, output
    formats, safety notes, and destructive-command guardrails.
 4. Expand or restructure `docs/mcp-tools.md` into a real MCP reference with
-   groups, tool purpose, inputs, outputs, and bounded/source-read-only
-   behavior.
+   groups, tool purpose, inputs, outputs, and bounded/source-read-only behavior.
 5. Add `docs/workflows.md` for the finding lifecycle and safe improvement loop:
    scan, next, context, plan, suggested tests, rescan, mark, report.
 6. Add `docs/configuration.md` for `.codescent/` state, config precedence,
@@ -99,15 +97,15 @@ Use a pragmatic post-PRD-complete doc set:
 8. Update `docs/language-packs.md` into supported-language documentation for
    Python and TypeScript/React/Next plus pack boundaries.
 9. Add root `CHANGELOG.md` with `Unreleased` and `[0.1.0] - 2026-06-12`.
-10. Add/extend docs tests to validate the new docs map, changelog shape,
-    command references, safety promises, and public-surface drift.
+10. Add/extend docs tests to validate the new docs map, changelog shape, command
+    references, safety promises, and public-surface drift.
 
 ## Recommended Changelog Shape
 
 Seed `CHANGELOG.md` as a first release:
 
-- `## [Unreleased]` with empty `Added`, `Changed`, `Fixed`, `Docs`, and
-  `Tests` sections.
+- `## [Unreleased]` with empty `Added`, `Changed`, `Fixed`, `Docs`, and `Tests`
+  sections.
 - `## [0.1.0] - 2026-06-12` with family-level bullets for:
   - package/CLI/MCP scaffold;
   - Python-first local source-read-only MVP;
@@ -132,20 +130,18 @@ Implementation should be TDD for validation changes:
   docs to pass.
 - Minimum focused gate:
   `uv run pytest tests/docs/test_docs.py tests/contract/test_cli.py tests/contract/test_mcp_tool_surface.py tests/contract/test_public_surface_registry.py tests/test_package_metadata.py tests/evals/test_agent_eval_spec.py`
-- Quality gate:
-  `uv run ruff check .`, `uv run ruff format --check .`, and
+- Quality gate: `uv run ruff check .`, `uv run ruff format --check .`, and
   `uv run basedpyright` if Python tests are edited.
-- Manual QA:
-  use tmux to run representative documented commands against
+- Manual QA: use tmux to run representative documented commands against
   `tests/fixtures/python-basic`, capture `.omo/evidence/docs-changelog-*`
   artifacts, and verify the docs mention only commands that succeed.
 
 ## Ambiguities For Approval
 
 1. Documentation scope:
-   - Option A: full practical project docs now, including getting started,
-     CLI reference, MCP reference, workflows, configuration, dashboard,
-     language packs, README updates, and changelog.
+   - Option A: full practical project docs now, including getting started, CLI
+     reference, MCP reference, workflows, configuration, dashboard, language
+     packs, README updates, and changelog.
    - Option B: only README plus root changelog.
    - Recommendation: Option A, because the PRD is fully implemented and the
      missing value is user/operator discoverability across the shipped surface.
@@ -158,8 +154,8 @@ Implementation should be TDD for validation changes:
    - Option A: add/extend docs tests for changelog and docs links/surface
      claims.
    - Option B: prose-only docs update with manual review.
-   - Recommendation: Option A, because this repo already pins docs through
-     tests and the changelog currently has no validation.
+   - Recommendation: Option A, because this repo already pins docs through tests
+     and the changelog currently has no validation.
 
 ## Approval Gate
 

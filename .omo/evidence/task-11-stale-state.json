@@ -8,9 +8,7 @@
         "ok": true,
         "path": "src/pkg/broken.py",
         "related_files": [],
-        "risk_notes": [
-          "parse-error: invalid syntax at line 1, column 12"
-        ],
+        "risk_notes": ["parse-error: invalid syntax at line 1, column 12"],
         "source_ranges": [],
         "summary": "src/pkg/broken.py defines no symbols.",
         "symbols": []

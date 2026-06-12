@@ -1,8 +1,8 @@
 # CLI Reference
 
-The `codescent` CLI is the human/admin surface over the same local services
-used by MCP. Commands write only CodeScent state under `.codescent/` unless they
-emit output to stdout.
+The `codescent` CLI is the human/admin surface over the same local services used
+by MCP. Commands write only CodeScent state under `.codescent/` unless they emit
+output to stdout.
 
 ## Repository Commands
 
@@ -48,8 +48,8 @@ uv run codescent watch --repo "$repo" --once --json
 
 ### `reset`
 
-Lists or removes `.codescent/` state. `reset` is intentionally guarded:
-reset requires --dry-run or --yes.
+Lists or removes `.codescent/` state. `reset` is intentionally guarded: reset
+requires --dry-run or --yes.
 
 ```bash
 uv run codescent reset --repo "$repo" --dry-run --json

@@ -39,18 +39,11 @@
     },
     {
       "data": {
-        "affected_files": [
-          "app/api/tasks/route.ts"
-        ],
+        "affected_files": ["app/api/tasks/route.ts"],
         "finding_id": "next.route_handler_too_much:91a4f11b02bf",
-        "next_tools": [
-          "plan_refactor",
-          "suggest_tests"
-        ],
+        "next_tools": ["plan_refactor", "suggest_tests"],
         "ok": true,
-        "relevant_symbols": [
-          "app.api.tasks.route.GET"
-        ],
+        "relevant_symbols": ["app.api.tasks.route.GET"],
         "relevant_tests": [],
         "risk_notes": [
           "low-confidence references omitted from caller/callee claims"
@@ -71,9 +64,7 @@
     },
     {
       "data": {
-        "affected_files": [
-          "app/api/tasks/route.ts"
-        ],
+        "affected_files": ["app/api/tasks/route.ts"],
         "expected_behavior_preservation": [
           "Keep existing imports and call sites working.",
           "Preserve test-observed behavior for likely related tests."
@@ -86,9 +77,7 @@
           "Do not change public behavior without tests."
         ],
         "ok": true,
-        "relevant_symbols": [
-          "app.api.tasks.route.GET"
-        ],
+        "relevant_symbols": ["app.api.tasks.route.GET"],
         "risk": "low",
         "steps": [
           "Review the bounded finding context and current tests.",
@@ -96,17 +85,13 @@
           "Run the suggested verification commands.",
           "Rescan with CodeScent and update the finding lifecycle."
         ],
-        "verification_recommendations": [
-          "pytest"
-        ]
+        "verification_recommendations": ["pytest"]
       },
       "tool": "plan_refactor"
     },
     {
       "data": {
-        "commands": [
-          "pytest"
-        ],
+        "commands": ["pytest"],
         "executes_in_v1": false,
         "likely_tests": [],
         "ok": true

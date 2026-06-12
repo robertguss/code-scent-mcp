@@ -23,7 +23,8 @@ Command:
 uv run pytest tests/contract/test_public_surface_registry.py::test_post_mvp_surface_is_declared_but_not_registered
 ```
 
-Result: failed during collection with `ModuleNotFoundError: No module named 'codescent.core.public_surface'`.
+Result: failed during collection with
+`ModuleNotFoundError: No module named 'codescent.core.public_surface'`.
 
 ## Green
 
@@ -67,7 +68,9 @@ Command:
 tmux new-session -d -s ulw-qa-prd-1 'cd <repo> && uv run python scripts/audit_plan_compliance.py --plan .omo/plans/codescent-prd-remainder.md --evidence .omo/evidence > .omo/evidence/prd-remainder-task-1-public-surface.json'
 ```
 
-Result: `.omo/evidence/prd-remainder-task-1-public-surface.json` reports `ok: true`, `tool_surface_ok: true`, no missing evidence, and no user decision gaps.
+Result: `.omo/evidence/prd-remainder-task-1-public-surface.json` reports
+`ok: true`, `tool_surface_ok: true`, no missing evidence, and no user decision
+gaps.
 
 Command:
 
@@ -99,6 +102,8 @@ Malformed plan check:
 uv run python scripts/audit_plan_compliance.py --plan .omo/plans/does-not-exist.md --evidence .omo/evidence
 ```
 
-Result: exited 1 with `FileNotFoundError`, proving missing plan input is rejected.
+Result: exited 1 with `FileNotFoundError`, proving missing plan input is
+rejected.
 
-Cleanup: tmux session `ulw-qa-prd-1` exited; `tmux has-session -t ulw-qa-prd-1` returned 1.
+Cleanup: tmux session `ulw-qa-prd-1` exited; `tmux has-session -t ulw-qa-prd-1`
+returned 1.

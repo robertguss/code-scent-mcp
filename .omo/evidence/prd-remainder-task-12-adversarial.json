@@ -37,27 +37,18 @@
       "src/acme_tasks/workflow.py"
     ],
     "confidence": 0.6937499999999999,
-    "likely_tests": [
-      "tests/test_config.py"
-    ],
+    "likely_tests": ["tests/test_config.py"],
     "passed": true,
     "source_read_only": {
       "allowed_runtime_state": ".codescent",
       "changed_source_paths": [],
       "source_hashes_unchanged": true
     },
-    "tools": [
-      "scan_code_health",
-      "get_impact"
-    ]
+    "tools": ["scan_code_health", "get_impact"]
   },
   "ok": true,
   "prompt_injection": {
-    "affected_files": [
-      "src/app.py",
-      "src/helper.py",
-      "tests/test_app.py"
-    ],
+    "affected_files": ["src/app.py", "src/helper.py", "tests/test_app.py"],
     "passed": true,
     "source_hash_after": "b2dfebfdafd3121e7191fbb4b655ff1087e66837fad3b24aa0399eb539f3c46d",
     "source_hash_before": "b2dfebfdafd3121e7191fbb4b655ff1087e66837fad3b24aa0399eb539f3c46d"

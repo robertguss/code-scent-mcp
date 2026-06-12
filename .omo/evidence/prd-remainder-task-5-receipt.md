@@ -67,7 +67,9 @@ Command:
 uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic search_expansion --out .omo/evidence/prd-remainder-task-5-mcp-search.json
 ```
 
-Result: `.omo/evidence/prd-remainder-task-5-mcp-search.json` includes `multi_search_content`, merged unique paths, bounded one-line snippets, and source-read-only proof.
+Result: `.omo/evidence/prd-remainder-task-5-mcp-search.json` includes
+`multi_search_content`, merged unique paths, bounded one-line snippets, and
+source-read-only proof.
 
 Command:
 
@@ -104,4 +106,5 @@ Mixed-query smoke:
 uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic multi_search_content:DOES_NOT_EXIST_NEEDLE,pending-review --out /tmp/codescent-task5-malformed.json
 ```
 
-Result: completed with `ok: true` and bounded non-empty results for the matching query.
+Result: completed with `ok: true` and bounded non-empty results for the matching
+query.
