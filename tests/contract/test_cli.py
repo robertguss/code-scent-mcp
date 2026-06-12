@@ -71,6 +71,27 @@ class ConfigPayload(BaseModel):
     privacy: dict[str, bool]
 
 
+class RulesPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    enabled_rule_packs: tuple[str, ...]
+    disabled_rule_packs: tuple[str, ...]
+
+
+class WatchPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    indexed_files: int
+    changed_files: tuple[str, ...]
+
+
+class ResetPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    deleted: bool
+    paths: tuple[str, ...]
+
+
 def _scan_payload(output: str) -> ScanPayload:
     return ScanPayload.model_validate_json(output)
 
@@ -226,12 +247,52 @@ allow_llm_review = false
     assert payload.privacy["runtime_network"] is False
 
 
-def test_reset_not_exposed() -> None:
+def test_rules_watch_and_reset_are_safe_and_codescent_scoped(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("value = 1\n")
+    _ = RUNNER.invoke(app, ["init", "--repo", str(repo), "--json"])
+
+    rules_result = RUNNER.invoke(app, ["rules", "--repo", str(repo), "--json"])
+    watch_result = RUNNER.invoke(
+        app,
+        ["watch", "--repo", str(repo), "--once", "--json"],
+    )
+    dry_run_result = RUNNER.invoke(
+        app,
+        ["reset", "--repo", str(repo), "--dry-run", "--json"],
+    )
+    reset_result = RUNNER.invoke(
+        app,
+        ["reset", "--repo", str(repo), "--yes", "--json"],
+    )
+
+    rules_payload = RulesPayload.model_validate_json(rules_result.output)
+    watch_payload = WatchPayload.model_validate_json(watch_result.output)
+    dry_run_payload = ResetPayload.model_validate_json(dry_run_result.output)
+    reset_payload = ResetPayload.model_validate_json(reset_result.output)
+
+    assert rules_result.exit_code == 0
+    assert watch_result.exit_code == 0
+    assert dry_run_result.exit_code == 0
+    assert reset_result.exit_code == 0
+    assert "python-maintainability" in rules_payload.enabled_rule_packs
+    assert watch_payload.indexed_files == 1
+    assert dry_run_payload.deleted is False
+    assert reset_payload.deleted is True
+    assert dry_run_payload.paths == (str(repo / ".codescent"),)
+    assert reset_payload.paths == (str(repo / ".codescent"),)
+    assert source.exists()
+    assert not (repo / ".codescent").exists()
+
+
+def test_reset_requires_explicit_yes() -> None:
     help_result = RUNNER.invoke(app, ["--help"])
     reset_result = RUNNER.invoke(app, ["reset"])
 
     assert help_result.exit_code == 0
-    assert "reset" not in help_result.output
+    assert "reset" in help_result.output
     assert reset_result.exit_code != 0
 
 

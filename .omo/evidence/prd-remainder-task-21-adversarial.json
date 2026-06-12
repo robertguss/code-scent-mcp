@@ -1,0 +1,56 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "reset/watch commands are bounded synchronous CLI operations in this task"
+  },
+  "dirty_worktree": {
+    "note": "main repo codescent-mcp-test-results.md remains untracked and untouched",
+    "passed": true,
+    "returncode": 0
+  },
+  "flaky_tests": {
+    "cmd": "uv run pytest tests/contract/test_cli.py::test_rules_watch_and_reset_are_safe_and_codescent_scoped -q",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": ".                                                                        [100%]\n1 passed in 0.39s\n"
+  },
+  "hung_or_long_commands": {
+    "cmd": "timeout 10 uv run codescent reset --repo tests/fixtures/python-basic --dry-run --json",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": "{\"deleted\": false, \"paths\": [\"/Users/robertguss/Projects/startups/code-scent-mcp/tests/fixtures/python-basic/.codescent\"]}\n"
+  },
+  "malformed_input": {
+    "cmd": "uv run codescent reset --repo /tmp/codescent-missing-repo-task21 --dry-run --json",
+    "passed": true,
+    "returncode": 1,
+    "stderr_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 /Users/robertguss/Projects/startups/code-scent-mcp/src/codescent/cli/main.py \u2502\n\u2502 :382 in reset                                                                \u2502\n\u2502                                                                              \u2502\n\u2502   379 \u2502   \u2502   typer.Option(\"--json\", help=\"Print JSON reset result.\"),       \u2502\n\u2502   380 \u2502   ] = False,                                                         \u2502\n\u2502   381 ) -> None:                                                             \u2502\n\u2502 \u2771 382 \u2502   repo_root = resolve_repo_root(repo)                                \u2502\n\u2502   383 \u2502   target = repo_root / \".codescent\"                                  \u2502\n\u2502   384 \u2502   paths = [str(target)]                                              \u2502\n\u2502   385 \u2502   deleted = False                                                    \u2502\n\u2502        ",
+    "stdout_excerpt": ""
+  },
+  "misleading_success_output": {
+    "passed": true,
+    "payload": {
+      "deleted": false,
+      "paths": [
+        "/Users/robertguss/Projects/startups/code-scent-mcp/tests/fixtures/python-basic/.codescent"
+      ]
+    }
+  },
+  "ok": true,
+  "prompt_injection": {
+    "dry_returncode": 0,
+    "passed": true,
+    "yes_returncode": 0
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "watch --once has no checkpointed long-running state in this task"
+  },
+  "stale_state": {
+    "first_returncode": 0,
+    "passed": true,
+    "second_returncode": 0
+  }
+}

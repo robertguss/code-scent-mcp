@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from typing import TYPE_CHECKING, Annotated, NoReturn, TypedDict
 
 import typer
@@ -15,6 +16,7 @@ from codescent.services.config import ConfigService
 from codescent.services.findings import FindingsService
 from codescent.services.repo_index import RepoIndexService
 from codescent.services.reports import ReportService
+from codescent.services.rules import RulesService
 from codescent.services.status import RepoStatusService
 from codescent.storage import initialize_storage
 
@@ -316,6 +318,82 @@ def config(
         typer.echo(json.dumps(payload))
         return
     typer.echo(json.dumps(payload, indent=2))
+
+
+@app.command()
+def rules(
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Print JSON rule configuration."),
+    ] = False,
+) -> None:
+    report_data = RulesService(repo).get_rules()
+    payload = {
+        "enabled_rule_packs": list(report_data.enabled_rule_packs),
+        "disabled_rule_packs": list(report_data.disabled_rule_packs),
+    }
+    if json_output:
+        typer.echo(json.dumps(payload))
+        return
+    typer.echo("\n".join(payload["enabled_rule_packs"]))
+
+
+@app.command()
+def watch(
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    once: Annotated[
+        bool,
+        typer.Option("--once", help="Run one index pass and exit."),
+    ] = False,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Print JSON watch result."),
+    ] = False,
+) -> None:
+    result = RepoIndexService(repo).index_repo()
+    payload = {
+        "mode": "once" if once else "poll",
+        "indexed_files": result.indexed_files,
+        "changed_files": list(result.changed_files),
+    }
+    if json_output:
+        typer.echo(json.dumps(payload))
+        return
+    typer.echo(f"Indexed {result.indexed_files} files")
+
+
+@app.command()
+def reset(
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="List reset targets without deleting."),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Delete .codescent state."),
+    ] = False,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Print JSON reset result."),
+    ] = False,
+) -> None:
+    repo_root = resolve_repo_root(repo)
+    target = repo_root / ".codescent"
+    paths = [str(target)]
+    deleted = False
+    if not dry_run:
+        if not yes:
+            typer.echo("reset requires --dry-run or --yes", err=True)
+            raise typer.Exit(1)
+        shutil.rmtree(target, ignore_errors=True)
+        deleted = True
+    payload = {"deleted": deleted, "paths": paths}
+    if json_output:
+        typer.echo(json.dumps(payload))
+        return
+    typer.echo(json.dumps(payload))
 
 
 @app.command()

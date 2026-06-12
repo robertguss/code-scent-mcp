@@ -328,7 +328,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-20 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent config --repo tests/fixtures/python-basic --json'`; PASS if JSON includes command hints, token budgets, privacy, and pack settings. Evidence `.omo/evidence/prd-remainder-task-20-config.txt`.
   Commit: Y | `feat(config): add full project configuration surface` | Files `src/codescent/core/models.py`, `src/codescent/services/config.py`, `src/codescent/cli/main.py`, `tests/unit/test_models.py`
 
-- [ ] 21. Add rule configuration and safe reset/watch CLI
+- [x] 21. Add rule configuration and safe reset/watch CLI
   What to do / Must NOT do: Add `codescent rules`, safe `.codescent`-only `codescent reset --dry-run|--yes`, and `codescent watch` with lock-safe incremental indexing. Do not delete source or execute target tests.
   Parallelization: Can parallel Y | Wave 6 | Blocks pack/rule customization
   References: `docs/prd.md:664`, `docs/prd.md:670`, `docs/prd.md:676`
