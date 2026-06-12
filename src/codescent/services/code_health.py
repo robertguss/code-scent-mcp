@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from codescent.core.models import FindingStatus
+from codescent.engine.packs import build_pack_registry
 from codescent.engine.rules.model import (
     CodeHealthFinding,
     FindingSpec,
     build_finding,
 )
-from codescent.engine.rules.python import scan_python_health
+from codescent.services.config import ConfigService
 from codescent.services.repo_index import RepoIndexService
 from codescent.storage import RepositoryStorage, initialize_storage
 
@@ -39,8 +40,9 @@ class CodeHealthService:
     def scan(self) -> CodeHealthScanResult:
         index_result = RepoIndexService(self.repo_root).index_repo()
         state = initialize_storage(self.repo_root)
+        registry = build_pack_registry(ConfigService(state.repo_root).load())
         findings = (
-            *scan_python_health(state.repo_root),
+            *registry.scan_rule_packs(state.repo_root),
             *_changed_source_without_related_tests(
                 index_result.changed_files,
                 set(index_result.file_hashes),

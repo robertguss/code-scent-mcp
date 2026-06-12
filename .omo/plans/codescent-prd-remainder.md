@@ -336,7 +336,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-21 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent reset --repo tests/fixtures/python-basic --dry-run --json'`; PASS if JSON lists only `.codescent` deletions and `deleted: false`. Evidence `.omo/evidence/prd-remainder-task-21-reset.txt`.
   Commit: Y | `feat(cli): add rules watch and safe reset` | Files `src/codescent/cli/main.py`, `src/codescent/services/rules.py`, `tests/contract/test_cli.py`
 
-- [ ] 22. Add internal language/framework/rule pack registry
+- [x] 22. Add internal language/framework/rule pack registry
   What to do / Must NOT do: Create internal pack interfaces and registry, migrate current Python parser/rules into a Python pack, and support repo-local pack enable/disable config. Do not add TypeScript parsing yet.
   Parallelization: Can parallel N | Wave 6 | Blocks TS/React pack
   References: `docs/prd.md:1277`, `docs/prd.md:1285`, `docs/architecture.md:523`, `src/codescent/engine/parsers/python.py`

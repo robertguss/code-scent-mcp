@@ -5,13 +5,16 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from codescent.engine.inventory import build_file_inventory
-from codescent.engine.parsers.python import ParsedSymbol, parse_python_file
+from codescent.engine.packs import build_pack_registry
+from codescent.services.config import ConfigService
 from codescent.services.git import detect_git_state
 from codescent.storage import RepositoryStorage, initialize_storage
 
 if TYPE_CHECKING:
     import sqlite3
     from pathlib import Path
+
+    from codescent.engine.parsers.python import ParsedPythonFile, ParsedSymbol
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +47,7 @@ class RepoIndexService:
         )
         file_hashes = {item.path: item.hash for item in inventory}
         git_state = detect_git_state(state.repo_root)
+        registry = build_pack_registry(ConfigService(state.repo_root).load())
 
         with RepositoryStorage(state).write_transaction() as connection:
             _ = connection.execute("delete from files")
@@ -78,12 +82,13 @@ class RepoIndexService:
                     ),
                 )
                 file_id = _lastrowid(cursor)
-                if item.language == "python":
+                parser = registry.parser_for_language(item.language)
+                if parser is not None:
+                    parsed = parser(state.repo_root / item.path, item.path)
                     _persist_python_graph(
                         connection=connection,
-                        repo_root=state.repo_root,
-                        path=item.path,
                         file_id=file_id,
+                        parsed=parsed,
                     )
 
         return IndexResult(
@@ -98,11 +103,9 @@ class RepoIndexService:
 def _persist_python_graph(
     *,
     connection: sqlite3.Connection,
-    repo_root: Path,
-    path: str,
     file_id: int,
+    parsed: ParsedPythonFile,
 ) -> None:
-    parsed = parse_python_file(repo_root / path, path)
     symbol_ids: dict[str, int] = {}
     for symbol in parsed.symbols:
         cursor = connection.execute(

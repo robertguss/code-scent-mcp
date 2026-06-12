@@ -5,10 +5,13 @@ from typing import TYPE_CHECKING
 
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
-from codescent.engine.parsers.python import ParsedPythonFile, parse_python_file
+from codescent.engine.packs import build_pack_registry
+from codescent.services.config import ConfigService
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from codescent.engine.parsers.python import ParsedPythonFile
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,9 +25,12 @@ class SymbolService:
 
     def extract(self) -> SymbolExtraction:
         repo_root = resolve_repo_root(self.repo_root)
+        registry = build_pack_registry(ConfigService(repo_root).load())
         parsed_files = tuple(
-            parse_python_file(repo_root / item.path, item.path)
+            parser(repo_root / item.path, item.path)
             for item in build_file_inventory(repo_root)
             if item.language == "python"
+            for parser in (registry.parser_for_language(item.language),)
+            if parser is not None
         )
         return SymbolExtraction(files=parsed_files)

@@ -5,13 +5,14 @@ from collections import Counter
 from typing import TYPE_CHECKING, Final
 
 from codescent.core.paths import resolve_repo_root
+from codescent.engine.inventory import build_file_inventory
+from codescent.engine.parsers.python import parse_python_file
 from codescent.engine.rules.model import (
     CodeHealthFinding,
     FindingSpec,
     build_finding,
 )
 from codescent.engine.rules.python_patterns import secondary_findings
-from codescent.services.symbols import SymbolService
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -29,7 +30,10 @@ MIN_LITERAL_LENGTH: Final = 3
 def scan_python_health(root: Path | str) -> tuple[CodeHealthFinding, ...]:
     repo_root = resolve_repo_root(root)
     findings: list[CodeHealthFinding] = []
-    for parsed in SymbolService(repo_root).extract().files:
+    for item in build_file_inventory(repo_root):
+        if item.language != "python":
+            continue
+        parsed = parse_python_file(repo_root / item.path, item.path)
         source_path = repo_root / parsed.path
         lines = source_path.read_text().splitlines()
         findings.extend(_large_file(parsed, len(lines)))
