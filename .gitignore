@@ -1,4 +1,33 @@
-.venv
-.ruff_cache
-.pytest_cache
-.codescent
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build and packaging outputs
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Coverage and test artifacts
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# CodeScent runtime state
+.codescent/
