@@ -360,7 +360,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-24 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent index --repo tests/fixtures/ts-react-next-basic --json'`; PASS if JSON/index inspection includes TypeScript and React symbol counts. Evidence `.omo/evidence/prd-remainder-task-24-ts-index.txt`.
   Commit: Y | `feat(packs): add ts react next parser` | Files `src/codescent/engine/packs_ts.py`, `tests/integration/test_ts_react_next_parser.py`
 
-- [ ] 25. Add TypeScript/React/Next rule pack
+- [x] 25. Add TypeScript/React/Next rule pack
   What to do / Must NOT do: Add deterministic rules for large component, too many hooks, too many props, too many exports, route handler doing too much, duplicate literals, TODO cluster, missing nearby test, and suspicious generated code.
   Parallelization: Can parallel N | Wave 7 | Blocks TS eval
   References: `docs/prd.md:1141`, `docs/prd.md:1145`, `docs/prd.md:1159`

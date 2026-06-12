@@ -85,7 +85,7 @@ class ProjectConfig(BaseModel):
     build: tuple[str, ...] = ()
     language_packs: tuple[str, ...] = ("python", "typescript")
     framework_packs: tuple[str, ...] = ()
-    rule_packs: tuple[str, ...] = ("python-maintainability",)
+    rule_packs: tuple[str, ...] = ("python-maintainability", "ts-react-next")
     commands: CommandHints = Field(default_factory=CommandHints)
     token_budgets: TokenBudgets = Field(default_factory=TokenBudgets)
     privacy: PrivacySettings = Field(default_factory=PrivacySettings)

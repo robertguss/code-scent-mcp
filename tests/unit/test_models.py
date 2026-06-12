@@ -124,7 +124,7 @@ def test_project_config_defaults_enable_python_and_typescript_packs() -> None:
     config = ProjectConfig()
 
     assert config.language_packs == ("python", "typescript")
-    assert config.rule_packs == ("python-maintainability",)
+    assert config.rule_packs == ("python-maintainability", "ts-react-next")
 
 
 def test_core_model_inventory_is_available() -> None:

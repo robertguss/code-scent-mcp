@@ -29,7 +29,6 @@
   "ok": true,
   "tool_surface_ok": true,
   "unchecked_todos": [
-    "- [ ] 24. Add TypeScript/JavaScript parser pack",
     "- [ ] 25. Add TypeScript/React/Next rule pack",
     "- [ ] 26. Add TypeScript/React/Next MCP and eval smoke",
     "- [ ] 27. Add CI and PR/diff review mode",
