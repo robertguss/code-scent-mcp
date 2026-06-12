@@ -416,7 +416,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: Browser use: open `http://127.0.0.1:<port>/`, click finding detail, rules, export; PASS if screenshot shows findings list, selected finding detail, progress trend, rule config, and export control. Evidence `.omo/evidence/prd-remainder-task-31-dashboard-browser.png` plus action log `.omo/evidence/prd-remainder-task-31-dashboard-browser.txt`.
   Commit: Y | `feat(dashboard): add local health dashboard ui` | Files `src/codescent/dashboard/static/**`, `src/codescent/dashboard/templates/**`, `tests/integration/test_dashboard.py`
 
-- [ ] 32. Add dashboard smoke, no-network, and cleanup proof
+- [x] 32. Add dashboard smoke, no-network, and cleanup proof
   What to do / Must NOT do: Add dashboard smoke script that starts the local server, drives browser checks, verifies no external requests, proves no source writes, exports JSON/Markdown, and cleans up server/process/temp state.
   Parallelization: Can parallel N | Wave 9 | Blocks final verification
   References: `docs/prd.md:757`, `docs/prd.md:762`, `docs/prd.md:777`, `docs/prd.md:1385`

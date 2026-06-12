@@ -1,6 +1,7 @@
 import shutil
 import socket
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -118,3 +119,39 @@ def test_subjective_review_is_disabled_by_default_and_uses_fake_provider_in_test
     assert enabled.subjective_findings[0].subjective is True
     assert "CodeScent subjective review prompt" in enabled.prompt
     assert attempts == []
+
+
+def test_dashboard_smoke_is_local_only_and_source_read_only(tmp_path: Path) -> None:
+    out = tmp_path / "dashboard-smoke.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/smoke_dashboard.py",
+            "--repo",
+            "tests/fixtures/python-basic",
+            "--out",
+            str(out),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    payload = JSON_PAYLOAD.validate_json(out.read_text())
+
+    assert result.returncode == 0
+    assert payload["ok"] is True
+    assert payload["external_requests"] == 0
+    assert payload["changed_source_paths"] == []
+    assert Path(str(payload["screenshot_path"])).is_file()
+    cleanup = payload["cleanup"]
+    exports = payload["exports"]
+    assert isinstance(cleanup, dict)
+    assert isinstance(exports, dict)
+    json_export = exports["json"]
+    markdown_export = exports["markdown"]
+    assert cleanup["server_stopped"] is True
+    assert isinstance(json_export, str)
+    assert isinstance(markdown_export, str)
+    assert json_export.endswith(".json")
+    assert markdown_export.endswith(".md")
