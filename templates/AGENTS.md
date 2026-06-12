@@ -7,11 +7,11 @@ for repos that choose to route coding agents through CodeScent.
 
 ## WHERE TO LOOK
 
-| Task | Location | Notes |
-| --- | --- | --- |
-| Codex/OpenAI agents | `AGENTS.md`, `CODEX.md` | Source-read-only CodeScent routing text. |
-| Claude agents | `CLAUDE.md` | Same routing contract for Claude-style repos. |
-| Template docs | `docs/agent-routing.md` | Explains that templates are optional. |
+| Task                | Location                | Notes                                         |
+| ------------------- | ----------------------- | --------------------------------------------- |
+| Codex/OpenAI agents | `AGENTS.md`, `CODEX.md` | Source-read-only CodeScent routing text.      |
+| Claude agents       | `CLAUDE.md`             | Same routing contract for Claude-style repos. |
+| Template docs       | `docs/agent-routing.md` | Explains that templates are optional.         |
 
 ## CONVENTIONS
 
@@ -26,5 +26,6 @@ for repos that choose to route coding agents through CodeScent.
 ## ANTI-PATTERNS
 
 - Do not imply CodeScent can edit source automatically.
-- Do not add product promises that are not supported by the current tool surface.
+- Do not add product promises that are not supported by the current tool
+  surface.
 - Do not make templates depend on this repo's private `.omo` workflow.

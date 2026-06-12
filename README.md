@@ -11,12 +11,11 @@ expanded search and graph tools, reports, CI/diff review, opt-in subjective
 review, evals, and a loopback dashboard.
 
 CodeScent is local stdio for MCP and loopback-only for the dashboard. It writes
-only `.codescent` state in the analyzed repository. It does not edit analyzed source files.
-Safety summary: writes only .codescent state and does not edit
+only `.codescent` state in the analyzed repository. It does not edit analyzed
+source files. Safety summary: writes only .codescent state and does not edit
 analyzed source files. The runtime no-network model applies to indexing,
 scanning, searching, context building, dashboard use, CI mode, and eval
-execution.
-Subjective LLM review remains opt-in and disabled by default.
+execution. Subjective LLM review remains opt-in and disabled by default.
 
 ## Install
 
@@ -41,8 +40,8 @@ uv run codescent doctor --repo tests/fixtures/python-basic --json
 commands are recommendations; CodeScent does not execute target project
 test/lint/build commands in V1.
 
-See [docs/getting-started.md](docs/getting-started.md) for an isolated first
-run that uses a temporary fixture copy.
+See [docs/getting-started.md](docs/getting-started.md) for an isolated first run
+that uses a temporary fixture copy.
 
 ## MCP Stdio
 
@@ -90,8 +89,8 @@ smoke, and safety eval details.
 
 - [Getting started](docs/getting-started.md): install and run the first local
   workflow.
-- [CLI reference](docs/cli-reference.md): commands, options, outputs, and
-  safety notes.
+- [CLI reference](docs/cli-reference.md): commands, options, outputs, and safety
+  notes.
 - [MCP tools](docs/mcp-tools.md): registered tools, groups, and output
   boundaries.
 - [Workflows](docs/workflows.md): finding lifecycle and safe improvement loop.
