@@ -224,6 +224,7 @@ def doctor(
         "ok": all(checks.values()),
         "checks": checks,
         "warnings": _doctor_warnings(database_ok=database_ok, config_ok=config_ok),
+        "routing_templates": _routing_templates(),
     }
     if json_output:
         typer.echo(json.dumps(payload))
@@ -483,6 +484,26 @@ def _doctor_warnings(*, database_ok: bool, config_ok: bool) -> list[str]:
     if not config_ok:
         warnings.append("codescent config has not been initialized")
     return warnings
+
+
+def _routing_templates() -> list[dict[str, str | bool]]:
+    return [
+        {
+            "name": "AGENTS.md",
+            "template": "templates/AGENTS.md",
+            "auto_write": False,
+        },
+        {
+            "name": "CLAUDE.md",
+            "template": "templates/CLAUDE.md",
+            "auto_write": False,
+        },
+        {
+            "name": "CODEX.md",
+            "template": "templates/CODEX.md",
+            "auto_write": False,
+        },
+    ]
 
 
 def _finding_row_payload(finding: FindingRow) -> dict[str, str | float]:

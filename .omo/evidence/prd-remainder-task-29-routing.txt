@@ -1,0 +1,24 @@
+{"ok": true, "checks": {"database_ok": true, "config_ok": true, "exclusions_ok":
+ true, "mcp_available": true}, "warnings": [], "routing_templates": [{"name": "A
+GENTS.md", "template": "templates/AGENTS.md", "auto_write": false}, {"name": "CL
+AUDE.md", "template": "templates/CLAUDE.md", "auto_write": false}, {"name": "COD
+EX.md", "template": "templates/CODEX.md", "auto_write": false}]}
+EXIT:0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

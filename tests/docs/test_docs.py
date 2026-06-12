@@ -1,8 +1,16 @@
 from pathlib import Path
 
+from typer.testing import CliRunner
+
+from codescent.cli.main import app
+
 README = Path("README.md")
 EVALS = Path("docs/evals.md")
 MCP_TOOLS = Path("docs/mcp-tools.md")
+AGENT_ROUTING = Path("docs/agent-routing.md")
+AGENTS_TEMPLATE = Path("templates/AGENTS.md")
+CLAUDE_TEMPLATE = Path("templates/CLAUDE.md")
+CODEX_TEMPLATE = Path("templates/CODEX.md")
 
 MVP_TOOLS = {
     "get_repo_map",
@@ -95,3 +103,26 @@ def test_eval_docs_include_deterministic_agent_and_real_smoke() -> None:
     assert "uv run python evals/run_deterministic.py" in text
     assert "scripts/smoke_lx_data_lake.py" in text
     assert "source-read-only" in text
+
+
+def test_agent_routing_templates_are_documented_and_not_auto_written(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    result = CliRunner().invoke(app, ["doctor", "--repo", str(repo), "--json"])
+    combined = (
+        f"{AGENT_ROUTING.read_text()}\n"
+        f"{AGENTS_TEMPLATE.read_text()}\n"
+        f"{CLAUDE_TEMPLATE.read_text()}\n"
+        f"{CODEX_TEMPLATE.read_text()}"
+    ).lower()
+
+    assert result.exit_code == 0
+    assert "routing_templates" in result.output
+    assert "use codescent before broad grep" in combined
+    assert "source-read-only" in combined
+    assert "does not auto-write" in combined
+    assert not (repo / "AGENTS.md").exists()
+    assert not (repo / "CLAUDE.md").exists()
+    assert not (repo / "CODEX.md").exists()

@@ -29,7 +29,6 @@
   "ok": true,
   "tool_surface_ok": true,
   "unchecked_todos": [
-    "- [ ] 28. Add optional subjective LLM review abstraction",
     "- [ ] 29. Add routing templates and adoption docs",
     "- [ ] 30. Add local dashboard service and read API",
     "- [ ] 31. Add dashboard UI for health, findings, trends, rules, and exports",

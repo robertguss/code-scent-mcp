@@ -392,7 +392,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-28 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent report --repo tests/fixtures/python-basic --include-subjective --provider fake --format json'`; PASS if JSON labels subjective findings separately and records fake provider. Evidence `.omo/evidence/prd-remainder-task-28-subjective.txt`.
   Commit: Y | `feat(review): add opt-in subjective review seam` | Files `src/codescent/services/subjective_review.py`, `src/codescent/storage/schema.py`, `tests/integration/test_subjective_review.py`
 
-- [ ] 29. Add routing templates and adoption docs
+- [x] 29. Add routing templates and adoption docs
   What to do / Must NOT do: Add optional AGENTS/CLAUDE/Codex routing-file templates that instruct agents to use CodeScent before broad grep and to respect source-read-only behavior. Do not auto-write templates into analyzed repos.
   Parallelization: Can parallel Y | Wave 8 | Blocks final docs
   References: `docs/prd.md:1479`, `docs/prd.md:1480`, `docs/prd.md:867`
