@@ -445,7 +445,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   - `uv run codescent ci --repo tests/fixtures/python-basic --format json > .omo/evidence/prd-remainder-final-ci.json`
   Evidence: the three files above.
 
-- [ ] F4. Runtime safety and stale-state proof
+- [x] F4. Runtime safety and stale-state proof
   Commands:
   - `uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-basic --out .omo/evidence/prd-remainder-final-source-read-only.json`
   - `uv run python scripts/smoke_lx_data_lake.py --repo /Users/robertguss/Projects/wts-lx/lx_data_lake --out .omo/evidence/prd-remainder-final-lx-smoke.json`

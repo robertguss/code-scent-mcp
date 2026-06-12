@@ -1,0 +1,48 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "F4 commands are bounded synchronous safety probes with no resumable state"
+  },
+  "dirty_worktree": {
+    "passed": true,
+    "returncode": 0,
+    "source_hashes_unchanged": true,
+    "status_excerpt": "?? .omo/evidence/prd-remainder-final-lx-smoke-tmux.json\n?? .omo/evidence/prd-remainder-final-lx-smoke.json\n?? .omo/evidence/prd-remainder-final-runtime-safety-tmux.txt\n?? .omo/evidence/prd-remainder-final-source-read-only-timeout.json\n?? .omo/evidence/prd-remainder-final-source-read-only-tmux.json\n?? .omo/evidence/prd-remainder-final-source-read-only.json\n?? .omo/evidence/prd-remainder-task-18-review-diff-risk.json\n?? codescent-mcp-test-results.md\n?? scripts/__pycache__/\n?? src/codescent/__pycache__/\n?? src/codescent/core/__pycache__/\n?? src/codescent/engine/__pycache__/\n?? src/codescent/engine/context/__pycache__/\n?? src/codescent/engine/parsers/__pycache__/\n?? src/codescent/engine/rules/__pycache__/\n?? src/codescent/engine/search/__pycache__/\n?? src/codescent/mcp/__pycache__/\n?? src/codescent/services/__pycache__/\n?? src/codescent/smoke/__pycache__/\n?? src/codescent/storage/__pycache__/\n?? src/codescent/storage/repositories/__pycache__/\n?? tests/fixtures/python-basic/.codescent/\n?? t"
+  },
+  "flaky_tests": {
+    "passed": true,
+    "returncode": 0
+  },
+  "hung_or_long_commands": {
+    "passed": true,
+    "returncode": 0
+  },
+  "malformed_input": {
+    "passed": true,
+    "returncode": 1,
+    "stderr_excerpt": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Traceback (most recent call last) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 /Users/robertguss/Projects/startups/code-scent-mcp/scripts/prove_source_read \u2502\n\u2502 _only.py:145 in main                                                         \u2502\n\u2502                                                                              \u2502\n\u2502   142 \u2502   repo: Annotated[Path, typer.Option()],                             \u2502\n\u2502   143 \u2502   out: Annotated[Path, typer.Option()],                              \u2502\n\u2502   144 ) -> None:                                                             \u2502\n\u2502 \u2771 145 \u2502   payload = prove_source_read_only(repo, out)                        \u2502\n\u2502   146 \u2502   typer.echo(json.dumps({\"ok\": payload[\"ok\"]}))                      \u2502\n\u2502   147                                                                        \u2502\n\u2502   148                                                                        \u2502\n\u2502                                                                              \u2502\n\u2502 /Users/robertguss/Projects",
+    "stdout_excerpt": ""
+  },
+  "misleading_success_output": {
+    "lx_tool_calls": 13,
+    "passed": true,
+    "source_network_attempts": 0
+  },
+  "ok": true,
+  "prompt_injection": {
+    "passed": true,
+    "returncode": 0,
+    "source_hashes_unchanged": true,
+    "stdout_excerpt": "{\"ok\": true}\n"
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "no checkpointed or interrupt-resumable runtime safety workflow exists"
+  },
+  "stale_state": {
+    "lx_changed": [],
+    "passed": true,
+    "source_changed": [],
+    "tmux_source_changed": []
+  }
+}
