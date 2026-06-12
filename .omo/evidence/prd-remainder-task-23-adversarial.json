@@ -1,0 +1,63 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "fixture creation and documentation are checked-in files with no resumable runtime operation"
+  },
+  "dirty_worktree": {
+    "passed": true,
+    "returncode": 0,
+    "stdout_excerpt": " M ts-react-next-basic/components/task-list.tsx\n"
+  },
+  "flaky_tests": {
+    "cmd": "uv run pytest tests/fixtures/test_ts_react_next_fixture.py::test_fixture_contains_expected_ts_react_next_patterns -q",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": ".                                                                        [100%]\n1 passed in 0.00s\n"
+  },
+  "hung_or_long_commands": {
+    "cmd": "timeout 10 uv run pytest tests/fixtures/test_ts_react_next_fixture.py -q",
+    "passed": true,
+    "returncode": 0,
+    "stderr_excerpt": "",
+    "stdout_excerpt": ".                                                                        [100%]\n1 passed in 0.00s\n"
+  },
+  "malformed_input": {
+    "cmd": "uv run python -c from pathlib import Path; root=Path('tests/fixtures/ts-react-next-basic-missing'); raise SystemExit(0 if root.is_dir() else 1)",
+    "passed": true,
+    "returncode": 1,
+    "stderr_excerpt": "",
+    "stdout_excerpt": ""
+  },
+  "misleading_success_output": {
+    "listed_files": [
+      "tests/fixtures/ts-react-next-basic/app/api/tasks/route.ts",
+      "tests/fixtures/ts-react-next-basic/app/tasks/page.tsx",
+      "tests/fixtures/ts-react-next-basic/components/task-card.jsx",
+      "tests/fixtures/ts-react-next-basic/components/task-list.tsx",
+      "tests/fixtures/ts-react-next-basic/hooks/useTasks.ts",
+      "tests/fixtures/ts-react-next-basic/lib/tasks.js",
+      "tests/fixtures/ts-react-next-basic/package.json",
+      "tests/fixtures/ts-react-next-basic/pages/legacy.jsx",
+      "tests/fixtures/ts-react-next-basic/tests/task-list.test.tsx",
+      "tests/fixtures/ts-react-next-basic/tsconfig.json"
+    ],
+    "passed": true
+  },
+  "ok": true,
+  "prompt_injection": {
+    "passed": true,
+    "returncode": 0,
+    "source_hashes_unchanged_by_test": true
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "no checkpointed or interrupt-resumable fixture workflow exists"
+  },
+  "stale_state": {
+    "first_returncode": 0,
+    "passed": true,
+    "second_returncode": 0,
+    "source_hashes_unchanged": true
+  }
+}

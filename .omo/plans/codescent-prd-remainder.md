@@ -344,7 +344,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic full_loop --out .omo/evidence/prd-remainder-task-22-python-pack-loop.json`; PASS if full loop still finds Python findings through the pack registry. Evidence `.omo/evidence/prd-remainder-task-22-python-pack-loop.json`.
   Commit: Y | `feat(packs): add internal pack registry` | Files `src/codescent/engine/packs.py`, `src/codescent/engine/parsers/python.py`, `src/codescent/engine/rules/**`, `tests/integration/test_packs.py`
 
-- [ ] 23. Add TypeScript/JavaScript fixture and parser dependency decision
+- [x] 23. Add TypeScript/JavaScript fixture and parser dependency decision
   What to do / Must NOT do: Add `tests/fixtures/ts-react-next-basic` with `.js`, `.jsx`, `.ts`, `.tsx`, React components/hooks, and basic Next routes. Choose and document the parser approach. Prefer a local deterministic parser library or stdlib-compatible adapter; no runtime network.
   Parallelization: Can parallel Y | Wave 7 | Blocks TS pack
   References: `docs/prd.md:1099`, `docs/prd.md:1293`, `docs/prd.md:1294`
