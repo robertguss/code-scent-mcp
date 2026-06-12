@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import anyio
 import typer
 from fastmcp import Client
+from mcp.types import TextContent
 from pydantic import TypeAdapter
 
 from codescent.engine.inventory import build_file_inventory
@@ -99,6 +100,7 @@ VERIFY_CHANGE_TOOLS: Final[tuple[str, ...]] = (
 DIFF_RISK_TOOLS: Final[tuple[str, ...]] = (
     "review_diff_risk",
 )
+PROMPT_TOOLS: Final[tuple[str, ...]] = ("prompts",)
 EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("full_loop",): FULL_LOOP_TOOLS,
     ("search_expansion",): SEARCH_EXPANSION_TOOLS,
@@ -113,6 +115,7 @@ EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("backlog_progress",): BACKLOG_PROGRESS_TOOLS,
     ("verify_change",): VERIFY_CHANGE_TOOLS,
     ("diff_risk",): DIFF_RISK_TOOLS,
+    ("prompts",): PROMPT_TOOLS,
 }
 
 
@@ -127,6 +130,34 @@ async def _call_tools(repo: str, tools: tuple[str, ...]) -> dict[str, JsonValue]
     current_finding_id: str | None = None
     async with Client(mcp) as client:
         for tool in tools:
+            if tool == "prompts":
+                prompts = await client.list_prompts()
+                rendered = await client.get_prompt(
+                    "safe_refactor_finding",
+                    {
+                        "repo": repo,
+                        "finding_id": (
+                            current_finding_id or "python.todo_cluster:example"
+                        ),
+                    },
+                )
+                rendered_content = rendered.messages[0].content
+                if not isinstance(rendered_content, TextContent):
+                    raise TypeError(type(rendered_content).__name__)
+                transcript.append(
+                    {
+                        "tool": "prompts",
+                        "data": {
+                            "prompt_names": _to_json_value(
+                                sorted(prompt.name for prompt in prompts),
+                            ),
+                            "rendered_text": _to_json_value(
+                                rendered_content.text,
+                            ),
+                        },
+                    },
+                )
+                continue
             if tool == "list_tools":
                 listed = await client.list_tools()
                 transcript.append(

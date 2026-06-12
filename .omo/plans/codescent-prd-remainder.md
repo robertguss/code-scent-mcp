@@ -312,7 +312,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic diff_risk --out .omo/evidence/prd-remainder-task-18-diff-risk.json`; PASS if artifact includes changed files, risk score, findings, and suggested tests. Evidence `.omo/evidence/prd-remainder-task-18-diff-risk.json`.
   Commit: Y | `feat(risk): add diff aware health reports` | Files `src/codescent/services/risk.py`, `src/codescent/mcp/finding_tools.py`, `tests/contract/test_mcp_finding_tools.py`
 
-- [ ] 19. Add workflow prompt resources
+- [x] 19. Add workflow prompt resources
   What to do / Must NOT do: Expose MCP prompt resources for safe refactor, symbol investigation, characterization tests, changed-file slop review, risky refactor verification, and code-health improvement. Prompts must be inspectable and must not override local safety constraints.
   Parallelization: Can parallel N | Wave 5 | Blocks agent workflow polish
   References: `docs/prd.md:638`, `docs/prd.md:1229`

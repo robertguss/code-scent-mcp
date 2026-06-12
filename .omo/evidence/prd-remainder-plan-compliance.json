@@ -29,7 +29,6 @@
   "ok": true,
   "tool_surface_ok": true,
   "unchecked_todos": [
-    "- [ ] 19. Add workflow prompt resources",
     "- [ ] 20. Add full project config model and CLI config command",
     "- [ ] 21. Add rule configuration and safe reset/watch CLI",
     "- [ ] 22. Add internal language/framework/rule pack registry",
