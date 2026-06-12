@@ -113,11 +113,7 @@ def _json_object(raw: str) -> JsonObject:
     if not isinstance(parsed, dict):
         return {}
     items = cast("dict[object, object]", parsed)
-    return {
-        str(key): value
-        for key, value in items.items()
-        if _is_json_scalar(value)
-    }
+    return {str(key): value for key, value in items.items() if _is_json_scalar(value)}
 
 
 def _is_json_scalar(value: object) -> TypeGuard[JsonScalar]:

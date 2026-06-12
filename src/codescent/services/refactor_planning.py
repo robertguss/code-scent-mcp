@@ -222,8 +222,7 @@ def _impact_risk_notes(
     if changed_paths:
         notes.append(f"changed files in worktree: {len(changed_paths)}")
     if any(
-        item["confidence"] < LOW_IMPACT_CONFIDENCE_THRESHOLD
-        for item in related_files
+        item["confidence"] < LOW_IMPACT_CONFIDENCE_THRESHOLD for item in related_files
     ):
         notes.append("some related files are low-confidence candidates")
     return tuple(notes)

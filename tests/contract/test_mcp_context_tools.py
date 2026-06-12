@@ -135,8 +135,7 @@ async def test_reference_graph_tools_return_bounded_graph_results() -> None:
     assert 0 < len(callees.results) <= 2
     assert all(result.confidence <= 1 for result in references.results)
     assert all(
-        result.certainty in {"low", "medium", "high"}
-        for result in callers.results
+        result.certainty in {"low", "medium", "high"} for result in callers.results
     )
     assert any(result.caller is not None for result in callers.results)
     assert all(result.path.endswith(".py") for result in callees.results)

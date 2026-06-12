@@ -2,17 +2,35 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, TypedDict
 
-from codescent.services.search import (
-    SearchResultPayload,
-    SearchService,
-    TestSearchResultPayload,
-    TodoSearchResultPayload,
-)
+from codescent.services.search import SearchService
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
 SAMPLE_FILE_LIMIT: Final = 20
+
+
+class SearchResultPayload(TypedDict):
+    path: str
+    score: float
+    reasons: tuple[str, ...]
+    snippet: str | None
+
+
+class TodoSearchResultPayload(TypedDict):
+    path: str
+    score: float
+    reasons: tuple[str, ...]
+    snippet: str
+    marker: str
+    line: int
+
+
+class TestSearchResultPayload(TypedDict):
+    path: str
+    score: float
+    reasons: tuple[str, ...]
+    snippet: str | None
 
 
 class SearchToolPayload(TypedDict):

@@ -61,11 +61,7 @@ class RiskService:
             for path in changed_files
         )
         findings = _dedupe_findings(
-            tuple(
-                finding
-                for health in file_health
-                for finding in health.findings
-            ),
+            tuple(finding for health in file_health for finding in health.findings),
         )
         risk_score = _max_score(tuple(health.risk_score for health in file_health))
         return DiffRiskReport(
@@ -75,9 +71,7 @@ class RiskService:
             findings=findings,
             suggested_tests=_dedupe(
                 tuple(
-                    test
-                    for health in file_health
-                    for test in health.suggested_tests
+                    test for health in file_health for test in health.suggested_tests
                 ),
             ),
             recommended_commands=_dedupe(

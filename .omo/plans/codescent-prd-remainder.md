@@ -433,7 +433,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   Evidence: `.omo/evidence/prd-remainder-final-plan-compliance.json`
   Must prove every todo has evidence, every exposed MCP/CLI surface is documented, and all safety decisions are represented.
 
-- [ ] F2. Code quality gates
+- [x] F2. Code quality gates
   Command: `uv run ruff check . && uv run ruff format --check . && uv run basedpyright && uv run pytest`
   Evidence: `.omo/evidence/prd-remainder-final-code-quality.txt`
   Must include module-size audit; split any production module over 250 pure LOC unless documented as indivisible.

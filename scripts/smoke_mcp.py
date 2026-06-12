@@ -97,9 +97,7 @@ VERIFY_CHANGE_TOOLS: Final[tuple[str, ...]] = (
     "scan_code_health",
     "verify_change",
 )
-DIFF_RISK_TOOLS: Final[tuple[str, ...]] = (
-    "review_diff_risk",
-)
+DIFF_RISK_TOOLS: Final[tuple[str, ...]] = ("review_diff_risk",)
 PROMPT_TOOLS: Final[tuple[str, ...]] = ("prompts",)
 EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("full_loop",): FULL_LOOP_TOOLS,

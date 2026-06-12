@@ -1,0 +1,43 @@
+{
+  "cancel_resume": {
+    "applicable": false,
+    "reason": "quality gate is stateless and rerunnable"
+  },
+  "dirty_worktree": {
+    "passed": true,
+    "status_excerpt": " M scripts/smoke_mcp.py\n M src/codescent/cli/main.py\n M src/codescent/mcp/finding_tools.py\n M src/codescent/mcp/search_tools.py\n M src/codescent/services/context.py\n M src/codescent/services/refactor_planning.py\n M src/codescent/services/reports.py\n M src/codescent/services/risk.py\n M src/codescent/services/search.py\n M tests/contract/test_mcp_context_tools.py\n M tests/integration/test_context.py\n M tests/integration/test_packs.py\n M tests/integration/test_ts_react_next_parser.py\n?? .omo/evidence/prd-remainder-final-code-quality-tmux.txt\n?? .omo/evidence/prd-remainder-final-code-quality.txt\n?? .omo/evidence/prd-remainder-task-18-review-diff-risk.json\n?? codescent-mcp-test-results.md\n?? scripts/__pycache__/\n?? src/codescent/__pycache__/\n?? src/codescent/cli/__pycache__/\n?? src/codescent/cli/admin.py\n?? src/codescent/cli/reporting.py\n?? src/codescent/core/__pycache__/\n?? src/codescent/dashboard/__pycache__/\n?? src/codescent/engine/__pycache__/\n?? src/codescent/engine/context/__pycache__/\n?? src/codescent/engine/parsers/__pycache__/\n?? src/codescent/engine/rules/__pycache__/\n?? src/codescent/engine/search/__pycache__/\n?? src/codescent/evals/__pycache__/\n?? src/codescent/mcp/__pycache_"
+  },
+  "flaky_tests": {
+    "passed": true,
+    "returncode": 0
+  },
+  "hung_or_long_commands": {
+    "passed": true,
+    "returncode": 0
+  },
+  "malformed_input": {
+    "passed": true,
+    "returncode": 1,
+    "stderr_excerpt": "",
+    "stdout_excerpt": "E902 No such file or directory (os error 2)\n--> does-not-exist.py:1:1\n\nFound 1 error.\n"
+  },
+  "misleading_success_output": {
+    "passed": true,
+    "quality_excerpt": "           [ 71%]\ntests/integration/test_storage_migrations.py .                           [ 72%]\ntests/integration/test_subjective_review.py .                            [ 73%]\ntests/integration/test_ts_react_next_parser.py .                         [ 73%]\ntests/integration/test_ts_react_next_rules.py .                          [ 74%]\ntests/security/test_runtime_safety.py .....                              [ 79%]\ntests/smoke/test_lx_data_lake_smoke_config.py .                          [ 80%]\ntests/smoke/test_smoke_mcp_search.py .                                   [ 80%]\ntests/test_package_metadata.py ..                                        [ 82%]\ntests/unit/test_errors.py ..                                             [ 84%]\ntests/unit/test_inventory.py ...                                         [ 86%]\ntests/unit/test_models.py ..........                                     [ 95%]\ntests/unit/test_python_parser.py ...                                     [ 98%]\ntests/unit/test_rules_python.py ..                                       [100%]\n\n============================= 115 passed in 4.84s ==============================\n$ module size audit\nmodule_size_ok=true oversized_modules=0\n",
+    "tmux_excerpt": "All checks passed!\n125 files already formatted\n0 errors, 0 warnings, 0 notes\n........................................................................ [ 62%]\n...........................................                              [100%]\n115 passed in 4.81s\n"
+  },
+  "ok": true,
+  "prompt_injection": {
+    "applicable": false,
+    "reason": "F2 runs local static/test tools and sends no prompts"
+  },
+  "repeated_interruptions": {
+    "applicable": false,
+    "reason": "no checkpointed or interrupt-resumable quality workflow exists"
+  },
+  "stale_state": {
+    "passed": true,
+    "returncode": 0,
+    "stdout_excerpt": "module_size_ok=true oversized_modules=0\n"
+  }
+}

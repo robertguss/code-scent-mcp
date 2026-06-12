@@ -50,6 +50,7 @@ def test_python_pack_registers_parser_rules_and_context_without_behavior_regress
     )
     assert tuple(pack.name for pack in registry.rule_packs) == (
         "python-maintainability",
+        "ts-react-next",
     )
     assert registry.parser_for_language("python") is not None
     assert registry.parser_for_language("typescript") is not None

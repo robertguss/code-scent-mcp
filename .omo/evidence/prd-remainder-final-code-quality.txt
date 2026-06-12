@@ -1,0 +1,57 @@
+$ uv run ruff check .
+All checks passed!
+$ uv run ruff format --check .
+125 files already formatted
+$ uv run basedpyright
+0 errors, 0 warnings, 0 notes
+$ uv run pytest
+============================= test session starts ==============================
+platform darwin -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/robertguss/Projects/startups/code-scent-mcp
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, anyio-4.13.0
+collected 115 items
+
+tests/contract/test_cli.py ...........                                   [  9%]
+tests/contract/test_mcp_context_tools.py ..                              [ 11%]
+tests/contract/test_mcp_finding_tools.py ...                             [ 13%]
+tests/contract/test_mcp_planning_tools.py ...                            [ 16%]
+tests/contract/test_mcp_prompt_resources.py .                            [ 17%]
+tests/contract/test_mcp_repo_tools.py ..                                 [ 19%]
+tests/contract/test_mcp_search_tools.py ....                             [ 22%]
+tests/contract/test_mcp_tool_surface.py ...                              [ 25%]
+tests/contract/test_public_surface_registry.py ..                        [ 26%]
+tests/docs/test_docs.py ......                                           [ 32%]
+tests/evals/test_agent_eval_spec.py .                                    [ 33%]
+tests/evals/test_deterministic_eval.py .......                           [ 39%]
+tests/fixtures/test_python_basic_fixture.py .                            [ 40%]
+tests/fixtures/test_ts_react_next_fixture.py .                           [ 40%]
+tests/integration/test_context.py ....                                   [ 44%]
+tests/integration/test_dashboard.py ..                                   [ 46%]
+tests/integration/test_findings.py ......                                [ 51%]
+tests/integration/test_packs.py .                                        [ 52%]
+tests/integration/test_refactor_planning.py ...                          [ 54%]
+tests/integration/test_repo_index.py ......                              [ 60%]
+tests/integration/test_reports.py .                                      [ 60%]
+tests/integration/test_scan_code_health.py .                             [ 61%]
+tests/integration/test_search.py ......                                  [ 66%]
+tests/integration/test_storage.py ....                                   [ 70%]
+tests/integration/test_storage_concurrency.py .                          [ 71%]
+tests/integration/test_storage_migrations.py .                           [ 72%]
+tests/integration/test_subjective_review.py .                            [ 73%]
+tests/integration/test_ts_react_next_parser.py .                         [ 73%]
+tests/integration/test_ts_react_next_rules.py .                          [ 74%]
+tests/security/test_runtime_safety.py .....                              [ 79%]
+tests/smoke/test_lx_data_lake_smoke_config.py .                          [ 80%]
+tests/smoke/test_smoke_mcp_search.py .                                   [ 80%]
+tests/test_package_metadata.py ..                                        [ 82%]
+tests/unit/test_errors.py ..                                             [ 84%]
+tests/unit/test_inventory.py ...                                         [ 86%]
+tests/unit/test_models.py ..........                                     [ 95%]
+tests/unit/test_python_parser.py ...                                     [ 98%]
+tests/unit/test_rules_python.py ..                                       [100%]
+
+============================= 115 passed in 4.84s ==============================
+$ module size audit
+module_size_ok=true oversized_modules=0

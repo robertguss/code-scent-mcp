@@ -142,9 +142,7 @@ def test_related_files_include_import_test_directory_and_git_reasons(
     assert "import_graph" in by_path["tests/test_app.py"]["reasons"]
     assert "git_history" in by_path["src/helper.py"]["reasons"]
     assert "directory_proximity" in by_path["src/view.py"]["reasons"]
-    assert any(
-        "search_similarity" in item["reasons"] for item in related["results"]
-    )
+    assert any("search_similarity" in item["reasons"] for item in related["results"])
     assert all(0 <= item["confidence"] <= 1 for item in related["results"])
 
 

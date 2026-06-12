@@ -23,13 +23,9 @@ def test_ts_pack_indexes_symbols_imports_components_hooks_and_routes() -> None:
         ).fetchall()
         files = dict(file_rows)
         symbols = {
-            (name, qualified_name, kind)
-            for name, qualified_name, kind in symbol_rows
+            (name, qualified_name, kind) for name, qualified_name, kind in symbol_rows
         }
-        references = {
-            reference
-            for (reference,) in reference_rows
-        }
+        references = {reference for (reference,) in reference_rows}
 
     assert result.indexed_files == 8
     assert files["components/task-list.tsx"] == "typescript"

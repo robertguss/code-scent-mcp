@@ -1,108 +1,30 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
-from codescent.core.models import FindingStatus
-from codescent.services.code_health import CodeHealthScanResult, CodeHealthService
-from codescent.services.findings import FindingsService
-from codescent.services.reports import (
-    FindingDetail,
-    JsonObject,
-    ReportService,
-    ScoreExplanation,
+from codescent.mcp.finding_payloads import (
+    BacklogToolPayload,
+    FindingDetailToolPayload,
+    MarkFindingToolPayload,
+    NextImprovementToolPayload,
+    ProgressToolPayload,
+    RegressionsToolPayload,
+    RescanToolPayload,
+    ScanHealthToolPayload,
+    ScoreExplanationToolPayload,
+    SmellReportToolPayload,
+    detail_payload,
+    finding_payload,
+    scan_payload,
+    score_explanation_payload,
+    status_from_string,
 )
+from codescent.services.code_health import CodeHealthService
+from codescent.services.findings import FindingsService
+from codescent.services.reports import ReportService
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
-
-    from codescent.storage.repositories import FindingRow
-
-
-class ScanHealthToolPayload(TypedDict):
-    ok: bool
-    status: str
-    scan_id: str
-    findings_created: int
-    finding_ids: tuple[str, ...]
-    rule_ids: tuple[str, ...]
-
-
-class SmellReportToolPayload(TypedDict):
-    ok: bool
-    open_count: int
-    status_counts: dict[str, int]
-    findings: tuple[dict[str, str | float], ...]
-
-
-class FindingDetailToolPayload(TypedDict):
-    ok: bool
-    finding_id: str
-    rule_id: str
-    file_path: str
-    severity: str
-    confidence: float
-    status: str
-    title: str
-    message: str
-    evidence: JsonObject
-    suggested_action: str
-    status_history: tuple[JsonObject, ...]
-    score_inputs: JsonObject
-
-
-class ScoreExplanationToolPayload(TypedDict):
-    ok: bool
-    finding_id: str
-    score_inputs: JsonObject
-    reasons: tuple[str, ...]
-    next_steps: tuple[str, ...]
-    subjective: bool
-
-
-class NextImprovementToolPayload(TypedDict):
-    ok: bool
-    finding_id: str | None
-    rule_id: str | None
-    file_path: str | None
-    suggested_action: str | None
-
-
-class BacklogToolPayload(TypedDict):
-    ok: bool
-    open_count: int
-    status_counts: dict[str, int]
-    finding_ids: tuple[str, ...]
-
-
-class ProgressToolPayload(TypedDict):
-    ok: bool
-    total_findings: int
-    open_count: int
-    resolved_count: int
-    regressed_count: int
-    status_counts: dict[str, int]
-
-
-class RegressionsToolPayload(TypedDict):
-    ok: bool
-    count: int
-    finding_ids: tuple[str, ...]
-
-
-class MarkFindingToolPayload(TypedDict):
-    ok: bool
-    finding_id: str
-    status: str
-
-
-class RescanToolPayload(TypedDict):
-    ok: bool
-    status: str
-    scan_id: str
-    findings_created: int
-    finding_ids: tuple[str, ...]
-    rule_ids: tuple[str, ...]
-    regressed_finding_ids: tuple[str, ...]
 
 
 def register_finding_tools(mcp: FastMCP) -> None:
@@ -160,7 +82,7 @@ def register_finding_tools(mcp: FastMCP) -> None:
 
 
 def scan_code_health(repo: str = ".") -> ScanHealthToolPayload:
-    return _scan_payload(CodeHealthService(repo).scan())
+    return scan_payload(CodeHealthService(repo).scan())
 
 
 def get_smell_report(repo: str = ".") -> SmellReportToolPayload:
@@ -169,19 +91,19 @@ def get_smell_report(repo: str = ".") -> SmellReportToolPayload:
         "ok": True,
         "open_count": report.open_count,
         "status_counts": report.status_counts,
-        "findings": tuple(_finding_payload(finding) for finding in report.findings),
+        "findings": tuple(finding_payload(finding) for finding in report.findings),
     }
 
 
 def get_finding(finding_id: str, repo: str = ".") -> FindingDetailToolPayload:
-    return _detail_payload(ReportService(repo).get_finding(finding_id))
+    return detail_payload(ReportService(repo).get_finding(finding_id))
 
 
 def explain_score(
     finding_id: str,
     repo: str = ".",
 ) -> ScoreExplanationToolPayload:
-    return _score_explanation_payload(ReportService(repo).explain_score(finding_id))
+    return score_explanation_payload(ReportService(repo).explain_score(finding_id))
 
 
 def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
@@ -242,7 +164,7 @@ def mark_finding(
 ) -> MarkFindingToolPayload:
     finding = FindingsService(repo).mark_finding(
         finding_id,
-        FindingStatus(status),
+        status_from_string(status),
         note=note,
     )
     return {"ok": True, "finding_id": finding.id, "status": finding.status.value}
@@ -250,62 +172,8 @@ def mark_finding(
 
 def rescan(repo: str = ".") -> RescanToolPayload:
     result = FindingsService(repo).rescan()
-    payload = _scan_payload(result.scan)
+    payload = scan_payload(result.scan)
     return {
         **payload,
         "regressed_finding_ids": result.regressed_finding_ids,
-    }
-
-
-def _scan_payload(scan: CodeHealthScanResult) -> ScanHealthToolPayload:
-    return {
-        "ok": True,
-        "status": "complete",
-        "scan_id": scan.scan_id,
-        "findings_created": scan.findings_created,
-        "finding_ids": scan.finding_ids,
-        "rule_ids": scan.rule_ids,
-    }
-
-
-def _finding_payload(finding: FindingRow) -> dict[str, str | float]:
-    return {
-        "finding_id": finding.id,
-        "rule_id": finding.rule_id,
-        "file_path": finding.file_path,
-        "severity": finding.severity,
-        "confidence": finding.confidence,
-        "status": finding.status.value,
-        "suggested_action": finding.suggested_action,
-    }
-
-
-def _detail_payload(detail: FindingDetail) -> FindingDetailToolPayload:
-    return {
-        "ok": True,
-        "finding_id": detail.finding_id,
-        "rule_id": detail.rule_id,
-        "file_path": detail.file_path,
-        "severity": detail.severity,
-        "confidence": detail.confidence,
-        "status": detail.status,
-        "title": detail.title,
-        "message": detail.message,
-        "evidence": detail.evidence,
-        "suggested_action": detail.suggested_action,
-        "status_history": detail.status_history,
-        "score_inputs": detail.score_inputs,
-    }
-
-
-def _score_explanation_payload(
-    explanation: ScoreExplanation,
-) -> ScoreExplanationToolPayload:
-    return {
-        "ok": True,
-        "finding_id": explanation.finding_id,
-        "score_inputs": explanation.score_inputs,
-        "reasons": explanation.reasons,
-        "next_steps": explanation.next_steps,
-        "subjective": explanation.subjective,
     }
