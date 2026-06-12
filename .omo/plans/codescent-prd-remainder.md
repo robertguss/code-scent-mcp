@@ -428,7 +428,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
 
 > Runs after all todos. ALL must pass before the plan is considered executed.
 
-- [ ] F1. Plan compliance audit
+- [x] F1. Plan compliance audit
   Command: `uv run python scripts/audit_plan_compliance.py --plan .omo/plans/codescent-prd-remainder.md --evidence .omo/evidence`
   Evidence: `.omo/evidence/prd-remainder-final-plan-compliance.json`
   Must prove every todo has evidence, every exposed MCP/CLI surface is documented, and all safety decisions are represented.
