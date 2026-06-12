@@ -438,7 +438,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   Evidence: `.omo/evidence/prd-remainder-final-code-quality.txt`
   Must include module-size audit; split any production module over 250 pure LOC unless documented as indivisible.
 
-- [ ] F3. Full MCP and CLI smoke
+- [x] F3. Full MCP and CLI smoke
   Commands:
   - `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic full_loop --out .omo/evidence/prd-remainder-final-python-mcp-loop.json`
   - `uv run python scripts/smoke_mcp.py --repo tests/fixtures/ts-react-next-basic full_loop --out .omo/evidence/prd-remainder-final-ts-mcp-loop.json`
