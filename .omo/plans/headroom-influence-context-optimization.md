@@ -178,8 +178,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
 
 > Implementation + Test = ONE todo. Never separate.
 
-- [x] 1. Record preflight state and isolate unrelated dirty paths What to do /
-     Must NOT do
+- [] 1. Record preflight state and isolate unrelated dirty paths What to do /
+  Must NOT do
   - Add implementation evidence file
     `.omo/evidence/task-1-headroom-preflight.txt`.
   - Run `git status --short`, `mcp__codescent.get_repo_status`, and
@@ -202,8 +202,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     planning/preflight only | Files
     `.omo/evidence/task-1-headroom-preflight.txt`
 
-- [x] 2. Add RED public-surface contract tests for `retrieve_result` and
-     `context_stats` What to do / Must NOT do
+- [] 2. Add RED public-surface contract tests for `retrieve_result` and
+  `context_stats` What to do / Must NOT do
   - Update `tests/contract/test_mcp_tool_surface.py` to expect `retrieve_result`
     and `context_stats`.
   - Update `tests/contract/test_public_surface_registry.py` to require both
@@ -226,8 +226,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     `tests/contract/test_mcp_tool_surface.py`,
     `tests/contract/test_public_surface_registry.py`
 
-- [x] 3. Add RED storage migration and repository tests for result/session
-     tables What to do / Must NOT do
+- [] 3. Add RED storage migration and repository tests for result/session tables
+  What to do / Must NOT do
   - Add tests that require `stored_results` and `session_events` tables after
     migration from schema version 4.
   - Assert existing file/symbol/finding data survives migration.
@@ -250,8 +250,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     `tests/integration/test_storage_migrations.py`,
     `tests/integration/test_storage_concurrency.py`
 
-- [x] 4. Add RED unit tests for envelope, result IDs, thresholds, and
-     preservation rules What to do / Must NOT do
+- [] 4. Add RED unit tests for envelope, result IDs, thresholds, and
+  preservation rules What to do / Must NOT do
   - Add unit tests for typed envelope model, token estimate, threshold decision,
     result ID format, retrieval hint generation, and preservation ordering.
   - Preserve critical items before reducing: errors, tracebacks, failing
@@ -274,7 +274,7 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     test(context): pin summarized envelope rules | Files
     `tests/unit/test_context_optimization.py`
 
-- [x] 5. Add RED stats/event service tests What to do / Must NOT do
+- [] 5. Add RED stats/event service tests What to do / Must NOT do
   - Add integration tests for session events and `context_stats` aggregation.
   - Assert stats exclude source content and include `tool_calls`,
     `summarized_results`, `retrievals`, `estimated_raw_tokens`,
@@ -295,8 +295,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     Y | test(context): pin context stats aggregation | Files
     `tests/integration/test_context_stats.py`
 
-- [x] 6. Implement schema version 5 and result/session repositories What to do /
-     Must NOT do
+- [] 6. Implement schema version 5 and result/session repositories What to do /
+  Must NOT do
   - Bump `SCHEMA_VERSION` from 4 to 5.
   - Add migration statements for `stored_results` and `session_events`.
   - Add repository methods in a focused module such as
@@ -321,7 +321,7 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     `src/codescent/storage/schema.py`,
     `src/codescent/storage/repositories/context_results.py`, storage tests
 
-- [x] 7. Implement envelope/result-store service models What to do / Must NOT do
+- [] 7. Implement envelope/result-store service models What to do / Must NOT do
   - Add typed domain models in `src/codescent/services/context_optimization.py`
     or a similarly focused services module.
   - Add `ResultEnvelope`, `StoredResult`, `RetrievalRequest`,
@@ -346,8 +346,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     feat(context): add summarized result envelope service | Files
     `src/codescent/services/context_optimization.py`, unit tests
 
-- [x] 8. Implement `retrieve_result` service and MCP tool What to do / Must NOT
-     do
+- [] 8. Implement `retrieve_result` service and MCP tool What to do / Must NOT
+  do
   - Add service method to retrieve stored result by ID.
   - Support modes `exact`, `summary`, `filtered`, and `sample`.
   - Support filters `query`, `file`, `symbol`, `limit`, and `mode`.
@@ -373,7 +373,7 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     `src/codescent/mcp/context_optimization_tools.py`,
     `src/codescent/mcp/server.py`, tests
 
-- [x] 9. Implement context stats service and MCP tool What to do / Must NOT do
+- [] 9. Implement context stats service and MCP tool What to do / Must NOT do
   - Aggregate `session_events` into `context_stats`.
   - Track tool calls, summarized results, retrievals, estimated
     raw/returned/avoided tokens, largest summarized results, most used tools,
@@ -397,8 +397,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     `src/codescent/services/context_stats.py`,
     `src/codescent/mcp/context_optimization_tools.py`, tests
 
-- [x] 10. Register public surface and update docs/contracts What to do / Must
-      NOT do
+- [] 10. Register public surface and update docs/contracts What to do / Must NOT
+  do
   - Add `retrieve_result` and `context_stats` to
     `REGISTERED_POST_MVP_MCP_TOOL_NAMES`, `POST_MVP_MCP_TOOL_NAMES`, and
     `PUBLIC_SURFACE`.
@@ -423,8 +423,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     `src/codescent/core/public_surface.py`, `docs/mcp-tools.md`, docs/contract
     tests
 
-- [x] 11. Apply envelope to `find_symbol` and `find_references` What to do /
-      Must NOT do
+- [] 11. Apply envelope to `find_symbol` and `find_references` What to do / Must
+  NOT do
   - Add optional `session_id` argument to `find_symbol` and `find_references`.
   - Return current fields plus envelope metadata.
   - Store raw full result when threshold is exceeded or when omitted rows exist
@@ -448,7 +448,7 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     `src/codescent/services/context.py`, `src/codescent/mcp/context_tools.py`,
     context tests
 
-- [x] 12. Apply envelope to `search_content` What to do / Must NOT do
+- [] 12. Apply envelope to `search_content` What to do / Must NOT do
   - Add optional `session_id` to `search_content`.
   - Preserve current `ok`, `query`, `limit`, `next_cursor`, and `results`
     fields.
@@ -475,8 +475,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     `src/codescent/services/search.py`, `src/codescent/mcp/search_tools.py`,
     search tests
 
-- [x] 13. Apply envelope to `search_tests` and defer generic command-output
-      shaping What to do / Must NOT do
+- [] 13. Apply envelope to `search_tests` and defer generic command-output
+  shaping What to do / Must NOT do
   - Add optional `session_id` to `search_tests`.
   - Shape test-search results as the PRD's "test surface" for this MVP because
     no MCP tool currently ingests pytest/lint/type-check output.
@@ -501,8 +501,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     `src/codescent/services/search.py`, `src/codescent/mcp/search_tools.py`,
     docs/tests
 
-- [x] 14. Extend safety and runtime guarantees for new context tools What to do
-      / Must NOT do
+- [] 14. Extend safety and runtime guarantees for new context tools What to do /
+  Must NOT do
   - Add `retrieve_result` and `context_stats` to source-read-only proof
     coverage.
   - Add no-network assertions for result store, retrieval, stats, shaping, and
@@ -521,8 +521,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     test(security): cover context result safety | Files
     `tests/security/test_runtime_safety.py`, `scripts/prove_source_read_only.py`
 
-- [x] 15. Update eval and smoke documentation for retrieval workflow What to do
-      / Must NOT do
+- [] 15. Update eval and smoke documentation for retrieval workflow What to do /
+  Must NOT do
   - Update deterministic eval docs/run-agent eval docs only enough to describe
     the new summarize -> retrieve -> stats workflow.
   - Update smoke script(s) or add a focused smoke helper that drives FastMCP
@@ -541,8 +541,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     Commit: Y | docs(evals): add context retrieval eval path | Files
     `docs/evals.md`, `scripts/run_agent_eval.md`, smoke/doc tests
 
-- [x] 16. Run real FastMCP summarize -> retrieve -> stats smoke What to do /
-      Must NOT do
+- [] 16. Run real FastMCP summarize -> retrieve -> stats smoke What to do / Must
+  NOT do
   - Use `fastmcp.Client(mcp)` against the real in-process MCP app.
   - Initialize fixture state first if needed:
     `uv run codescent init --repo tests/fixtures/python-basic`.
@@ -564,8 +564,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     prove retrievable context MCP loop | Files `scripts/smoke_mcp.py` or focused
     smoke helper, smoke tests
 
-- [x] 17. Run full verification and classify unrelated dirty-tree failures What
-      to do / Must NOT do
+- [] 17. Run full verification and classify unrelated dirty-tree failures What
+  to do / Must NOT do
   - Run the full gates.
   - If failures are caused by pre-existing unrelated dirty paths (`docs/prd.md`
     deletion, moved `docs/prd/prd.md`, `AGENTS.md`, `uv.lock`), record exact
@@ -587,8 +587,8 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
     `.omo/evidence/task-17-headroom-full-gates.txt` Commit: Y | chore(qa):
     verify context optimization MVP | Files evidence only unless fixes required
 
-- [x] 18. Final plan compliance, scope fidelity, and handoff What to do / Must
-      NOT do
+- [] 18. Final plan compliance, scope fidelity, and handoff What to do / Must
+  NOT do
   - Verify all todos have evidence files.
   - Verify no must-not-have feature was implemented.
   - Verify new public tools are documented and contract-tested.
@@ -612,25 +612,25 @@ Critical path: 1 -> 2 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 16 -> 17 -> 18
 > Runs in parallel. ALL must APPROVE. Surface results and wait for the user's
 > explicit okay before declaring complete.
 
-- [x] F1. Plan compliance audit
+- [] F1. Plan compliance audit
   - Run
     `uv run python scripts/audit_plan_compliance.py --plan .omo/plans/headroom-influence-context-optimization.md --evidence-dir .omo/evidence`
     if the script supports custom plan paths; otherwise run a manual checklist
     with `rg` and evidence file existence.
   - PASS if every todo has evidence and no unchecked must-have remains.
 
-- [x] F2. Code quality review
+- [] F2. Code quality review
   - Run `uv run ruff check .`, `uv run ruff format --check .`, and
     `uv run basedpyright`.
   - PASS if all exit 0 or unrelated dirty-tree failures are isolated with exact
     proof.
 
-- [x] F3. Real manual QA
+- [] F3. Real manual QA
   - Run FastMCP summarize -> retrieve -> stats smoke from Todo 16.
   - PASS if artifact contains a `ctx_` result ID, retrieval succeeds, stats
     count the retrieval, and source hashes are unchanged.
 
-- [x] F4. Scope fidelity
+- [] F4. Scope fidelity
   - Search implementation paths for excluded future features.
   - PASS if `project_learnings`, `project_guidance`, optional Headroom
     integration, dashboard stats, and generic compression were not implemented.
