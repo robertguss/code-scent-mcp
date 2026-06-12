@@ -11,6 +11,7 @@ from codescent.core.errors import CodeScentError
 from codescent.core.paths import resolve_repo_root
 from codescent.mcp.server import mcp_available
 from codescent.mcp.server import run as run_mcp
+from codescent.services.ci import CiReport, CiService
 from codescent.services.code_health import CodeHealthService
 from codescent.services.config import ConfigService
 from codescent.services.findings import FindingsService
@@ -30,6 +31,15 @@ class CliReportPayload(TypedDict):
     open_count: int
     status_counts: dict[str, int]
     findings: list[dict[str, str | float]]
+
+
+class CiReportPayload(TypedDict):
+    ok: bool
+    risk_level: str
+    finding_count: int
+    changed_file_health: list[dict[str, object]]
+    suggested_tests: list[str]
+    recommended_commands: list[str]
 
 app = typer.Typer(
     add_completion=False,
@@ -397,6 +407,36 @@ def reset(
 
 
 @app.command()
+def ci(
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    format_name: Annotated[
+        str,
+        typer.Option("--format", help="Output format: json or markdown."),
+    ] = "json",
+    threshold: Annotated[
+        str,
+        typer.Option("--threshold", help="Fail at risk threshold: warn or high."),
+    ] = "high",
+) -> None:
+    report_data = CiService(repo).run(threshold=threshold)
+    _emit_ci_report(report_data, format_name)
+    if not report_data.ok:
+        raise typer.Exit(1)
+
+
+@app.command(name="review-diff")
+def review_diff(
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    format_name: Annotated[
+        str,
+        typer.Option("--format", help="Output format: json or markdown."),
+    ] = "json",
+) -> None:
+    report_data = CiService(repo).run(threshold="high")
+    _emit_ci_report(report_data, format_name)
+
+
+@app.command()
 def serve() -> None:
     run_mcp()
 
@@ -448,4 +488,52 @@ def _markdown_report(payload: CliReportPayload) -> str:
         f"- {finding['finding_id']}: {finding['rule_id']}"
         for finding in findings
     )
+    return "\n".join(lines)
+
+
+def _emit_ci_report(report_data: CiReport, format_name: str) -> None:
+    payload = _ci_payload(report_data)
+    if format_name == "json":
+        typer.echo(json.dumps(payload))
+        return
+    if format_name == "markdown":
+        typer.echo(_ci_markdown(payload))
+        return
+    raise typer.BadParameter(INVALID_FORMAT_MESSAGE)
+
+
+def _ci_payload(report_data: CiReport) -> CiReportPayload:
+    return {
+        "ok": report_data.ok,
+        "risk_level": report_data.risk_level,
+        "finding_count": report_data.finding_count,
+        "changed_file_health": [
+            {
+                "path": health.path,
+                "risk_level": health.risk_level,
+                "risk_score": health.risk_score,
+                "finding_count": health.finding_count,
+            }
+            for health in report_data.changed_file_health
+        ],
+        "suggested_tests": list(report_data.suggested_tests),
+        "recommended_commands": list(report_data.recommended_commands),
+    }
+
+
+def _ci_markdown(payload: CiReportPayload) -> str:
+    lines = [
+        "# CodeScent Diff Review",
+        "",
+        f"Risk: {payload['risk_level']}",
+        f"Findings: {payload['finding_count']}",
+        "",
+        "## Changed-file health",
+    ]
+    lines.extend(
+        f"- {item['path']}: {item['risk_level']}"
+        for item in payload["changed_file_health"]
+    )
+    lines.extend(("", "## Suggested tests"))
+    lines.extend(f"- {test}" for test in payload["suggested_tests"])
     return "\n".join(lines)

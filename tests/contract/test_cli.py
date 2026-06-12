@@ -92,6 +92,15 @@ class ResetPayload(BaseModel):
     paths: tuple[str, ...]
 
 
+class CiPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    risk_level: str
+    changed_file_health: tuple[dict[str, object], ...]
+    suggested_tests: tuple[str, ...]
+
+
 def _scan_payload(output: str) -> ScanPayload:
     return ScanPayload.model_validate_json(output)
 
@@ -294,6 +303,42 @@ def test_reset_requires_explicit_yes() -> None:
     assert help_result.exit_code == 0
     assert "reset" in help_result.output
     assert reset_result.exit_code != 0
+
+
+def test_ci_and_review_diff_emit_json_markdown_and_threshold_exit_codes() -> None:
+    ci_result = RUNNER.invoke(
+        app,
+        [
+            "ci",
+            "--repo",
+            "tests/fixtures/python-basic",
+            "--format",
+            "json",
+            "--threshold",
+            "warn",
+        ],
+    )
+    review_result = RUNNER.invoke(
+        app,
+        [
+            "review-diff",
+            "--repo",
+            "tests/fixtures/python-basic",
+            "--format",
+            "markdown",
+        ],
+    )
+
+    payload = CiPayload.model_validate_json(ci_result.output)
+
+    assert ci_result.exit_code == 1
+    assert payload.ok is False
+    assert payload.risk_level in {"medium", "high"}
+    assert payload.changed_file_health
+    assert payload.suggested_tests
+    assert review_result.exit_code == 0
+    assert "# CodeScent Diff Review" in review_result.output
+    assert "Suggested tests" in review_result.output
 
 
 def test_doctor_json_reports_invalid_repo_root(tmp_path: Path) -> None:

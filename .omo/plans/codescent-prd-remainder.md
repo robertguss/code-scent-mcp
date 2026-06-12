@@ -376,7 +376,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/ts-react-next-basic full_loop --out .omo/evidence/prd-remainder-task-26-ts-full-loop.json`; PASS if full loop selects a TS/React finding and source hashes are unchanged. Evidence `.omo/evidence/prd-remainder-task-26-ts-full-loop.json`.
   Commit: Y | `test(evals): add ts react next mcp eval` | Files `evals/fixtures/ts-react-next.expected.json`, `tests/evals/test_deterministic_eval.py`, `scripts/smoke_mcp.py`
 
-- [ ] 27. Add CI and PR/diff review mode
+- [x] 27. Add CI and PR/diff review mode
   What to do / Must NOT do: Add `codescent ci` and `codescent review-diff` local commands with JSON and Markdown output, thresholds, changed-file health, risk report, and suggested tests. Do not call GitHub APIs or network.
   Parallelization: Can parallel N | Wave 8 | Blocks dashboard import/export
   References: `docs/prd.md:1342`, `docs/prd.md:1350`, `docs/prd.md:1357`
