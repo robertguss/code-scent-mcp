@@ -5,8 +5,44 @@ All checks passed!
 ## basedpyright
 0 errors, 0 warnings, 0 notes
 ## pytest
-........................................................................ [ 58%]
+.....................................................F.................. [ 58%]
 ...................................................                      [100%]
-123 passed in 13.11s
+=================================== FAILURES ===================================
+___________ test_dashboard_updates_rule_config_inside_codescent_only ___________
+
+tmp_path = PosixPath('/private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/pytest-of-user/pytest-548/test_dashboard_updates_rule_co0')
+
+    def test_dashboard_updates_rule_config_inside_codescent_only(tmp_path: Path) -> None:
+        repo = _repo_with_finding(tmp_path)
+        source_path = repo / "src" / "pkg" / "config.py"
+        before_source = source_path.read_text()
+        _ = CodeHealthService(repo).scan()
+
+        server = start_dashboard_server(repo, port=0)
+        try:
+            response = post_json(
+                f"{server.base_url}/api/rules",
+                {"enabled_rule_packs": ["python-maintainability"]},
+            )
+            rules = get_json(f"{server.base_url}/api/rules")
+        finally:
+            server.shutdown()
+
+        assert response.status == 200
+        assert response.payload["read_only"] is False
+        assert response.payload["enabled_rule_packs"] == ["python-maintainability"]
+>       assert rules.payload["enabled_rule_packs"] == ["python-maintainability"]
+E       AssertionError: assert ['python-main...s-react-next'] == ['python-maintainability']
+E
+E         Left contains one more item: 'ts-react-next'
+E         Use -v to get more diff
+
+tests/integration/test_dashboard.py:60: AssertionError
+----------------------------- Captured stderr call -----------------------------
+127.0.0.1 - - [11/Jun/2026 23:00:24] "POST /api/rules HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jun/2026 23:00:24] "GET /api/rules HTTP/1.1" 200 -
+=========================== short test summary info ============================
+FAILED tests/integration/test_dashboard.py::test_dashboard_updates_rule_config_inside_codescent_only
+1 failed, 122 passed in 12.25s
 ## size audit
 {'oversized': []}

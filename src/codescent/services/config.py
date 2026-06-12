@@ -33,7 +33,7 @@ class ConfigService:
         config_path = repo_root / ".codescent" / "config.toml"
         config_path.parent.mkdir(parents=True, exist_ok=True)
         if config_path.exists():
-            raw = _parse_config(config_path)
+            raw = _parse_raw_config(config_path)
             raw["rule_packs"] = list(rule_packs)
             _ = config_path.write_text(_render_config_payload(raw))
         else:
@@ -42,10 +42,15 @@ class ConfigService:
 
 
 def _parse_config(config_path: Path) -> dict[str, TomlValue]:
-    raw: dict[str, TomlValue] = tomllib.loads(config_path.read_text())
+    raw = _parse_raw_config(config_path)
     project = raw.get("project")
     if isinstance(project, dict):
         raw = {key: value for key, value in raw.items() if key != "project"}
+    return raw
+
+
+def _parse_raw_config(config_path: Path) -> dict[str, TomlValue]:
+    raw: dict[str, TomlValue] = tomllib.loads(config_path.read_text())
     return raw
 
 

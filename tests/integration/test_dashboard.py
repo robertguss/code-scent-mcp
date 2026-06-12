@@ -75,6 +75,9 @@ def test_dashboard_rule_update_preserves_existing_config_sections(
         """include = ["src"]
 rule_packs = ["python-maintainability", "ts-react-next"]
 
+[project]
+schema_version = 4
+
 [commands]
 test = ["pytest"]
 lint = ["ruff check ."]
@@ -107,6 +110,8 @@ model = "gpt-5.4"
     config_text = config_path.read_text()
     assert response.status == 200
     assert rules.payload["enabled_rule_packs"] == ["python-maintainability"]
+    assert "[project]" in config_text
+    assert "schema_version = 4" in config_text
     assert "[commands]" in config_text
     assert 'test = ["pytest"]' in config_text
     assert "[token_budgets]" in config_text
