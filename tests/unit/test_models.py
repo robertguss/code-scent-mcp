@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from codescent.core.models import (
+    CommandHints,
     ConfigSource,
     ContextOptions,
     ContextPack,
@@ -11,6 +12,7 @@ from codescent.core.models import (
     Finding,
     IndexedFile,
     PageOptions,
+    ProjectConfig,
     RefactorPlan,
     RepoConfig,
     RepoStatus,
@@ -65,6 +67,57 @@ def test_config_source_orders_from_defaults_to_tool_args() -> None:
         ConfigSource.CLI_FLAGS,
         ConfigSource.TOOL_ARGS,
     ]
+
+
+def test_project_config_parses_full_prd_surface_with_precedence() -> None:
+    config = ProjectConfig.model_validate(
+        {
+            "include": ["src", "tests"],
+            "exclude": ["dist", "vendor"],
+            "generated": ["src/generated"],
+            "vendor": ["vendor"],
+            "build": ["dist"],
+            "language_packs": ["python", "typescript"],
+            "framework_packs": ["react", "nextjs"],
+            "rule_packs": ["python-maintainability"],
+            "commands": {
+                "test": ["pytest"],
+                "typecheck": ["basedpyright"],
+                "lint": ["ruff check ."],
+                "build": ["python -m build"],
+            },
+            "token_budgets": {"context": 4500, "file": 600, "dashboard": 12000},
+            "privacy": {"runtime_network": False, "allow_llm_review": True},
+            "llm": {"provider": "openai", "model": "gpt-5.4"},
+        },
+    )
+    merged = config.with_overrides(
+        cli_flags={"include": ("src",), "token_budgets": {"context": 3000}},
+        tool_args={"commands": {"test": ("pytest tests/test_config.py",)}},
+    )
+
+    assert config.include == ("src", "tests")
+    assert config.exclude == ("dist", "vendor")
+    assert config.generated == ("src/generated",)
+    assert config.vendor == ("vendor",)
+    assert config.build == ("dist",)
+    assert config.language_packs == ("python", "typescript")
+    assert config.framework_packs == ("react", "nextjs")
+    assert config.rule_packs == ("python-maintainability",)
+    assert config.commands == CommandHints(
+        test=("pytest",),
+        typecheck=("basedpyright",),
+        lint=("ruff check .",),
+        build=("python -m build",),
+    )
+    assert config.token_budgets.context == 4500
+    assert config.privacy.runtime_network is False
+    assert config.privacy.allow_llm_review is True
+    assert config.llm is not None
+    assert config.llm.provider == "openai"
+    assert merged.include == ("src",)
+    assert merged.token_budgets.context == 3000
+    assert merged.commands.test == ("pytest tests/test_config.py",)
 
 
 def test_core_model_inventory_is_available() -> None:

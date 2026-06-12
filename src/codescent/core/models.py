@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import ClassVar
+from typing import ClassVar, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -42,6 +42,65 @@ class RepoConfig(BaseModel):
         "build",
         "coverage",
     )
+
+
+class CommandHints(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    test: tuple[str, ...] = ()
+    typecheck: tuple[str, ...] = ()
+    lint: tuple[str, ...] = ()
+    build: tuple[str, ...] = ()
+
+
+class TokenBudgets(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    context: int = Field(default=3000, ge=1)
+    file: int = Field(default=800, ge=1)
+    dashboard: int = Field(default=10000, ge=1)
+
+
+class PrivacySettings(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    runtime_network: bool = False
+    allow_llm_review: bool = False
+
+
+class LlmSettings(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    provider: str
+    model: str
+
+
+class ProjectConfig(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    include: tuple[str, ...] = (".",)
+    exclude: tuple[str, ...] = RepoConfig(root_path=".").exclude
+    generated: tuple[str, ...] = ()
+    vendor: tuple[str, ...] = ()
+    build: tuple[str, ...] = ()
+    language_packs: tuple[str, ...] = ("python",)
+    framework_packs: tuple[str, ...] = ()
+    rule_packs: tuple[str, ...] = ("python-maintainability",)
+    commands: CommandHints = Field(default_factory=CommandHints)
+    token_budgets: TokenBudgets = Field(default_factory=TokenBudgets)
+    privacy: PrivacySettings = Field(default_factory=PrivacySettings)
+    llm: LlmSettings | None = None
+
+    def with_overrides(
+        self,
+        *,
+        cli_flags: dict[str, object] | None = None,
+        tool_args: dict[str, object] | None = None,
+    ) -> Self:
+        payload: dict[str, object] = self.model_dump(mode="python")
+        for overrides in (cli_flags or {}, tool_args or {}):
+            payload.update(overrides)
+        return self.model_validate(payload)
 
 
 class IndexedFile(BaseModel):

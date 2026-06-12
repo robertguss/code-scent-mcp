@@ -11,6 +11,7 @@ from codescent.core.paths import resolve_repo_root
 from codescent.mcp.server import mcp_available
 from codescent.mcp.server import run as run_mcp
 from codescent.services.code_health import CodeHealthService
+from codescent.services.config import ConfigService
 from codescent.services.findings import FindingsService
 from codescent.services.repo_index import RepoIndexService
 from codescent.services.reports import ReportService
@@ -299,6 +300,22 @@ def explain(
         typer.echo(json.dumps(payload))
         return
     typer.echo("\n".join(explanation.reasons))
+
+
+@app.command()
+def config(
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Print JSON project config."),
+    ] = False,
+) -> None:
+    project_config = ConfigService(repo).load()
+    payload = project_config.model_dump(mode="json")
+    if json_output:
+        typer.echo(json.dumps(payload))
+        return
+    typer.echo(json.dumps(payload, indent=2))
 
 
 @app.command()

@@ -58,6 +58,19 @@ class ErrorPayload(BaseModel):
     code: str
 
 
+class ConfigPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    include: tuple[str, ...]
+    exclude: tuple[str, ...]
+    language_packs: tuple[str, ...]
+    framework_packs: tuple[str, ...]
+    rule_packs: tuple[str, ...]
+    commands: dict[str, tuple[str, ...]]
+    token_budgets: dict[str, int]
+    privacy: dict[str, bool]
+
+
 def _scan_payload(output: str) -> ScanPayload:
     return ScanPayload.model_validate_json(output)
 
@@ -167,6 +180,50 @@ def load_config() -> str:
     assert "suggested_action" in next_result.output
     assert "score_inputs" in explain_result.output
     assert "# CodeScent Report" in export_result.output
+
+
+def test_config_command_reports_full_project_surface(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    state_dir = repo / ".codescent"
+    state_dir.mkdir()
+    _ = (state_dir / "config.toml").write_text(
+        """
+include = ["src", "tests"]
+exclude = ["dist", "vendor"]
+language_packs = ["python"]
+framework_packs = ["react"]
+rule_packs = ["python-maintainability"]
+
+[commands]
+test = ["pytest"]
+typecheck = ["basedpyright"]
+lint = ["ruff check ."]
+build = ["python -m build"]
+
+[token_budgets]
+context = 4500
+file = 600
+dashboard = 12000
+
+[privacy]
+runtime_network = false
+allow_llm_review = false
+""",
+    )
+
+    result = RUNNER.invoke(app, ["config", "--repo", str(repo), "--json"])
+    payload = ConfigPayload.model_validate_json(result.output)
+
+    assert result.exit_code == 0
+    assert payload.include == ("src", "tests")
+    assert payload.exclude == ("dist", "vendor")
+    assert payload.language_packs == ("python",)
+    assert payload.framework_packs == ("react",)
+    assert payload.rule_packs == ("python-maintainability",)
+    assert payload.commands["test"] == ("pytest",)
+    assert payload.token_budgets["context"] == 4500
+    assert payload.privacy["runtime_network"] is False
 
 
 def test_reset_not_exposed() -> None:

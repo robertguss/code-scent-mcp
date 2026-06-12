@@ -320,7 +320,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: MCP smoke: `uv run python scripts/smoke_mcp.py --repo tests/fixtures/python-basic prompts --out .omo/evidence/prd-remainder-task-19-prompts.json`; PASS if artifact lists prompt names and safety text. Evidence `.omo/evidence/prd-remainder-task-19-prompts.json`.
   Commit: Y | `feat(mcp): add safe workflow prompt resources` | Files `src/codescent/mcp/prompts.py`, `src/codescent/mcp/server.py`, `tests/contract/test_mcp_prompt_resources.py`
 
-- [ ] 20. Add full project config model and CLI config command
+- [x] 20. Add full project config model and CLI config command
   What to do / Must NOT do: Implement include/exclude paths, generated/vendor/build config, command hints, token budgets, privacy settings, and optional LLM settings in repository-local config. Preserve current precedence: defaults < config < CLI flags < MCP args.
   Parallelization: Can parallel Y | Wave 6 | Blocks rules/packs/LLM
   References: `docs/prd.md:721`, `docs/prd.md:723`, `docs/architecture.md:810`
