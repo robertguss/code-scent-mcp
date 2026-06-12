@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Final
 
-SCHEMA_VERSION: Final = 3
+SCHEMA_VERSION: Final = 4
 
 BASE_TABLE_STATEMENTS: Final[tuple[str, ...]] = (
     "create table if not exists schema_version (version integer not null)",
@@ -160,6 +160,20 @@ MIGRATION_STATEMENTS: Final[dict[int, tuple[str, ...]]] = {
             call_text text not null,
             start_line integer not null,
             confidence real not null
+        )
+        """,
+    ),
+    4: (
+        """
+        create table if not exists subjective_findings (
+            id text primary key,
+            provider text not null,
+            prompt text not null,
+            file_path text not null,
+            title text not null,
+            message text not null,
+            confidence real not null,
+            created_at text not null
         )
         """,
     ),

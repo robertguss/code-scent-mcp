@@ -10,6 +10,10 @@ from scripts.prove_source_read_only import prove_source_read_only
 from codescent.mcp.finding_tools import get_smell_report, scan_code_health
 from codescent.mcp.planning_tools import suggest_tests
 from codescent.mcp.search_tools import search_content, search_files
+from codescent.services.subjective_review import (
+    FakeSubjectiveReviewProvider,
+    SubjectiveReviewService,
+)
 from codescent.smoke.lx_data_lake_contract import JsonValue
 
 JSON_PAYLOAD = TypeAdapter(dict[str, JsonValue])
@@ -81,3 +85,36 @@ def test_verification_commands_are_recommended_not_executed(
 
     assert suggested["commands"]
     assert suggested["executes_in_v1"] is False
+
+
+def test_subjective_review_is_disabled_by_default_and_uses_fake_provider_in_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts: list[str] = []
+
+    def blocked_socket(*args: object, **kwargs: object) -> socket.socket:
+        _ = args, kwargs
+        attempts.append("socket")
+        message = "network disabled"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(socket, "socket", blocked_socket)
+
+    repo = "tests/fixtures/python-basic"
+    shutil.rmtree(Path(repo) / ".codescent", ignore_errors=True)
+    disabled = SubjectiveReviewService(repo).review(provider_name="fake")
+    enabled = SubjectiveReviewService(repo).review(
+        provider_name="fake",
+        provider=FakeSubjectiveReviewProvider(),
+        allow_subjective=True,
+    )
+
+    assert disabled.enabled is False
+    assert disabled.provider == "disabled"
+    assert "disabled by default" in disabled.privacy_notice
+    assert enabled.enabled is True
+    assert enabled.provider == "fake"
+    assert enabled.subjective_findings
+    assert enabled.subjective_findings[0].subjective is True
+    assert "CodeScent subjective review prompt" in enabled.prompt
+    assert attempts == []

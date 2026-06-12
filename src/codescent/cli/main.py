@@ -19,6 +19,10 @@ from codescent.services.repo_index import RepoIndexService
 from codescent.services.reports import ReportService
 from codescent.services.rules import RulesService
 from codescent.services.status import RepoStatusService
+from codescent.services.subjective_review import (
+    SubjectiveReviewService,
+    subjective_findings_payload,
+)
 from codescent.storage import initialize_storage
 
 if TYPE_CHECKING:
@@ -31,6 +35,9 @@ class CliReportPayload(TypedDict):
     open_count: int
     status_counts: dict[str, int]
     findings: list[dict[str, str | float]]
+    subjective_findings: list[dict[str, str | float | bool]]
+    subjective_provider: str | None
+    privacy_notice: str | None
 
 
 class CiReportPayload(TypedDict):
@@ -231,12 +238,29 @@ def report(
         str,
         typer.Option("--format", help="Output format: json or markdown."),
     ] = "json",
+    include_subjective: Annotated[
+        bool,
+        typer.Option("--include-subjective", help="Include opt-in subjective review."),
+    ] = False,
+    provider: Annotated[
+        str,
+        typer.Option("--provider", help="Subjective review provider."),
+    ] = "fake",
 ) -> None:
     report_data = FindingsService(repo).get_smell_report()
+    subjective = SubjectiveReviewService(repo).review(
+        provider_name=provider,
+        allow_subjective=include_subjective,
+    )
     payload: CliReportPayload = {
         "open_count": report_data.open_count,
         "status_counts": report_data.status_counts,
         "findings": [_finding_row_payload(finding) for finding in report_data.findings],
+        "subjective_findings": subjective_findings_payload(
+            subjective.subjective_findings,
+        ),
+        "subjective_provider": subjective.provider,
+        "privacy_notice": subjective.privacy_notice,
     }
     _emit_report_payload(payload, format_name)
 
@@ -254,6 +278,9 @@ def export(
         "open_count": report_data.open_count,
         "status_counts": report_data.status_counts,
         "findings": [_finding_row_payload(finding) for finding in report_data.findings],
+        "subjective_findings": [],
+        "subjective_provider": None,
+        "privacy_notice": None,
     }
     _emit_report_payload(payload, format_name)
 

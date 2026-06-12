@@ -384,7 +384,7 @@ Critical path: 1 -> 2 -> 3 -> 5 -> 9 -> 13 -> 17 -> 20 -> 22 -> 23 -> 27 -> 30 -
   QA scenarios: tmux: `tmux new-session -d -s ulw-qa-prd-27 'cd /Users/robertguss/Projects/startups/code-scent-mcp && uv run codescent ci --repo tests/fixtures/python-basic --format json --threshold warn'`; PASS if JSON includes risk, changed-file health, suggested tests, and deterministic exit behavior. Evidence `.omo/evidence/prd-remainder-task-27-ci.txt`.
   Commit: Y | `feat(ci): add local ci and diff review mode` | Files `src/codescent/cli/main.py`, `src/codescent/services/ci.py`, `tests/contract/test_cli.py`
 
-- [ ] 28. Add optional subjective LLM review abstraction
+- [x] 28. Add optional subjective LLM review abstraction
   What to do / Must NOT do: Add disabled-by-default subjective review provider interface, fake provider tests, inspectable prompts, privacy notice, and separate subjective finding storage. Do not make network calls in tests or default runtime.
   Parallelization: Can parallel N | Wave 8 | Blocks subjective review reports
   References: `docs/prd.md:1309`, `docs/prd.md:1328`, `docs/architecture.md:805`

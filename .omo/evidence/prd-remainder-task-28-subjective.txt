@@ -1,0 +1,24 @@
+{"open_count": 0, "status_counts": {}, "findings": [], "subjective_findings": [{
+"id": "subjective.fake:0c7aa9f3e4c9", "provider": "fake", "file_path": "src/acme
+_tasks/workflow.py", "title": "Subjective review: workflow clarity", "message":
+"Fake provider marked this as subjective review evidence.", "confidence": 0.51,
+"subjective": true}], "subjective_provider": "fake", "privacy_notice": "Subjecti
+ve LLM review is disabled by default. Enable it only when you intend to send pro
+mpt context to the selected provider."}
+EXIT:0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
