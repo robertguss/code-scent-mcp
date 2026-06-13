@@ -170,6 +170,43 @@ class SearchResult(BaseModel):
     snippet: str | None = None
 
 
+class EnvelopeMode(StrEnum):
+    EXACT = "exact"
+    SUMMARIZED = "summarized"
+    FILTERED = "filtered"
+    SAMPLE = "sample"
+    TRUNCATED = "truncated"
+
+
+class EnvelopeConfidence(StrEnum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class ResponseEnvelope(BaseModel):
+    """Stable wrapper for bounded result payloads.
+
+    Existing item schemas stay stable. Envelope metadata is additive and should
+    be updated in lockstep with the public contract for any surface that adopts
+    it.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    kind: str
+    mode: EnvelopeMode
+    summary: str
+    items: tuple[object, ...] = Field(default_factory=tuple)
+    omitted_count: int = Field(default=0, ge=0)
+    original_result_id: str | None = None
+    retrieval_available: bool = False
+    retrieval_hints: tuple[str, ...] = Field(default_factory=tuple)
+    confidence: EnvelopeConfidence = EnvelopeConfidence.HIGH
+    warnings: tuple[str, ...] = Field(default_factory=tuple)
+    stats: dict[str, int | float] | None = None
+
+
 class ContextOptions(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 

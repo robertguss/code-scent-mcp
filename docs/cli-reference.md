@@ -48,8 +48,7 @@ uv run codescent watch --repo "$repo" --once --json
 
 ### `reset`
 
-Lists or removes `.codescent/` state. `reset` is intentionally guarded: reset
-requires --dry-run or --yes.
+Lists or removes `.codescent/` state. `reset` is intentionally guarded: reset requires --dry-run or --yes.
 
 ```bash
 uv run codescent reset --repo "$repo" --dry-run --json

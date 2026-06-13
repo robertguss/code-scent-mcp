@@ -11,11 +11,11 @@ expanded search and graph tools, reports, CI/diff review, opt-in subjective
 review, evals, and a loopback dashboard.
 
 CodeScent is local stdio for MCP and loopback-only for the dashboard. It writes
-only `.codescent` state in the analyzed repository. It does not edit analyzed
-source files. Safety summary: writes only .codescent state and does not edit
-analyzed source files. The runtime no-network model applies to indexing,
-scanning, searching, context building, dashboard use, CI mode, and eval
-execution. Subjective LLM review remains opt-in and disabled by default.
+only `.codescent` state in the analyzed repository. It does not edit analyzed source files.
+Safety summary: writes only .codescent state and does not edit analyzed source files.
+The runtime no-network model applies to indexing, scanning, searching, context
+building, dashboard use, CI mode, and eval execution. Subjective LLM review
+remains opt-in and disabled by default.
 
 ## Install
 

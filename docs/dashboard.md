@@ -3,8 +3,8 @@
 CodeScent includes a local health dashboard backed by the same `.codescent/`
 state as the CLI and MCP tools.
 
-The dashboard binds to `127.0.0.1` loopback only. It has no auth, no remote
-dashboard, and no hosted mode. Do not expose it beyond the local machine.
+The dashboard binds to `127.0.0.1` loopback only. It has no auth, no remote dashboard,
+and no hosted mode. Do not expose it beyond the local machine.
 
 There is no public CLI command for launching the dashboard in this release. The
 current verified path is the dashboard server used by integration tests and

@@ -88,6 +88,8 @@ POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "get_regressions",
         "review_diff_risk",
         "get_changed_file_health",
+        "retrieve_result",
+        "context_stats",
     },
 )
 
@@ -110,6 +112,8 @@ REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "verify_change",
         "review_diff_risk",
         "get_changed_file_health",
+        "retrieve_result",
+        "context_stats",
     },
 )
 
@@ -175,6 +179,8 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _registered_post_mvp_entry("get_regressions", "health"),
         _registered_post_mvp_entry("review_diff_risk", "risk"),
         _registered_post_mvp_entry("get_changed_file_health", "risk"),
+        _registered_post_mvp_entry("retrieve_result", "context"),
+        _registered_post_mvp_entry("context_stats", "health"),
     ),
     cli_commands=(
         _mvp_entry("init", "repository"),

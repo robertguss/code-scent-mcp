@@ -162,6 +162,14 @@ def test_rules_watch_and_reset_are_safe_and_codescent_scoped(tmp_path: Path) -> 
     source = repo / "src" / "app.py"
     source.parent.mkdir(parents=True)
     _ = source.write_text("value = 1\n")
+    nested_state_like_dir = repo / "src" / ".codescent"
+    nested_state_like_dir.mkdir()
+    nested_marker = nested_state_like_dir / "marker.txt"
+    _ = nested_marker.write_text("not top-level runtime state\n")
+    sibling_state_like_dir = repo / ".codescent-backup"
+    sibling_state_like_dir.mkdir()
+    sibling_marker = sibling_state_like_dir / "marker.txt"
+    _ = sibling_marker.write_text("not reset target\n")
     _ = RUNNER.invoke(app, ["init", "--repo", str(repo), "--json"])
 
     rules_result = RUNNER.invoke(app, ["rules", "--repo", str(repo), "--json"])
@@ -194,6 +202,8 @@ def test_rules_watch_and_reset_are_safe_and_codescent_scoped(tmp_path: Path) -> 
     assert dry_run_payload.paths == (str(repo / ".codescent"),)
     assert reset_payload.paths == (str(repo / ".codescent"),)
     assert source.exists()
+    assert nested_marker.read_text() == "not top-level runtime state\n"
+    assert sibling_marker.read_text() == "not reset target\n"
     assert not (repo / ".codescent").exists()
 
 

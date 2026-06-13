@@ -19,9 +19,10 @@ an external plugin API.
 
 ## Parser Decision
 
-The TypeScript/JavaScript pack uses a local deterministic parser adapter. The
-adapter must run from installed local dependencies, require no runtime network,
-and degrade gracefully when a grammar cannot produce high-confidence references.
+The TypeScript/JavaScript pack uses a local deterministic parser adapter backed
+by tree-sitter. The adapter must run from installed local dependencies, require
+no runtime network, and degrade gracefully when a grammar cannot produce
+high-confidence references.
 
 This keeps parsing source-read-only and gives CodeScent one parser strategy for
 plain JavaScript, JSX, TypeScript, and TSX instead of separate ad hoc regex

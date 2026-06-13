@@ -8,6 +8,13 @@ from codescent.core.public_surface import (
     SurfaceStage,
 )
 
+ABSENT_POST_MVP_MCP_TOOL_NAMES = {
+    "project_guidance",
+    "project_learnings",
+    "compress_generic_output",
+    "retrieve_original_output",
+}
+
 
 def test_post_mvp_surface_tracks_registered_and_locked_tools() -> None:
     # Given: the public surface registry is the source of truth for docs and tests.
@@ -26,17 +33,31 @@ def test_post_mvp_surface_tracks_registered_and_locked_tools() -> None:
     # Then: MVP runtime tools stay stable while post-MVP tools are declared.
     assert registered_mvp == MVP_MCP_TOOL_NAMES
     assert declared_post_mvp >= POST_MVP_MCP_TOOL_NAMES
+    assert {"retrieve_result", "context_stats"} <= declared_post_mvp
     assert {
         entry.name
         for entry in PUBLIC_SURFACE.mcp_tools
         if entry.stage is SurfaceStage.POST_MVP and entry.registered
     } == REGISTERED_POST_MVP_MCP_TOOL_NAMES
+    assert (
+        sum(1 for entry in PUBLIC_SURFACE.mcp_tools if entry.name == "retrieve_result")
+        == 1
+    )
+    assert (
+        sum(1 for entry in PUBLIC_SURFACE.mcp_tools if entry.name == "context_stats")
+        == 1
+    )
+    assert "retrieve_result" in REGISTERED_POST_MVP_MCP_TOOL_NAMES
+    assert "context_stats" in REGISTERED_POST_MVP_MCP_TOOL_NAMES
     assert {
         entry.name
         for entry in PUBLIC_SURFACE.mcp_tools
         if entry.stage is SurfaceStage.POST_MVP and not entry.registered
     } == LOCKED_POST_MVP_MCP_TOOL_NAMES
     assert registered_mvp.isdisjoint(declared_post_mvp)
+    assert ABSENT_POST_MVP_MCP_TOOL_NAMES.isdisjoint(
+        {entry.name for entry in PUBLIC_SURFACE.mcp_tools}
+    )
 
 
 def test_post_mvp_cli_commands_are_declared_but_locked() -> None:

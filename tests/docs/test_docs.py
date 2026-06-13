@@ -4,7 +4,11 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from codescent.cli.main import app
-from codescent.core.public_surface import PUBLIC_SURFACE, REGISTERED_MCP_TOOL_NAMES
+from codescent.core.public_surface import (
+    LOCKED_POST_MVP_MCP_TOOL_NAMES,
+    PUBLIC_SURFACE,
+    REGISTERED_MCP_TOOL_NAMES,
+)
 
 README = Path("README.md")
 CHANGELOG = Path("CHANGELOG.md")
@@ -73,6 +77,13 @@ POST_MVP_PHRASES = {
     "source autofix",
 }
 
+POST_MVP_ABSENT_TOOLS = {
+    "project_guidance",
+    "project_learnings",
+    "compress_generic_output",
+    "retrieve_original_output",
+}
+
 
 def test_readme_names_python_first_mvp_and_safety() -> None:
     text = README.read_text().lower()
@@ -125,6 +136,15 @@ def test_tool_docs_keep_mvp_tools_and_stage_post_mvp_surface() -> None:
     assert tools >= MVP_TOOLS
     assert "registered post-mvp mcp tools" in text.lower()
     assert "locked post-mvp mcp tools" in text.lower()
+
+
+def test_tool_docs_include_locked_headroom_placeholders() -> None:
+    text = MCP_TOOLS.read_text().lower()
+
+    for tool_name in LOCKED_POST_MVP_MCP_TOOL_NAMES:
+        assert f"`{tool_name}`" in text
+        assert f"- `{tool_name}` - stage `post_mvp`, registered `false`" in text
+    assert "task 14" in text
 
 
 def test_eval_docs_include_deterministic_agent_and_real_smoke() -> None:
@@ -231,6 +251,44 @@ def test_mcp_reference_covers_registered_tools() -> None:
         "Outputs",
     ):
         assert phrase in text
+
+
+def test_mcp_reference_documents_result_retrieval_and_envelopes() -> None:
+    text = MCP_TOOLS.read_text().lower()
+    find_symbol_section = text.split("### `find_symbol`", maxsplit=1)[1].split(
+        "\n### `get_file_context`",
+        maxsplit=1,
+    )[0]
+    retrieve_result_section = text.split("### `retrieve_result`", maxsplit=1)[1].split(
+        "\n### `context_stats`",
+        maxsplit=1,
+    )[0]
+    context_stats_section = text.split("### `context_stats`", maxsplit=1)[1].split(
+        "\n## Reference Pattern",
+        maxsplit=1,
+    )[0]
+
+    assert "symbol-search" in find_symbol_section
+    assert "envelope" in find_symbol_section
+    assert "original_result_id" in find_symbol_section
+    assert "retrieval_available" in find_symbol_section
+    assert "retrieval_hints" in find_symbol_section
+    assert "summarized" in retrieve_result_section
+    assert "filtered" in retrieve_result_section
+    assert "sample" in retrieve_result_section
+    assert "filters only inspect stored json" in retrieve_result_section
+    assert "sanitized" in context_stats_section
+    assert "session events only" in context_stats_section
+    assert "no raw source" in context_stats_section
+    assert "raw results" in context_stats_section
+    assert "full query payloads" in context_stats_section
+
+
+def test_mcp_docs_do_not_name_post_mvp_excluded_tools() -> None:
+    text = MCP_TOOLS.read_text().lower()
+
+    for tool_name in POST_MVP_ABSENT_TOOLS:
+        assert f"`{tool_name}`" not in text
 
 
 def test_dashboard_docs_do_not_invent_public_command() -> None:

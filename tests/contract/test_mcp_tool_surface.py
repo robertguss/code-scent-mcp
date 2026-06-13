@@ -7,6 +7,13 @@ from pydantic import BaseModel, ConfigDict
 
 from codescent.mcp.server import mcp
 
+ABSENT_POST_MVP_TOOL_NAMES = {
+    "project_guidance",
+    "project_learnings",
+    "compress_generic_output",
+    "retrieve_original_output",
+}
+
 MVP_TOOL_NAMES = {
     "get_repo_map",
     "get_repo_status",
@@ -40,6 +47,8 @@ MVP_TOOL_NAMES = {
     "rescan",
     "review_diff_risk",
     "get_changed_file_health",
+    "retrieve_result",
+    "context_stats",
 }
 
 
@@ -89,8 +98,11 @@ async def test_no_post_mvp_tools_exposed() -> None:
     assert "get_regressions" in tool_names
     assert "review_diff_risk" in tool_names
     assert "get_changed_file_health" in tool_names
+    assert "retrieve_result" in tool_names
+    assert "context_stats" in tool_names
     assert "report" not in tool_names
     assert "reset" not in tool_names
+    assert tool_names.isdisjoint(ABSENT_POST_MVP_TOOL_NAMES)
 
 
 @pytest.mark.anyio

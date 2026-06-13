@@ -6,6 +6,7 @@ from tests.integration.dashboard_http import JsonObject, get_json, get_text, pos
 
 from codescent.dashboard.server import start_dashboard_server
 from codescent.services.code_health import CodeHealthService
+from codescent.storage.schema import SCHEMA_VERSION
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -72,11 +73,11 @@ def test_dashboard_rule_update_preserves_existing_config_sections(
     _ = CodeHealthService(repo).scan()
     config_path = repo / ".codescent" / "config.toml"
     _ = config_path.write_text(
-        """include = ["src"]
+        f"""include = ["src"]
 rule_packs = ["python-maintainability", "ts-react-next"]
 
 [project]
-schema_version = 4
+schema_version = {SCHEMA_VERSION}
 
 [commands]
 test = ["pytest"]
@@ -111,7 +112,7 @@ model = "gpt-5.4"
     assert response.status == 200
     assert rules.payload["enabled_rule_packs"] == ["python-maintainability"]
     assert "[project]" in config_text
-    assert "schema_version = 4" in config_text
+    assert f"schema_version = {SCHEMA_VERSION}" in config_text
     assert "[commands]" in config_text
     assert 'test = ["pytest"]' in config_text
     assert "[token_budgets]" in config_text

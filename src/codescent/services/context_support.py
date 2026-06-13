@@ -35,6 +35,7 @@ COUNT_ROW: TypeAdapter[tuple[int] | None] = TypeAdapter(tuple[int] | None)
 class SymbolMatchPayload(TypedDict):
     name: str
     qualified_name: str
+    kind: str
     path: str
     start_line: int
     end_line: int
@@ -94,6 +95,7 @@ def symbol_payload(
     return {
         "name": symbol.name,
         "qualified_name": symbol.qualified_name,
+        "kind": symbol.kind,
         "path": parsed.path,
         "start_line": symbol.start_line,
         "end_line": symbol.end_line,

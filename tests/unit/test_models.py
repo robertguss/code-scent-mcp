@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from typing import cast
+
 import pytest
 from pydantic import ValidationError
 
@@ -8,6 +11,8 @@ from codescent.core.models import (
     ConfigSource,
     ContextOptions,
     ContextPack,
+    EnvelopeConfidence,
+    EnvelopeMode,
     EvalResult,
     Finding,
     IndexedFile,
@@ -16,6 +21,7 @@ from codescent.core.models import (
     RefactorPlan,
     RepoConfig,
     RepoStatus,
+    ResponseEnvelope,
     ScanRun,
     SearchOptions,
     SearchResult,
@@ -137,6 +143,7 @@ def test_core_model_inventory_is_available() -> None:
         RepoStatus,
         PageOptions,
         SearchResult,
+        ResponseEnvelope,
         ContextPack,
         RefactorPlan,
         SuggestedVerification,
@@ -152,8 +159,147 @@ def test_core_model_inventory_is_available() -> None:
         "RepoStatus",
         "PageOptions",
         "SearchResult",
+        "ResponseEnvelope",
         "ContextPack",
         "RefactorPlan",
         "SuggestedVerification",
         "EvalResult",
     ]
+
+
+@pytest.mark.parametrize(
+    ("mode", "warnings", "retrieval_available", "original_result_id", "stats"),
+    [
+        (
+            EnvelopeMode.EXACT,
+            (),
+            False,
+            None,
+            None,
+        ),
+        (
+            EnvelopeMode.SUMMARIZED,
+            ("heuristic summary may omit edge cases",),
+            True,
+            "ctx_abc123",
+            cast(
+                "dict[str, int | float]",
+                {"returned_count": 2, "omitted_count": 8},
+            ),
+        ),
+        (
+            EnvelopeMode.FILTERED,
+            ("filtered to test files only",),
+            True,
+            "ctx_filter_001",
+            cast(
+                "dict[str, int | float]",
+                {"returned_count": 1, "omitted_count": 4},
+            ),
+        ),
+        (
+            EnvelopeMode.SAMPLE,
+            ("sampled from a larger result set",),
+            True,
+            "ctx_sample_001",
+            cast(
+                "dict[str, int | float]",
+                {"returned_count": 3, "omitted_count": 12},
+            ),
+        ),
+        (
+            EnvelopeMode.TRUNCATED,
+            ("truncated at the configured limit",),
+            False,
+            None,
+            cast(
+                "dict[str, int | float]",
+                {"returned_count": 20, "omitted_count": 80},
+            ),
+        ),
+    ],
+)
+def test_response_envelope_serializes_modes_deterministically(
+    mode: EnvelopeMode,
+    warnings: tuple[str, ...],
+    retrieval_available: bool,
+    original_result_id: str | None,
+    stats: dict[str, int | float] | None,
+) -> None:
+    envelope = ResponseEnvelope(
+        kind="symbol_search_result",
+        mode=mode,
+        summary="Compact result envelope.",
+        items=({"path": "src/app.py", "score": 0.99},),
+        omitted_count=0 if mode is EnvelopeMode.EXACT else 4,
+        original_result_id=original_result_id,
+        retrieval_available=retrieval_available,
+        retrieval_hints=(f"retrieve_result(id='{original_result_id}')",)
+        if original_result_id is not None
+        else (),
+        confidence=(
+            EnvelopeConfidence.HIGH
+            if mode is EnvelopeMode.EXACT
+            else EnvelopeConfidence.MEDIUM
+        ),
+        warnings=warnings,
+        stats=stats,
+    )
+
+    assert envelope.model_dump(mode="json") == {
+        "kind": "symbol_search_result",
+        "mode": mode.value,
+        "summary": "Compact result envelope.",
+        "items": [{"path": "src/app.py", "score": 0.99}],
+        "omitted_count": 0 if mode is EnvelopeMode.EXACT else 4,
+        "original_result_id": original_result_id,
+        "retrieval_available": retrieval_available,
+        "retrieval_hints": [
+            f"retrieve_result(id='{original_result_id}')",
+        ]
+        if original_result_id is not None
+        else [],
+        "confidence": (
+            EnvelopeConfidence.HIGH.value
+            if mode is EnvelopeMode.EXACT
+            else EnvelopeConfidence.MEDIUM.value
+        ),
+        "warnings": list(warnings),
+        "stats": stats,
+    }
+    assert envelope.model_dump_json() == json.dumps(
+        {
+            "kind": "symbol_search_result",
+            "mode": mode.value,
+            "summary": "Compact result envelope.",
+            "items": [{"path": "src/app.py", "score": 0.99}],
+            "omitted_count": 0 if mode is EnvelopeMode.EXACT else 4,
+            "original_result_id": original_result_id,
+            "retrieval_available": retrieval_available,
+            "retrieval_hints": [
+                f"retrieve_result(id='{original_result_id}')",
+            ]
+            if original_result_id is not None
+            else [],
+            "confidence": (
+                EnvelopeConfidence.HIGH.value
+                if mode is EnvelopeMode.EXACT
+                else EnvelopeConfidence.MEDIUM.value
+            ),
+            "warnings": list(warnings),
+            "stats": stats,
+        },
+        separators=(",", ":"),
+    )
+
+
+def test_response_envelope_rejects_invalid_mode() -> None:
+    with pytest.raises(ValidationError):
+        _ = ResponseEnvelope.model_validate(
+            {
+                "kind": "symbol_search_result",
+                "mode": "partial",
+                "summary": "Invalid mode.",
+                "items": [],
+            },
+        )

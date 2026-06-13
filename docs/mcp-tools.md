@@ -3,7 +3,7 @@
 CodeScent registers MCP tools in `codescent.core.public_surface`. The MCP server
 is local stdio and source-read-only for analyzed source. Tools may write or
 update `.codescent/` state for indexes, scan runs, findings, lifecycle events,
-and telemetry.
+result storage, and telemetry.
 
 Every tool should return bounded output by default. Inputs are the tool
 arguments supplied by the MCP client. Outputs are structured payloads validated
@@ -46,10 +46,12 @@ by the service and contract tests.
 - `get_regressions`
 - `review_diff_risk`
 - `get_changed_file_health`
+- `retrieve_result`
+- `context_stats`
 
 ## Locked Post-MVP MCP Tools
 
-No MCP tools are locked in the current local PRD-remainder stage.
+No MCP tools are locked in the current local PRD-remainder stage. Task 14 remains the final docs/public lockstep check for Headroom MCP tools.
 
 ## Current Registered CLI Commands
 
@@ -85,13 +87,13 @@ Search and context tools:
 
 `search_files`, `search_content`, `find_symbol`, `get_file_context`,
 `get_symbol_context`, `find_references`, `find_callers`, `find_callees`,
-`get_related_files`
+`get_related_files`, `retrieve_result`
 
 Code health and finding lifecycle tools:
 
 `scan_code_health`, `get_smell_report`, `get_next_improvement`, `mark_finding`,
 `rescan`, `get_finding`, `explain_score`, `get_backlog`, `get_progress`,
-`get_regressions`
+`get_regressions`, `context_stats`
 
 Planning tools:
 
@@ -159,14 +161,18 @@ events, and telemetry.
 ### `find_symbol`
 
 - Group: `context`
-- Purpose: Find indexed symbols by name.
-- Inputs: repository root plus tool-specific arguments such as query, path,
-  symbol, finding id, status, or limit.
+- Purpose: Find indexed symbols by name and return a bounded symbol-search
+  envelope.
+- Inputs: repository root, query, and limit. Large responses may include
+  `mode`, `original_result_id`, `omitted_count`, `retrieval_available`,
+  `retrieval_hints`, `warnings`, and `stats`.
 - Outputs: JSON-compatible structured payload with local evidence and no
   unbounded source dump.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
-- Example shape: `{"tool": "find_symbol", "ok": true, "data": {...}}`
+  `find_symbol` envelopes large results instead of returning unbounded symbol
+  lists; runtime no-network.
+- Example shape: `{"ok": true, "kind": "symbol_search", "mode": "exact",
+  "items": []}`
 
 ### `get_file_context`
 
@@ -492,6 +498,34 @@ events, and telemetry.
   runtime no-network.
 - Example shape:
   `{"tool": "get_changed_file_health", "ok": true, "data": {...}}`
+
+### `retrieve_result`
+
+- Group: `context`
+- Purpose: Retrieve exact, summarized, filtered, or sampled stored CodeScent
+  results by opaque result id.
+- Inputs: repository root, opaque result id, retrieval mode (`exact`, `summary`,
+  `filtered`, or `sample`), optional query/file/symbol/result-type filters, and
+  limit.
+- Outputs: JSON-compatible stored-result payload or bounded error payload;
+  filters only inspect stored JSON.
+- Bounds: does not rerun searches or read filesystem paths from filters; bounded
+  output by default; runtime no-network.
+- Example shape:
+  `{"result_id": "ctx_123", "mode": "summary", "items": [], "warnings": []}`
+
+### `context_stats`
+
+- Group: `health`
+- Purpose: Report bounded context and token-savings stats for a local MCP
+  session.
+- Inputs: repository root, project id, and session id.
+- Outputs: JSON-compatible structured counters, fingerprints, tool names, and
+  warnings; no raw source, raw results, or full query payloads.
+- Bounds: reads sanitized `.codescent` session events only; bounded output by
+  default; runtime no-network.
+- Example shape:
+  `{"session_id": "sess_123", "tool_calls": 0, "warnings": []}`
 
 ## Reference Pattern
 

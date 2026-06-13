@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import ClassVar
 
 import pytest
@@ -6,6 +7,8 @@ from mcp.types import ContentBlock, TextContent
 from pydantic import BaseModel, ConfigDict
 
 from codescent.mcp.server import mcp
+from codescent.services.result_store import ResultStoreService
+from codescent.services.session_stats import ContextStatsService
 
 
 class ContextToolPayload(BaseModel):
@@ -36,6 +39,22 @@ class GraphToolPayload(BaseModel):
     query: str
     results: tuple[GraphResultPayload, ...]
     next_cursor: int | None = None
+
+
+class SymbolEnvelopePayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    kind: str
+    mode: str
+    summary: str
+    items: tuple[dict[str, object], ...]
+    omitted_count: int
+    original_result_id: str | None = None
+    retrieval_available: bool
+    retrieval_hints: tuple[str, ...]
+    warnings: tuple[str, ...]
+    stats: dict[str, int | float]
 
 
 @pytest.mark.anyio
@@ -143,8 +162,89 @@ async def test_reference_graph_tools_return_bounded_graph_results() -> None:
     assert "source_content" not in combined
 
 
+@pytest.mark.anyio
+async def test_find_symbol_large_result_returns_stored_summary_envelope(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    _write_many_symbol_repo(repo, count=20)
+
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "find_symbol",
+            {
+                "repo": str(repo),
+                "query": "handler",
+                "limit": 20,
+                "project_id": "project-symbols",
+                "session_id": "session-symbols",
+            },
+        )
+
+    payload = SymbolEnvelopePayload.model_validate_json(_text_content(result.content))
+    assert payload.ok is True
+    assert payload.kind == "symbol_search"
+    assert payload.mode == "summarized"
+    assert payload.original_result_id is not None
+    assert payload.original_result_id.startswith("ctx_")
+    assert payload.omitted_count > 0
+    assert payload.retrieval_available is True
+    assert any("retrieve_result" in hint for hint in payload.retrieval_hints)
+    assert payload.stats["total_results"] == 20
+
+    stored = ResultStoreService(repo).retrieve_result(
+        payload.original_result_id,
+        mode="exact",
+        limit=25,
+    )
+    stats = ContextStatsService(repo).context_stats(
+        project_id="project-symbols",
+        session_id="session-symbols",
+    )
+    assert len(stored["items"]) == 20
+    assert stats.tool_calls == 1
+    assert stats.summarized_results == 1
+    assert stats.estimated_tokens_avoided > 0
+
+
+@pytest.mark.anyio
+async def test_find_symbol_small_result_is_exact_without_omission_warning(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    _write_many_symbol_repo(repo, count=1)
+
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "find_symbol",
+            {"repo": str(repo), "query": "handler_0", "limit": 20},
+        )
+
+    payload = SymbolEnvelopePayload.model_validate_json(_text_content(result.content))
+
+    assert payload.ok is True
+    assert payload.mode == "exact"
+    assert payload.omitted_count == 0
+    assert payload.original_result_id is None
+    assert payload.retrieval_available is False
+    assert payload.retrieval_hints == ()
+    assert payload.warnings == ()
+    assert payload.stats["total_results"] == 1
+
+
 def _text_content(content: list[ContentBlock]) -> str:
     assert len(content) == 1
     first = content[0]
     assert isinstance(first, TextContent)
     return first.text
+
+
+def _write_many_symbol_repo(repo: Path, *, count: int) -> None:
+    source = repo / "src" / "many.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text(
+        "\n".join(
+            f"def handler_{index}() -> int:\n    return {index}\n"
+            for index in range(count)
+        ),
+    )
