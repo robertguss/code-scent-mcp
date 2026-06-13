@@ -1,0 +1,2 @@
+basedpyright: 0 errors, 0 warnings, 0 notes
+pytest: 2 passed in 0.02s

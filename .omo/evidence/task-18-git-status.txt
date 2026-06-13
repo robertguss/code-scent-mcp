@@ -1,0 +1,90 @@
+git status --short
+ M .omo/boulder.json
+ M README.md
+ M docs/cli-reference.md
+ M docs/dashboard.md
+ M docs/language-packs.md
+ M docs/mcp-tools.md
+ M src/codescent/core/__init__.py
+ M src/codescent/core/models.py
+ M src/codescent/core/public_surface.py
+ M src/codescent/mcp/context_tools.py
+ M src/codescent/mcp/server.py
+ M src/codescent/services/__init__.py
+ M src/codescent/services/context_support.py
+ M src/codescent/storage/repositories/__init__.py
+ M src/codescent/storage/schema.py
+ M tests/contract/test_cli.py
+ M tests/contract/test_mcp_context_tools.py
+ M tests/contract/test_mcp_tool_surface.py
+ M tests/contract/test_public_surface_registry.py
+ M tests/docs/test_docs.py
+ M tests/integration/test_dashboard.py
+ M tests/integration/test_storage.py
+ M tests/integration/test_storage_migrations.py
+ M tests/security/test_runtime_safety.py
+ M tests/unit/test_models.py
+?? .omo/evidence/task-1-envelope-invalid.txt
+?? .omo/evidence/task-1-envelope-unit.txt
+?? .omo/evidence/task-10-long-passing-output.txt
+?? .omo/evidence/task-10-pytest-failure.txt
+?? .omo/evidence/task-11-retrieve-filtered.txt
+?? .omo/evidence/task-11-retrieve-missing.txt
+?? .omo/evidence/task-12-empty-stats.txt
+?? .omo/evidence/task-12-stats-contract.txt
+?? .omo/evidence/task-13-large-symbol-summary.txt
+?? .omo/evidence/task-13-small-symbol-exact.txt
+?? .omo/evidence/task-14-docs-surface.txt
+?? .omo/evidence/task-14-post-mvp-absent.txt
+?? .omo/evidence/task-15-reset-scope.txt
+?? .omo/evidence/task-15-storage-edge-cases.txt
+?? .omo/evidence/task-16-no-sentinel-leak.txt
+?? .omo/evidence/task-16-security-runtime.txt
+?? .omo/evidence/task-17-mcp-e2e.txt
+?? .omo/evidence/task-17-mcp-negative.txt
+?? .omo/evidence/task-18-quality-gates.txt
+?? .omo/evidence/task-2-oversized-critical.txt
+?? .omo/evidence/task-2-preservation.txt
+?? .omo/evidence/task-3-fresh-storage.txt
+?? .omo/evidence/task-3-v4-migration.txt
+?? .omo/evidence/task-4-post-mvp-excluded.txt
+?? .omo/evidence/task-4-public-surface-prep.txt
+?? .omo/evidence/task-5-symbol-fixture.txt
+?? .omo/evidence/task-5-test-output-fixture.txt
+?? .omo/evidence/task-6-expiry-cleanup.txt
+?? .omo/evidence/task-6-repository-roundtrip.txt
+?? .omo/evidence/task-7-missing-id.txt
+?? .omo/evidence/task-7-restart-retrieval.txt
+?? .omo/evidence/task-8-event-privacy.txt
+?? .omo/evidence/task-8-stats-aggregate.txt
+?? .omo/evidence/task-9-empty-symbol.txt
+?? .omo/evidence/task-9-symbol-grouping.txt
+?? .omo/notepads/
+?? .omo/plans/headroom-influence-implementation.md
+?? .omo/run-continuation/
+?? src/codescent/core/output_formatter.py
+?? src/codescent/core/preservation.py
+?? src/codescent/core/symbol_formatter.py
+?? src/codescent/mcp/result_tools.py
+?? src/codescent/mcp/session_stats_tools.py
+?? src/codescent/services/result_store.py
+?? src/codescent/services/session_stats.py
+?? src/codescent/storage/repositories/session_events.py
+?? src/codescent/storage/repositories/stored_results.py
+?? tests/contract/test_mcp_context_optimization_workflow.py
+?? tests/contract/test_mcp_context_stats.py
+?? tests/contract/test_mcp_retrieve_result.py
+?? tests/fixtures/headroom_influence_fixtures.py
+?? tests/fixtures/storage/mvp_v4_schema.sql
+?? tests/fixtures/test_headroom_influence_fixtures.py
+?? tests/integration/test_result_store_service.py
+?? tests/integration/test_session_stats.py
+?? tests/integration/test_stored_results_repository.py
+?? tests/unit/test_output_formatter.py
+?? tests/unit/test_preservation.py
+?? tests/unit/test_symbol_formatter.py
+
+Artifact review notes:
+- No .codescent, cache, __pycache__, or fixture runtime-state artifacts were introduced by Task 18.
+- Remaining modified/untracked files are the intentional implementation/evidence/notepad changes already present for the headroom plan.
+- uv.lock drift was restored before completion; git diff -- uv.lock is expected to be empty.

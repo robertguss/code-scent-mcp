@@ -1,0 +1,88 @@
+{
+  "payload": {
+    "confidence": "high",
+    "items": [
+      {
+        "best_score": 1.0,
+        "count": 20,
+        "items": [
+          {
+            "end_line": 2,
+            "kind": "function",
+            "line": 1,
+            "name": "handler_0",
+            "path": "src/many.py",
+            "qualified_name": "many.handler_0",
+            "rank_reason": "partial definition match for 'handler' with score=1.00",
+            "score": 1.0
+          },
+          {
+            "end_line": 5,
+            "kind": "function",
+            "line": 4,
+            "name": "handler_1",
+            "path": "src/many.py",
+            "qualified_name": "many.handler_1",
+            "rank_reason": "partial definition match for 'handler' with score=1.00",
+            "score": 1.0
+          }
+        ],
+        "kind": "function",
+        "match_type": "partial",
+        "module": "many",
+        "path": "src/many.py",
+        "role": "definition",
+        "symbol_types": [
+          "function"
+        ]
+      }
+    ],
+    "kind": "symbol_search",
+    "mode": "summarized",
+    "ok": true,
+    "omitted_count": 18,
+    "original_result_id": "ctx_94693a80cce93712",
+    "retrieval_available": true,
+    "retrieval_hints": [
+      "Refine symbol query 'handler' or request a narrower limit/cursor window.",
+      "Use retrieve_result('ctx_94693a80cce93712') for full results."
+    ],
+    "stats": {
+      "groups_returned": 1,
+      "raw_token_estimate": 1084,
+      "returned_results": 2,
+      "total_groups": 1,
+      "total_results": 20
+    },
+    "summary": "Grouped 20 symbol results for 'handler'; returned 2 compact items across 1 groups and omitted 18.",
+    "warnings": []
+  },
+  "retrieved_count": 20,
+  "stats": {
+    "estimated_raw_tokens": 790,
+    "estimated_returned_tokens": 281,
+    "estimated_tokens_avoided": 509,
+    "largest_summarized_results": [
+      {
+        "input_fingerprint": "sha256:ebbb1532efbc730b",
+        "query_fingerprint": "sha256:ebbb1532efbc730b",
+        "raw_tokens": 790,
+        "returned_tokens": 281,
+        "tool": "find_symbol"
+      }
+    ],
+    "most_used_tools": [
+      "find_symbol"
+    ],
+    "repeated_broad_queries": [],
+    "retrievals": 0,
+    "session_id": "evidence-session",
+    "summarized_results": 1,
+    "tool_calls": 1,
+    "warnings": []
+  }
+}
+
+--- pytest stdout/stderr ---
+........                                                                 [100%]
+8 passed in 2.25s

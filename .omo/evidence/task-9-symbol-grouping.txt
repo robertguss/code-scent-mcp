@@ -1,0 +1,257 @@
+{
+  "kind": "symbol_search",
+  "mode": "summarized",
+  "summary": "Grouped 24 symbol results for 'build_task'; returned 12 compact items across 6 groups and omitted 12.",
+  "items": [
+    {
+      "match_type": "exact",
+      "role": "definition",
+      "path": "src/acme/pipeline/module_00.py",
+      "module": "acme.pipeline.module_00",
+      "kind": "mixed",
+      "symbol_types": [
+        "class",
+        "function",
+        "method",
+        "variable"
+      ],
+      "count": 4,
+      "best_score": 1.0,
+      "items": [
+        {
+          "name": "build_task_0_0",
+          "qualified_name": "acme.pipeline.module_00.build_task_0_0",
+          "path": "src/acme/pipeline/module_00.py",
+          "line": 10,
+          "end_line": 12,
+          "kind": "function",
+          "score": 1.0,
+          "rank_reason": "exact definition match for 'build_task' with score=1.00",
+          "snippet": "def build_task_0_0() -> None: ..."
+        },
+        {
+          "name": "build_task_0_1",
+          "qualified_name": "acme.pipeline.module_00.build_task_0_1",
+          "path": "src/acme/pipeline/module_00.py",
+          "line": 16,
+          "end_line": 18,
+          "kind": "class",
+          "score": 0.99,
+          "rank_reason": "exact definition match for 'build_task' with score=0.99",
+          "snippet": "def build_task_0_1() -> None: ..."
+        }
+      ]
+    },
+    {
+      "match_type": "exact",
+      "role": "definition",
+      "path": "src/acme/pipeline/module_01.py",
+      "module": "acme.pipeline.module_01",
+      "kind": "mixed",
+      "symbol_types": [
+        "class",
+        "function",
+        "method",
+        "module"
+      ],
+      "count": 4,
+      "best_score": 0.96,
+      "items": [
+        {
+          "name": "build_task_1_0",
+          "qualified_name": "acme.pipeline.module_01.build_task_1_0",
+          "path": "src/acme/pipeline/module_01.py",
+          "line": 10,
+          "end_line": 12,
+          "kind": "module",
+          "score": 0.96,
+          "rank_reason": "exact definition match for 'build_task' with score=0.96",
+          "snippet": "def build_task_1_0() -> None: ..."
+        },
+        {
+          "name": "build_task_1_1",
+          "qualified_name": "acme.pipeline.module_01.build_task_1_1",
+          "path": "src/acme/pipeline/module_01.py",
+          "line": 16,
+          "end_line": 18,
+          "kind": "function",
+          "score": 0.95,
+          "rank_reason": "exact definition match for 'build_task' with score=0.95",
+          "snippet": "def build_task_1_1() -> None: ..."
+        }
+      ]
+    },
+    {
+      "match_type": "exact",
+      "role": "definition",
+      "path": "src/acme/pipeline/module_02.py",
+      "module": "acme.pipeline.module_02",
+      "kind": "mixed",
+      "symbol_types": [
+        "class",
+        "function",
+        "variable",
+        "module"
+      ],
+      "count": 4,
+      "best_score": 0.92,
+      "items": [
+        {
+          "name": "build_task_2_0",
+          "qualified_name": "acme.pipeline.module_02.build_task_2_0",
+          "path": "src/acme/pipeline/module_02.py",
+          "line": 10,
+          "end_line": 12,
+          "kind": "variable",
+          "score": 0.92,
+          "rank_reason": "exact definition match for 'build_task' with score=0.92",
+          "snippet": "def build_task_2_0() -> None: ..."
+        },
+        {
+          "name": "build_task_2_1",
+          "qualified_name": "acme.pipeline.module_02.build_task_2_1",
+          "path": "src/acme/pipeline/module_02.py",
+          "line": 16,
+          "end_line": 18,
+          "kind": "module",
+          "score": 0.91,
+          "rank_reason": "exact definition match for 'build_task' with score=0.91",
+          "snippet": "def build_task_2_1() -> None: ..."
+        }
+      ]
+    },
+    {
+      "match_type": "exact",
+      "role": "definition",
+      "path": "src/acme/pipeline/module_03.py",
+      "module": "acme.pipeline.module_03",
+      "kind": "mixed",
+      "symbol_types": [
+        "function",
+        "method",
+        "variable",
+        "module"
+      ],
+      "count": 4,
+      "best_score": 0.88,
+      "items": [
+        {
+          "name": "build_task_3_0",
+          "qualified_name": "acme.pipeline.module_03.build_task_3_0",
+          "path": "src/acme/pipeline/module_03.py",
+          "line": 10,
+          "end_line": 12,
+          "kind": "method",
+          "score": 0.88,
+          "rank_reason": "exact definition match for 'build_task' with score=0.88",
+          "snippet": "def build_task_3_0() -> None: ..."
+        },
+        {
+          "name": "build_task_3_1",
+          "qualified_name": "acme.pipeline.module_03.build_task_3_1",
+          "path": "src/acme/pipeline/module_03.py",
+          "line": 16,
+          "end_line": 18,
+          "kind": "variable",
+          "score": 0.87,
+          "rank_reason": "exact definition match for 'build_task' with score=0.87",
+          "snippet": "def build_task_3_1() -> None: ..."
+        }
+      ]
+    },
+    {
+      "match_type": "exact",
+      "role": "definition",
+      "path": "src/acme/pipeline/module_04.py",
+      "module": "acme.pipeline.module_04",
+      "kind": "mixed",
+      "symbol_types": [
+        "class",
+        "method",
+        "variable",
+        "module"
+      ],
+      "count": 4,
+      "best_score": 0.84,
+      "items": [
+        {
+          "name": "build_task_4_0",
+          "qualified_name": "acme.pipeline.module_04.build_task_4_0",
+          "path": "src/acme/pipeline/module_04.py",
+          "line": 10,
+          "end_line": 12,
+          "kind": "class",
+          "score": 0.84,
+          "rank_reason": "exact definition match for 'build_task' with score=0.84",
+          "snippet": "def build_task_4_0() -> None: ..."
+        },
+        {
+          "name": "build_task_4_1",
+          "qualified_name": "acme.pipeline.module_04.build_task_4_1",
+          "path": "src/acme/pipeline/module_04.py",
+          "line": 16,
+          "end_line": 18,
+          "kind": "method",
+          "score": 0.83,
+          "rank_reason": "exact definition match for 'build_task' with score=0.83",
+          "snippet": "def build_task_4_1() -> None: ..."
+        }
+      ]
+    },
+    {
+      "match_type": "exact",
+      "role": "definition",
+      "path": "src/acme/pipeline/module_05.py",
+      "module": "acme.pipeline.module_05",
+      "kind": "mixed",
+      "symbol_types": [
+        "class",
+        "function",
+        "method",
+        "variable"
+      ],
+      "count": 4,
+      "best_score": 0.8,
+      "items": [
+        {
+          "name": "build_task_5_0",
+          "qualified_name": "acme.pipeline.module_05.build_task_5_0",
+          "path": "src/acme/pipeline/module_05.py",
+          "line": 10,
+          "end_line": 12,
+          "kind": "function",
+          "score": 0.8,
+          "rank_reason": "exact definition match for 'build_task' with score=0.80",
+          "snippet": "def build_task_5_0() -> None: ..."
+        },
+        {
+          "name": "build_task_5_1",
+          "qualified_name": "acme.pipeline.module_05.build_task_5_1",
+          "path": "src/acme/pipeline/module_05.py",
+          "line": 16,
+          "end_line": 18,
+          "kind": "class",
+          "score": 0.79,
+          "rank_reason": "exact definition match for 'build_task' with score=0.79",
+          "snippet": "def build_task_5_1() -> None: ..."
+        }
+      ]
+    }
+  ],
+  "omitted_count": 12,
+  "original_result_id": "stored-symbols-1",
+  "retrieval_available": true,
+  "retrieval_hints": [
+    "Refine symbol query 'build_task' or request a narrower limit/cursor window.",
+    "Use retrieve_result('stored-symbols-1') for full results."
+  ],
+  "confidence": "high",
+  "warnings": [],
+  "stats": {
+    "total_results": 24,
+    "returned_results": 12,
+    "total_groups": 6,
+    "groups_returned": 6,
+    "raw_token_estimate": 1714
+  }
+}

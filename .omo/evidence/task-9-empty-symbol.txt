@@ -1,0 +1,17 @@
+{
+  "kind": "symbol_search",
+  "mode": "exact",
+  "summary": "No symbol results for 'build_task'.",
+  "items": [],
+  "omitted_count": 0,
+  "original_result_id": null,
+  "retrieval_available": false,
+  "retrieval_hints": [],
+  "confidence": "high",
+  "warnings": [],
+  "stats": {
+    "total_results": 0,
+    "returned_results": 0,
+    "groups_returned": 0
+  }
+}
