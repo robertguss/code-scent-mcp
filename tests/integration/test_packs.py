@@ -49,6 +49,7 @@ def test_python_pack_registers_parser_rules_and_context_without_behavior_regress
         "typescript",
     )
     assert tuple(pack.name for pack in registry.rule_packs) == (
+        "architecture",
         "python-maintainability",
         "ts-react-next",
     )

@@ -26,6 +26,7 @@ RELATED_REASON_WEIGHTS = {
     "test_match": 0.7,
     "import_graph": 0.65,
     "git_history": 0.6,
+    "co_change": 0.62,
     "directory_proximity": 0.35,
     "search_similarity": 0.3,
 }

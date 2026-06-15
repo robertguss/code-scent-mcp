@@ -8,6 +8,7 @@ from codescent.engine.inventory import build_file_inventory
 from codescent.engine.packs_ts import parse_typescript_file
 from codescent.engine.rules.model import CodeHealthFinding, FindingSpec, build_finding
 from codescent.engine.rules.ts_react_next_patterns import secondary_findings
+from codescent.engine.source_read import read_source_lines
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -35,7 +36,10 @@ def scan_ts_react_next_health(
         if item.language not in {"javascript", "typescript"}:
             continue
         parsed = parse_typescript_file(repo_root / item.path, item.path)
-        lines = (repo_root / item.path).read_text().splitlines()
+        source = read_source_lines(repo_root / item.path)
+        if source.lines is None:
+            continue
+        lines = list(source.lines)
         findings.extend(_large_components(parsed))
         findings.extend(_too_many_hooks(parsed, lines))
         findings.extend(_too_many_props(parsed, lines))

@@ -1,10 +1,21 @@
+import json
 import sqlite3
 from contextlib import closing
+from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
+import pytest
+
+import codescent.services.findings as findings_module
 from codescent.core.models import FindingStatus
 from codescent.services.code_health import CodeHealthService
-from codescent.services.findings import FindingsService
+from codescent.services.findings import (
+    MAX_VERIFICATION_OUTPUT_SUMMARY_CHARS,
+    FindingsService,
+)
+from codescent.storage import RepositoryStorage, initialize_storage
+from codescent.storage.repositories import FindingRepository
 
 
 def test_mark_finding_persists_status(tmp_path: Path) -> None:
@@ -25,11 +36,127 @@ def test_mark_finding_persists_status(tmp_path: Path) -> None:
     assert report.findings[0].events[-1].event_type == "status_changed"
 
 
+def test_finding_repository_records_verification_runs(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    finding_id = "needs-evidence"
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id=finding_id,
+            rule_id="python.todo_cluster",
+            file_path="src/pkg/config.py",
+            severity="warning",
+            line_count=10,
+        ),
+    )
+    repository = FindingRepository(RepositoryStorage(initialize_storage(repo)))
+
+    failed = repository.record_verification(
+        finding_id,
+        command="uv run pytest tests/unit/test_config.py",
+        exit_code=1,
+        output_summary="1 failed",
+    )
+    passing_after_failure = repository.has_passing_verification(finding_id)
+    passed = repository.record_verification(
+        finding_id,
+        command="uv run pytest tests/unit/test_config.py",
+        exit_code=0,
+        output_summary="1 passed",
+    )
+    runs = repository.list_verification_runs(finding_id)
+
+    assert passing_after_failure is False
+    assert repository.has_passing_verification(finding_id) is True
+    assert runs == (failed, passed)
+    assert runs[0].output_summary == "1 failed"
+    assert runs[1].exit_code == 0
+    assert all(run.created_at for run in runs)
+
+
+def test_mark_finding_gates_resolved_without_verification(tmp_path: Path) -> None:
+    repo = _repo_with_todo(tmp_path)
+    scan = CodeHealthService(repo).scan()
+    finding_id = scan.finding_ids[0]
+    service = FindingsService(repo)
+
+    marked = service.mark_finding(
+        finding_id,
+        FindingStatus.RESOLVED,
+        note="fixed locally",
+    )
+    detail = service.get_smell_report().findings[0]
+    event_details = cast(
+        "dict[str, str]",
+        json.loads(detail.events[-1].details_json),
+    )
+
+    assert marked.gated is True
+    assert marked.requested_status is FindingStatus.RESOLVED
+    assert marked.applied_status is FindingStatus.NEEDS_REVIEW
+    assert marked.status is FindingStatus.NEEDS_REVIEW
+    assert "passing verification" in marked.message
+    assert event_details["status"] == FindingStatus.NEEDS_REVIEW.value
+    assert "fixed locally" in event_details["note"]
+
+
+def test_mark_finding_allows_resolved_with_passing_verification(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_todo(tmp_path)
+    scan = CodeHealthService(repo).scan()
+    finding_id = scan.finding_ids[0]
+    _record_passing_verification(repo, finding_id)
+
+    marked = FindingsService(repo).mark_finding(
+        finding_id,
+        FindingStatus.RESOLVED,
+        note="verified",
+    )
+
+    assert marked.gated is False
+    assert marked.requested_status is FindingStatus.RESOLVED
+    assert marked.applied_status is FindingStatus.RESOLVED
+    assert _finding_lifecycle(repo, finding_id) == (FindingStatus.RESOLVED.value, True)
+
+
+def test_record_verification_bounds_summary_and_enables_resolution(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_todo(tmp_path)
+    scan = CodeHealthService(repo).scan()
+    finding_id = scan.finding_ids[0]
+    service = FindingsService(repo)
+    output_summary = "x" * (MAX_VERIFICATION_OUTPUT_SUMMARY_CHARS + 25)
+
+    recorded = service.record_verification(
+        finding_id,
+        command="uv run pytest tests/integration/test_findings.py",
+        exit_code=0,
+        output_summary=output_summary,
+    )
+    marked = service.mark_finding(
+        finding_id,
+        FindingStatus.RESOLVED,
+        note="verified",
+    )
+    runs = FindingRepository(
+        RepositoryStorage(initialize_storage(repo)),
+    ).list_verification_runs(finding_id)
+
+    assert recorded.output_truncated is True
+    assert len(recorded.output_summary) == MAX_VERIFICATION_OUTPUT_SUMMARY_CHARS
+    assert runs == (recorded.verification,)
+    assert marked.gated is False
+    assert marked.status is FindingStatus.RESOLVED
+
+
 def test_rescan_preserves_resolved_or_marks_regressed(tmp_path: Path) -> None:
     repo = _repo_with_todo(tmp_path)
     scan = CodeHealthService(repo).scan()
     finding_id = scan.finding_ids[0]
     service = FindingsService(repo)
+    _record_passing_verification(repo, finding_id)
 
     _ = service.mark_finding(finding_id, FindingStatus.RESOLVED, note="fixed")
     rescan = service.rescan()
@@ -47,6 +174,7 @@ def test_regressed_finding_clears_resolved_timestamp(tmp_path: Path) -> None:
     scan = CodeHealthService(repo).scan()
     finding_id = scan.finding_ids[0]
     service = FindingsService(repo)
+    _record_passing_verification(repo, finding_id)
 
     _ = service.mark_finding(finding_id, FindingStatus.RESOLVED, note="fixed")
     before = _finding_lifecycle(repo, finding_id)
@@ -65,6 +193,8 @@ def test_rescan_marks_absent_open_findings_resolved(tmp_path: Path) -> None:
     _ = source.write_text(
         """def load_config() -> str:
     return "ok"
+
+CONFIG = load_config()
 """,
     )
     rescan = FindingsService(repo).rescan()
@@ -110,6 +240,7 @@ def test_backlog_progress_and_regressions_survive_rescan(tmp_path: Path) -> None
     scan = CodeHealthService(repo).scan()
     finding_id = scan.finding_ids[0]
     service = FindingsService(repo)
+    _record_passing_verification(repo, finding_id)
 
     _ = service.mark_finding(finding_id, FindingStatus.RESOLVED, note="fixed")
     rescan = service.rescan()
@@ -123,6 +254,136 @@ def test_backlog_progress_and_regressions_survive_rescan(tmp_path: Path) -> None
     assert progress.total_findings == scan.findings_created
     assert progress.resolved_count == 1
     assert progress.regressed_count == 1
+
+
+def test_next_improvement_uses_hotspot_tiebreak(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="cold",
+            rule_id="python.todo_cluster",
+            file_path="src/cold.py",
+            severity="info",
+            line_count=200,
+        ),
+    )
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="hot",
+            rule_id="python.todo_cluster",
+            file_path="src/hot.py",
+            severity="info",
+            line_count=25,
+        ),
+    )
+
+    def change_counts(_repo_root: Path) -> dict[str, int]:
+        return {"src/cold.py": 1, "src/hot.py": 10}
+
+    monkeypatch.setattr(
+        findings_module,
+        "git_change_counts",
+        change_counts,
+    )
+
+    next_improvement = FindingsService(repo).get_next_improvement()
+
+    assert next_improvement is not None
+    assert next_improvement.id == "hot"
+
+
+def test_next_improvement_preserves_severity_and_rule_priority(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="hot-info",
+            rule_id="python.todo_cluster",
+            file_path="src/hot_info.py",
+            severity="info",
+            line_count=100,
+        ),
+    )
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="cold-warning",
+            rule_id="python.todo_cluster",
+            file_path="src/cold_warning.py",
+            severity="warning",
+            line_count=1,
+        ),
+    )
+
+    def severity_change_counts(_repo_root: Path) -> dict[str, int]:
+        return {"src/hot_info.py": 100, "src/cold_warning.py": 1}
+
+    monkeypatch.setattr(
+        findings_module,
+        "git_change_counts",
+        severity_change_counts,
+    )
+
+    severity_next = FindingsService(repo).get_next_improvement()
+
+    assert severity_next is not None
+    assert severity_next.id == "cold-warning"
+
+    repo = tmp_path / "rule-repo"
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="hot-lower-rule",
+            rule_id="python.changed_source_without_related_test",
+            file_path="src/hot_lower_rule.py",
+            severity="info",
+            line_count=100,
+        ),
+    )
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="cold-higher-rule",
+            rule_id="python.todo_cluster",
+            file_path="src/cold_higher_rule.py",
+            severity="info",
+            line_count=1,
+        ),
+    )
+
+    def rule_change_counts(_repo_root: Path) -> dict[str, int]:
+        return {
+            "src/hot_lower_rule.py": 100,
+            "src/cold_higher_rule.py": 1,
+        }
+
+    monkeypatch.setattr(
+        findings_module,
+        "git_change_counts",
+        rule_change_counts,
+    )
+
+    rule_next = FindingsService(repo).get_next_improvement()
+
+    assert rule_next is not None
+    assert rule_next.id == "cold-higher-rule"
+
+
+@dataclass(frozen=True, slots=True)
+class SeedFinding:
+    finding_id: str
+    rule_id: str
+    file_path: str
+    severity: str
+    line_count: int
 
 
 def _repo_with_todo(tmp_path: Path) -> Path:
@@ -140,9 +401,81 @@ def load_config() -> str:
     # FIXME: preserve compatibility
     # HACK: keep old queue name
     return STATUS
+
+CONFIG = load_config()
 """,
     )
     return repo
+
+
+def _seed_open_finding(
+    repo: Path,
+    finding: SeedFinding,
+) -> None:
+    repo.mkdir(parents=True, exist_ok=True)
+    state = initialize_storage(repo)
+    storage = RepositoryStorage(state)
+    with storage.write_transaction() as connection:
+        _ = connection.execute(
+            """
+            insert or ignore into scan_runs (
+                id,
+                started_at,
+                completed_at,
+                index_version,
+                rule_version,
+                files_scanned,
+                findings_created,
+                findings_resolved,
+                status
+            ) values ('scan', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z',
+                1, 'test', 0, 0, 0, 'complete')
+            """,
+        )
+        cursor = connection.execute(
+            """
+            insert into files (
+                path,
+                language,
+                hash,
+                size_bytes,
+                line_count,
+                is_generated,
+                is_test
+            ) values (?, 'python', ?, 1, ?, 0, 0)
+            """,
+            (finding.file_path, finding.finding_id, finding.line_count),
+        )
+        file_id = cursor.lastrowid
+        _ = connection.execute(
+            """
+            insert into findings (
+                id,
+                stable_key,
+                rule_id,
+                file_id,
+                severity,
+                confidence,
+                status,
+                title,
+                message,
+                evidence_json,
+                suggested_action,
+                first_seen_scan_id,
+                last_seen_scan_id
+            ) values (?, ?, ?, ?, ?, 0.8, 'open', ?, ?, ?, '', 'scan', 'scan')
+            """,
+            (
+                finding.finding_id,
+                f"{finding.rule_id}:{finding.file_path}:{finding.finding_id}",
+                finding.rule_id,
+                file_id,
+                finding.severity,
+                finding.finding_id,
+                finding.finding_id,
+                json.dumps({"line_count": finding.line_count}),
+            ),
+        )
 
 
 def _finding_lifecycle(repo: Path, finding_id: str) -> tuple[str, bool]:
@@ -154,3 +487,13 @@ def _finding_lifecycle(repo: Path, finding_id: str) -> tuple[str, bool]:
     assert len(rows) == 1
     row = rows[0]
     return (row[0], row[1] is not None)
+
+
+def _record_passing_verification(repo: Path, finding_id: str) -> None:
+    repository = FindingRepository(RepositoryStorage(initialize_storage(repo)))
+    _ = repository.record_verification(
+        finding_id,
+        command="uv run pytest tests/integration/test_findings.py",
+        exit_code=0,
+        output_summary="focused tests passed",
+    )

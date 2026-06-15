@@ -90,6 +90,9 @@ POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "get_changed_file_health",
         "retrieve_result",
         "context_stats",
+        "select_tests",
+        "start_task",
+        "record_verification",
     },
 )
 
@@ -114,6 +117,9 @@ REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "get_changed_file_health",
         "retrieve_result",
         "context_stats",
+        "select_tests",
+        "start_task",
+        "record_verification",
     },
 )
 
@@ -181,6 +187,9 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _registered_post_mvp_entry("get_changed_file_health", "risk"),
         _registered_post_mvp_entry("retrieve_result", "context"),
         _registered_post_mvp_entry("context_stats", "health"),
+        _registered_post_mvp_entry("select_tests", "planning"),
+        _registered_post_mvp_entry("start_task", "repository"),
+        _registered_post_mvp_entry("record_verification", "health"),
     ),
     cli_commands=(
         _mvp_entry("init", "repository"),

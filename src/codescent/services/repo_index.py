@@ -53,6 +53,7 @@ class RepoIndexService:
         with RepositoryStorage(state).write_transaction() as connection:
             _ = connection.execute("delete from files")
             _ = connection.execute("delete from symbols")
+            _ = connection.execute("delete from imports")
             _ = connection.execute("delete from symbol_references")
             _ = connection.execute("delete from call_edges")
             for item in inventory:
@@ -132,6 +133,26 @@ def _persist_python_graph(
             ),
         )
         symbol_ids[symbol.qualified_name] = _lastrowid(cursor)
+
+    for imported in parsed.imports:
+        _ = connection.execute(
+            """
+            insert into imports (
+                source_file_id,
+                imported_path,
+                imported_symbol,
+                resolved_file_id,
+                confidence
+            ) values (?, ?, ?, ?, ?)
+            """,
+            (
+                file_id,
+                imported.module,
+                imported.name,
+                None,
+                imported.confidence,
+            ),
+        )
 
     for reference in parsed.references:
         _ = connection.execute(

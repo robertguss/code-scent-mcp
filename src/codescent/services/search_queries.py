@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Final
 
 from codescent.core.models import PageOptions, ProjectConfig
 from codescent.engine.inventory import build_file_inventory
+from codescent.engine.source_read import read_source_lines
 from codescent.services.search_support import (
     TestSearchResultPayload,
     TodoSearchResultPayload,
@@ -42,7 +43,10 @@ def search_todos_for_repo(
     project_config = config or ProjectConfig()
     results: list[TodoSearchResultPayload] = []
     for item in build_file_inventory(repo_root, config=project_config):
-        lines = (repo_root / item.path).read_text().splitlines()
+        source = read_source_lines(repo_root / item.path)
+        if source.lines is None:
+            continue
+        lines = list(source.lines)
         for line_number, line in enumerate(lines, start=1):
             marker_match = TODO_PATTERN.search(line)
             if marker_match is None:
@@ -76,7 +80,10 @@ def search_tests_for_repo(
     for item in build_file_inventory(repo_root, config=project_config):
         if not is_test_path(item.path):
             continue
-        lines = (repo_root / item.path).read_text().splitlines()
+        source = read_source_lines(repo_root / item.path)
+        if source.lines is None:
+            continue
+        lines = list(source.lines)
         score, reasons, matched_snippet = rank_test_file(item.path, lines, terms)
         if score <= 0:
             continue

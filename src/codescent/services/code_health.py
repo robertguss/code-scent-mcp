@@ -13,8 +13,15 @@ from codescent.engine.rules.model import (
     FindingSpec,
     build_finding,
 )
+from codescent.engine.source_read import read_source_lines
 from codescent.services.config import ConfigService
+from codescent.services.coverage import coverage_findings
 from codescent.services.repo_index import RepoIndexService
+from codescent.services.search_queries import (
+    is_test_path,
+    rank_test_file,
+    split_test_terms,
+)
 from codescent.storage import RepositoryStorage, initialize_storage
 
 if TYPE_CHECKING:
@@ -40,13 +47,16 @@ class CodeHealthService:
     def scan(self) -> CodeHealthScanResult:
         index_result = RepoIndexService(self.repo_root).index_repo()
         state = initialize_storage(self.repo_root)
-        registry = build_pack_registry(ConfigService(state.repo_root).load())
+        config = ConfigService(state.repo_root).load()
+        registry = build_pack_registry(config)
         findings = (
             *registry.scan_rule_packs(state.repo_root),
             *_changed_source_without_related_tests(
+                state.repo_root,
                 index_result.changed_files,
                 set(index_result.file_hashes),
             ),
+            *coverage_findings(state.repo_root, coverage_path=config.coverage_path),
         )
         scan_id = uuid4().hex
         now = datetime.now(UTC).isoformat()
@@ -150,6 +160,7 @@ class CodeHealthService:
 
 
 def _changed_source_without_related_tests(
+    repo_root: Path,
     changed_files: tuple[str, ...],
     indexed_paths: set[str],
 ) -> tuple[CodeHealthFinding, ...]:
@@ -170,7 +181,8 @@ def _changed_source_without_related_tests(
             ),
         )
         for path in changed_files
-        if _is_python_source(path) and _expected_test_path(path) not in indexed_paths
+        if _is_python_source(path)
+        and not _has_likely_test(repo_root, path, indexed_paths)
     )
 
 
@@ -182,6 +194,31 @@ def _is_python_source(path: str) -> bool:
 def _expected_test_path(path: str) -> str:
     stem = path.rsplit("/", maxsplit=1)[-1].removesuffix(".py")
     return f"tests/test_{stem}.py"
+
+
+def _has_likely_test(
+    repo_root: Path,
+    source_path: str,
+    indexed_paths: set[str],
+) -> bool:
+    terms = split_test_terms(source_path)
+    for test_path in sorted(indexed_paths):
+        if not is_test_path(test_path):
+            continue
+        try:
+            source = read_source_lines(repo_root / test_path)
+        except OSError:
+            continue
+        if source.lines is None:
+            continue
+        lines = list(source.lines)
+        _, reasons, _ = rank_test_file(test_path, lines, terms)
+        if any(
+            reason in {"content_match", "path_match", "symbol_match"}
+            for reason in reasons
+        ):
+            return True
+    return False
 
 
 def _previous_lifecycle(

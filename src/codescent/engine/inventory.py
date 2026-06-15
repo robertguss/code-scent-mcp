@@ -4,6 +4,7 @@ from typing import Final
 
 from codescent.core.models import IndexedFile, ProjectConfig
 from codescent.core.paths import resolve_repo_root
+from codescent.engine.source_read import read_source_bytes
 
 DEFAULT_EXCLUDED_NAMES: Final = frozenset(
     {
@@ -68,7 +69,10 @@ def build_file_inventory(
         if language is None:
             continue
 
-        content = path.read_bytes()
+        source = read_source_bytes(path)
+        content = source.content
+        if content is None:
+            continue
         if _is_binary(content):
             continue
 
@@ -78,7 +82,7 @@ def build_file_inventory(
                 path=relative,
                 language=language,
                 hash=hashlib.sha256(content).hexdigest(),
-                size_bytes=len(content),
+                size_bytes=source.size_bytes,
                 line_count=_line_count(content),
                 is_test=_is_test_path(relative),
                 is_generated=False,

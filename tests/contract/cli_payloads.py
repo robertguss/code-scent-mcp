@@ -98,3 +98,16 @@ class CiPayload(BaseModel):
     risk_level: str
     changed_file_health: tuple[dict[str, JsonValue], ...]
     suggested_tests: tuple[str, ...]
+
+
+class CiBaselinePayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    files_recorded: int
+    finding_count: int
+
+
+class CiRatchetPayload(CiPayload):
+    ratchet_enabled: bool
+    ratchet_regressions: tuple[dict[str, JsonValue], ...]

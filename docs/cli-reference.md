@@ -144,6 +144,18 @@ is exceeded.
 uv run codescent ci --repo "$repo" --format json --threshold high
 ```
 
+To gate only new or worsened findings, seed the per-file health baseline before
+enabling ratchet mode:
+
+```bash
+uv run codescent ci --repo "$repo" --update-baseline
+uv run codescent ci --repo "$repo" --ratchet
+```
+
+The baseline records each indexed file's current finding count. Ratchet mode
+fails when a file exceeds its stored count; omitting `--ratchet` keeps the
+default threshold behavior.
+
 ### `review-diff`
 
 Runs the diff review report without threshold failure semantics.

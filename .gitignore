@@ -31,3 +31,6 @@ htmlcov/
 
 # CodeScent runtime state
 .codescent/
+
+# bv (beads viewer) local config and caches
+.bv/

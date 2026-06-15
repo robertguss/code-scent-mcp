@@ -8,12 +8,15 @@ from codescent.core.models import ProjectConfig
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.parsers.python import parse_python_file
+from codescent.engine.rules.dead_code import scan_dead_code
 from codescent.engine.rules.model import (
     CodeHealthFinding,
     FindingSpec,
     build_finding,
 )
 from codescent.engine.rules.python_patterns import secondary_findings
+from codescent.engine.rules.structural_duplicates import structural_duplicate_findings
+from codescent.engine.source_read import read_source_text
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -41,12 +44,17 @@ def scan_python_health(
             continue
         parsed = parse_python_file(repo_root / item.path, item.path)
         source_path = repo_root / parsed.path
-        lines = source_path.read_text().splitlines()
+        source = read_source_text(source_path)
+        if source.text is None:
+            continue
+        lines = source.text.splitlines()
         findings.extend(_large_file(parsed, len(lines)))
         findings.extend(_symbol_size_findings(parsed))
         findings.extend(_todo_cluster(parsed, lines))
-        findings.extend(_duplicate_literals(parsed, source_path))
-        findings.extend(secondary_findings(parsed, source_path, lines))
+        findings.extend(_duplicate_literals(parsed, source.text))
+        findings.extend(secondary_findings(parsed, source.text, lines))
+    findings.extend(structural_duplicate_findings(repo_root, config=project_config))
+    findings.extend(scan_dead_code(repo_root, config=project_config))
     return tuple(findings)
 
 
@@ -153,10 +161,10 @@ def _todo_cluster(
 
 def _duplicate_literals(
     parsed: ParsedPythonFile,
-    source_path: Path,
+    source_text: str,
 ) -> tuple[CodeHealthFinding, ...]:
     try:
-        tree = ast.parse(source_path.read_text(), filename=parsed.path)
+        tree = ast.parse(source_text, filename=parsed.path)
     except SyntaxError:
         return ()
     literals = Counter(

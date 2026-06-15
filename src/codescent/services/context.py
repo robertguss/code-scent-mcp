@@ -7,6 +7,8 @@ from codescent.core.models import PageOptions
 from codescent.core.paths import normalize_repo_path, resolve_repo_root
 from codescent.engine.context import source_range
 from codescent.services.context_support import (
+    LOW_CONFIDENCE_THRESHOLD,
+    MIN_RELATED_TERM_LENGTH,
     SOURCE_LINE_CAP,
     FileContextPayload,
     GraphResultPayload,
@@ -17,28 +19,27 @@ from codescent.services.context_support import (
     SymbolMatchPayload,
     add_related_reason,
     ensure_graph_indexed,
-    file_by_path,
-    file_ranges,
-    file_summary,
-    find_qualified_symbol,
     graph_payload,
     import_text,
-    imports_between,
     like,
-    likely_tests,
-    matches_symbol,
     related_file_payload,
-    risk_notes,
     same_directory,
-    similar_source_terms,
-    symbol_payload,
 )
-from codescent.services.git import git_related_paths
-from codescent.services.symbols import SymbolService
+from codescent.services.git import git_co_change_counts, git_related_paths
+from codescent.services.symbols import (
+    ensure_symbols_indexed,
+    read_persisted_file_symbols,
+    read_persisted_symbol,
+    read_persisted_symbols,
+)
 from codescent.storage import RepositoryStorage
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+type PersistedFileRow = tuple[str, int]
+type PersistedImportRow = tuple[str, str | None]
+type PersistedTextRow = tuple[str, str]
 
 __all__ = [
     "ContextService",
@@ -58,60 +59,61 @@ class ContextService:
         *,
         limit: int = 20,
     ) -> tuple[SymbolMatchPayload, ...]:
-        files = SymbolService(self.repo_root).extract().files
-        matches = [
-            symbol_payload(parsed, symbol)
-            for parsed in files
-            for symbol in parsed.symbols
-            if matches_symbol(query, symbol)
-        ]
-        return tuple(matches[: min(max(limit, 1), 20)])
+        return read_persisted_symbols(self.repo_root, query, limit=limit)
 
     def get_file_context(self, path: str) -> FileContextPayload:
         repo_root = resolve_repo_root(self.repo_root)
         relative_path = (
             normalize_repo_path(repo_root, path).relative_to(repo_root).as_posix()
         )
-        files = SymbolService(repo_root).extract().files
-        parsed = file_by_path(files, relative_path)
-        tests = likely_tests(files, parsed)
+        if not _persisted_file_exists(repo_root, relative_path):
+            raise LookupError(relative_path)
+        symbols = read_persisted_file_symbols(repo_root, relative_path)
+        imports = _persisted_file_imports(repo_root, relative_path)
+        tests = _persisted_file_likely_tests(repo_root, relative_path)
+        related_rows = _related_rows(
+            _persisted_related_reason_map(repo_root, relative_path, tests),
+            relative_path,
+        )
         return {
-            "path": parsed.path,
-            "summary": file_summary(parsed),
-            "symbols": tuple(symbol.name for symbol in parsed.symbols),
-            "imports": tuple(
-                import_text(imported.module, imported.name)
-                for imported in parsed.imports
-            ),
+            "path": relative_path,
+            "summary": _persisted_file_summary(relative_path, symbols),
+            "symbols": tuple(symbol["name"] for symbol in symbols),
+            "imports": tuple(import_text(module, name) for module, name in imports),
             "likely_tests": tests,
-            "related_files": tests,
+            "related_files": tuple(item["path"] for item in related_rows),
             "source_ranges": tuple(
-                item.to_payload() for item in file_ranges(repo_root, parsed)
+                source_range(
+                    repo_root,
+                    symbol["path"],
+                    start_line=symbol["start_line"],
+                    end_line=symbol["end_line"],
+                    line_cap=SOURCE_LINE_CAP,
+                ).to_payload()
+                for symbol in symbols[:2]
             ),
-            "risk_notes": risk_notes(parsed),
+            "risk_notes": _persisted_risk_notes(repo_root, relative_path),
             "next_tools": tuple(
-                f"get_symbol_context:{symbol.qualified_name}"
-                for symbol in parsed.symbols
+                f"get_symbol_context:{symbol['qualified_name']}" for symbol in symbols
             ),
         }
 
     def get_symbol_context(self, qualified_name: str) -> SymbolContextPayload:
         repo_root = resolve_repo_root(self.repo_root)
-        files = SymbolService(repo_root).extract().files
-        parsed, symbol = find_qualified_symbol(files, qualified_name)
+        symbol = read_persisted_symbol(repo_root, qualified_name)
         return {
-            "symbol": symbol_payload(parsed, symbol),
-            "likely_tests": likely_tests(files, parsed, symbol.name),
+            "symbol": symbol,
+            "likely_tests": _persisted_likely_tests(repo_root, symbol["name"]),
             "source_ranges": (
                 source_range(
                     repo_root,
-                    parsed.path,
-                    start_line=symbol.start_line,
-                    end_line=symbol.end_line,
+                    symbol["path"],
+                    start_line=symbol["start_line"],
+                    end_line=symbol["end_line"],
                     line_cap=SOURCE_LINE_CAP,
                 ).to_payload(),
             ),
-            "risk_notes": risk_notes(parsed),
+            "risk_notes": _persisted_risk_notes(repo_root, symbol["path"]),
         }
 
     def find_references(
@@ -213,34 +215,269 @@ class ContextService:
         relative_path = (
             normalize_repo_path(repo_root, path).relative_to(repo_root).as_posix()
         )
-        files = SymbolService(repo_root).extract().files
-        target = file_by_path(files, relative_path)
-        reasons: dict[str, set[str]] = {}
+        if not _persisted_file_exists(repo_root, relative_path):
+            raise LookupError(relative_path)
+        reasons = _persisted_related_reason_map(
+            repo_root,
+            relative_path,
+            _persisted_file_likely_tests(repo_root, relative_path),
+        )
 
-        for related_path in likely_tests(files, target):
-            add_related_reason(reasons, related_path, "test_match")
-        for candidate in files:
-            if candidate.path == target.path:
-                continue
-            if imports_between(target, candidate):
-                add_related_reason(reasons, candidate.path, "import_graph")
-            if same_directory(target.path, candidate.path):
-                add_related_reason(reasons, candidate.path, "directory_proximity")
-            if similar_source_terms(target, candidate):
-                add_related_reason(reasons, candidate.path, "search_similarity")
-        for related_path in git_related_paths(repo_root, target.path):
-            add_related_reason(reasons, related_path, "git_history")
-
-        rows = _related_rows(reasons, target.path)
+        rows = _related_rows(reasons, relative_path)
         visible_rows = rows[page.offset : page.offset + page.limit]
         next_cursor = (
             page.offset + page.limit if page.offset + page.limit < len(rows) else None
         )
         return {
-            "path": target.path,
+            "path": relative_path,
             "results": tuple(visible_rows),
             "next_cursor": next_cursor,
         }
+
+
+def _persisted_file_exists(repo_root: Path, path: str) -> bool:
+    state = ensure_symbols_indexed(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        rows: list[tuple[int]] = connection.execute(
+            """
+            select 1
+            from files
+            where path = ?
+            limit 1
+            """,
+            (path,),
+        ).fetchall()
+    return bool(rows)
+
+
+def _persisted_file_imports(
+    repo_root: Path, path: str
+) -> tuple[PersistedImportRow, ...]:
+    state = ensure_symbols_indexed(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        rows: list[PersistedImportRow] = connection.execute(
+            """
+            select imports.imported_path, imports.imported_symbol
+            from imports
+            join files on files.id = imports.source_file_id
+            where files.path = ?
+            order by imports.id
+            """,
+            (path,),
+        ).fetchall()
+    return tuple(rows)
+
+
+def _persisted_file_summary(
+    path: str,
+    symbols: tuple[SymbolMatchPayload, ...],
+) -> str:
+    symbol_names = ", ".join(symbol["name"] for symbol in symbols) or "no symbols"
+    return f"{path} defines {symbol_names}."
+
+
+def _persisted_file_likely_tests(repo_root: Path, path: str) -> tuple[str, ...]:
+    module = _module_name(path)
+    module_tail = module.rsplit(".", maxsplit=1)[-1]
+    candidates: list[str] = []
+    for candidate_path, imported_modules in _persisted_imports_by_path(
+        repo_root,
+        test_only=True,
+    ).items():
+        if module in imported_modules or module_tail in candidate_path:
+            candidates.append(candidate_path)
+    return tuple(sorted(dict.fromkeys(candidates)))
+
+
+def _persisted_related_reason_map(
+    repo_root: Path,
+    target_path: str,
+    likely_test_paths: tuple[str, ...],
+) -> dict[str, set[str]]:
+    reasons: dict[str, set[str]] = {}
+    target_module = _module_name(target_path)
+    imports_by_path = _persisted_imports_by_path(repo_root)
+    target_imports = imports_by_path.get(target_path, set())
+    symbols_by_path = _persisted_symbols_by_path(repo_root)
+    references_by_path = _persisted_references_by_path(repo_root)
+    target_terms = _persisted_source_terms(
+        target_path,
+        symbols_by_path=symbols_by_path,
+        references_by_path=references_by_path,
+    )
+
+    for related_path in likely_test_paths:
+        add_related_reason(reasons, related_path, "test_match")
+    for candidate_path, _is_test in _persisted_file_rows(repo_root):
+        if candidate_path == target_path:
+            continue
+        candidate_imports = imports_by_path.get(candidate_path, set())
+        if (
+            _module_name(candidate_path) in target_imports
+            or target_module in candidate_imports
+        ):
+            add_related_reason(reasons, candidate_path, "import_graph")
+        if same_directory(target_path, candidate_path):
+            add_related_reason(reasons, candidate_path, "directory_proximity")
+        candidate_terms = _persisted_source_terms(
+            candidate_path,
+            symbols_by_path=symbols_by_path,
+            references_by_path=references_by_path,
+        )
+        if target_terms & candidate_terms:
+            add_related_reason(reasons, candidate_path, "search_similarity")
+    for related_path in git_related_paths(repo_root, target_path):
+        add_related_reason(reasons, related_path, "git_history")
+    for related_path, _count in git_co_change_counts(repo_root, target_path):
+        add_related_reason(reasons, related_path, "co_change")
+
+    return reasons
+
+
+def _persisted_file_rows(repo_root: Path) -> tuple[PersistedFileRow, ...]:
+    state = ensure_symbols_indexed(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        rows: list[PersistedFileRow] = connection.execute(
+            """
+            select path, is_test
+            from files
+            order by path
+            """,
+        ).fetchall()
+    return tuple(rows)
+
+
+def _persisted_imports_by_path(
+    repo_root: Path,
+    *,
+    test_only: bool = False,
+) -> dict[str, set[str]]:
+    state = ensure_symbols_indexed(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        if test_only:
+            rows: list[PersistedTextRow] = connection.execute(
+                """
+                select files.path, imports.imported_path
+                from imports
+                join files on files.id = imports.source_file_id
+                where files.is_test = 1
+                order by files.path, imports.id
+                """,
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                select files.path, imports.imported_path
+                from imports
+                join files on files.id = imports.source_file_id
+                order by files.path, imports.id
+                """,
+            ).fetchall()
+    imports_by_path: dict[str, set[str]] = {}
+    for source_path, imported_path in rows:
+        imports_by_path.setdefault(source_path, set()).add(
+            _normalized_import_module(imported_path),
+        )
+    return imports_by_path
+
+
+def _persisted_symbols_by_path(repo_root: Path) -> dict[str, set[str]]:
+    state = ensure_symbols_indexed(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        rows: list[PersistedTextRow] = connection.execute(
+            """
+            select files.path, symbols.name
+            from symbols
+            join files on files.id = symbols.file_id
+            order by files.path, symbols.name
+            """,
+        ).fetchall()
+    symbols_by_path: dict[str, set[str]] = {}
+    for path, symbol_name in rows:
+        symbols_by_path.setdefault(path, set()).add(symbol_name)
+    return symbols_by_path
+
+
+def _persisted_references_by_path(repo_root: Path) -> dict[str, set[str]]:
+    state = ensure_symbols_indexed(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        rows: list[PersistedTextRow] = connection.execute(
+            """
+            select files.path, symbol_references.reference_text
+            from symbol_references
+            join files on files.id = symbol_references.source_file_id
+            order by files.path, symbol_references.reference_text
+            """,
+        ).fetchall()
+    references_by_path: dict[str, set[str]] = {}
+    for path, reference_text in rows:
+        references_by_path.setdefault(path, set()).add(reference_text)
+    return references_by_path
+
+
+def _persisted_source_terms(
+    path: str,
+    *,
+    symbols_by_path: dict[str, set[str]],
+    references_by_path: dict[str, set[str]],
+) -> set[str]:
+    terms: set[str] = set(_module_name(path).replace(".", "_").split("_"))
+    for symbol_name in symbols_by_path.get(path, set()):
+        terms.update(symbol_name.lower().split("_"))
+    for reference_text in references_by_path.get(path, set()):
+        terms.update(reference_text.lower().split("_"))
+    return {term for term in terms if len(term) >= MIN_RELATED_TERM_LENGTH}
+
+
+def _module_name(path: str) -> str:
+    without_suffix = path.rsplit(".", maxsplit=1)[0]
+    raw_parts = tuple(part for part in without_suffix.split("/") if part)
+    if path.endswith((".py", ".pyi")):
+        python_parts = tuple(part for part in raw_parts if part != "__init__")
+        parts = python_parts[1:] if python_parts[:1] == ("src",) else python_parts
+        return ".".join(parts)
+    return ".".join(raw_parts)
+
+
+def _normalized_import_module(module: str) -> str:
+    return module.lstrip(".")
+
+
+def _persisted_likely_tests(repo_root: Path, symbol_name: str) -> tuple[str, ...]:
+    state = ensure_symbols_indexed(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        rows: list[tuple[str]] = connection.execute(
+            """
+            select distinct files.path
+            from files
+            join symbol_references
+                on symbol_references.source_file_id = files.id
+            where files.is_test = 1
+                and symbol_references.reference_text = ?
+            order by files.path
+            """,
+            (symbol_name,),
+        ).fetchall()
+    return tuple(path for (path,) in rows)
+
+
+def _persisted_risk_notes(repo_root: Path, path: str) -> tuple[str, ...]:
+    state = ensure_symbols_indexed(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        low_confidence_rows: list[tuple[int]] = connection.execute(
+            """
+            select 1
+            from symbol_references
+            join files on files.id = symbol_references.source_file_id
+            where files.path = ?
+                and symbol_references.confidence < ?
+            limit 1
+            """,
+            (path, LOW_CONFIDENCE_THRESHOLD),
+        ).fetchall()
+    if low_confidence_rows:
+        return ("low-confidence references omitted from caller/callee claims",)
+    return ()
 
 
 def _related_rows(

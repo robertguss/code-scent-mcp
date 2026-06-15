@@ -4,6 +4,11 @@ from shutil import which
 
 from codescent.services.repo_index import RepoIndexService
 from codescent.services.status import RepoStatusService
+from codescent.services.symbols import (
+    read_persisted_file_symbols,
+    read_persisted_symbol,
+    read_persisted_symbols,
+)
 from codescent.storage import RepositoryStorage, initialize_storage
 
 
@@ -172,8 +177,44 @@ def process_order() -> None:
             order by call_text
             """,
         ).fetchall()
+        import_rows: list[tuple[str, str | None, float]] = connection.execute(
+            """
+            select imported_path, imported_symbol, confidence
+            from imports
+            order by imported_path, imported_symbol
+            """,
+        ).fetchall()
 
     assert ("print", 5, 0.4) in reference_rows
     assert ("send_event", 4, 0.4) in reference_rows
     assert ("print", 5, 0.4) in call_rows
     assert ("send_event", 4, 0.4) in call_rows
+    assert ("helper", "send_event", 1.0) in import_rows
+
+
+def test_persisted_symbol_readers_return_context_payload_fields(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """def run() -> str:
+    return "ok"
+""",
+    )
+
+    _ = RepoIndexService(repo).index_repo()
+    expected = {
+        "name": "run",
+        "qualified_name": "app.run",
+        "kind": "function",
+        "path": "src/app.py",
+        "start_line": 1,
+        "end_line": 2,
+        "confidence": 1.0,
+    }
+
+    assert read_persisted_symbols(repo, "run") == (expected,)
+    assert read_persisted_symbol(repo, "app.run") == expected
+    assert read_persisted_file_symbols(repo, "src/app.py") == (expected,)

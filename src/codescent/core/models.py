@@ -75,6 +75,19 @@ class LlmSettings(BaseModel):
     model: str
 
 
+class ArchitectureRule(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    layer: str
+    forbidden_imports: tuple[str, ...] = ()
+
+
+class ArchitectureRules(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    rules: tuple[ArchitectureRule, ...] = ()
+
+
 class ProjectConfig(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
@@ -86,9 +99,11 @@ class ProjectConfig(BaseModel):
     language_packs: tuple[str, ...] = ("python", "typescript")
     framework_packs: tuple[str, ...] = ()
     rule_packs: tuple[str, ...] = ("python-maintainability", "ts-react-next")
+    coverage_path: str = "coverage.xml"
     commands: CommandHints = Field(default_factory=CommandHints)
     token_budgets: TokenBudgets = Field(default_factory=TokenBudgets)
     privacy: PrivacySettings = Field(default_factory=PrivacySettings)
+    architecture: ArchitectureRules = Field(default_factory=ArchitectureRules)
     llm: LlmSettings | None = None
 
     def with_overrides(

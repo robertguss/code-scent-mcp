@@ -118,6 +118,72 @@
       "rule_id": "python.missing_nearby_test",
       "file": "src/acme_tasks/storage.py",
       "symbol": "acme_tasks.storage.save_plan"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-EXPORT-FIELD-NAMES",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/oversized.py",
+      "symbol": "acme_tasks.oversized.export_field_names"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-LOAD-EXPORT-ROWS",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/oversized.py",
+      "symbol": "acme_tasks.oversized.load_export_rows"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-SAVE-EXPORT-ROWS",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/oversized.py",
+      "symbol": "acme_tasks.oversized.save_export_rows"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-RENDER-EXPORT-ROWS",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/oversized.py",
+      "symbol": "acme_tasks.oversized.render_export_rows"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-BUILD-EXPORT-ROWS",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/oversized.py",
+      "symbol": "acme_tasks.oversized.build_export_rows"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-SUMMARIZE-EXPORT-ROWS",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/oversized.py",
+      "symbol": "acme_tasks.oversized.summarize_export_rows"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-CALCULATE-NESTED-PRIORITY",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/oversized.py",
+      "symbol": "acme_tasks.oversized.calculate_nested_priority"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-LEGACY-EXPORT-MAPPER",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/oversized.py",
+      "symbol": "acme_tasks.oversized.LegacyExportMapper"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-PAYROLL",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/payroll.py",
+      "symbol": "acme_tasks.payroll.summarize_payroll_run"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-REPORT",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/report.py",
+      "symbol": "acme_tasks.report.render_priority_report"
+    },
+    {
+      "id": "PYBASIC-DEAD-CODE-STORAGE",
+      "rule_id": "python.dead_code_candidate",
+      "file": "src/acme_tasks/storage.py",
+      "symbol": "acme_tasks.storage.save_plan"
     }
   ],
   "search_queries": [

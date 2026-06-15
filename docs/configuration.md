@@ -24,6 +24,36 @@ uv run codescent rules --repo "$repo" --json
 `doctor` reports database/config health and `routing_templates`. Templates are
 examples only and are not auto-written into analyzed repos.
 
+## Architecture Rules
+
+Architecture boundary checks are opt-in and report-only. Add rules to
+`.codescent/config.toml` when a layer must not import another package or module
+prefix:
+
+```toml
+[architecture]
+rules = [
+  { layer = "src/codescent/services", forbidden_imports = ["codescent.cli"] },
+]
+```
+
+`layer` matches repo-relative path prefixes. `forbidden_imports` matches dotted
+Python import prefixes, so `codescent.cli` also matches `codescent.cli.main`.
+When no architecture rules are configured, the scanner returns no findings.
+
+## Coverage Report
+
+Coverage ingestion reads an existing Cobertura XML report when present. By
+default CodeScent looks for `coverage.xml` at the repository root. To use a
+different repo-relative path, set `coverage_path` in `.codescent/config.toml`:
+
+```toml
+coverage_path = "reports/coverage.xml"
+```
+
+Paths outside the analyzed repository are ignored. CodeScent reads coverage
+reports only; it does not run tests or generate coverage files.
+
 ## Reset
 
 `reset` is intentionally explicit because it deletes CodeScent state:

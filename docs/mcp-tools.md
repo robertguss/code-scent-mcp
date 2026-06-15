@@ -48,6 +48,9 @@ by the service and contract tests.
 - `get_changed_file_health`
 - `retrieve_result`
 - `context_stats`
+- `select_tests`
+- `start_task`
+- `record_verification`
 
 ## Locked Post-MVP MCP Tools
 
@@ -81,7 +84,7 @@ No CLI commands are locked in the current local PRD-remainder stage.
 
 Repository tools:
 
-`get_repo_map`, `get_repo_status`
+`get_repo_map`, `get_repo_status`, `start_task`
 
 Search and context tools:
 
@@ -92,13 +95,13 @@ Search and context tools:
 Code health and finding lifecycle tools:
 
 `scan_code_health`, `get_smell_report`, `get_next_improvement`, `mark_finding`,
-`rescan`, `get_finding`, `explain_score`, `get_backlog`, `get_progress`,
-`get_regressions`, `context_stats`
+`record_verification`, `rescan`, `get_finding`, `explain_score`, `get_backlog`,
+`get_progress`, `get_regressions`, `context_stats`
 
 Planning tools:
 
 `get_finding_context`, `plan_refactor`, `suggest_tests`, `get_impact`,
-`verify_change`
+`verify_change`, `select_tests`
 
 Risk tools:
 
@@ -133,6 +136,19 @@ events, and telemetry.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
 - Example shape: `{"tool": "get_repo_status", "ok": true, "data": {...}}`
+
+### `start_task`
+
+- Group: `repository`
+- Purpose: Return a bounded deterministic task brief for a natural-language task
+  plus optional focus path or focus symbol.
+- Inputs: repository root, required `query`, optional `focus_path`, and optional
+  `focus_symbol`.
+- Outputs: `query`, `relevant_files`, `relevant_symbols`, `related_tests`,
+  `open_findings`, `index_fresh`, and `next_tools`.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network; no raw source dumps.
+- Example shape: `{"tool": "start_task", "ok": true, "data": {...}}`
 
 ### `search_files`
 
@@ -270,10 +286,24 @@ events, and telemetry.
   runtime no-network.
 - Example shape: `{"tool": "suggest_tests", "ok": true, "data": {...}}`
 
+### `select_tests`
+
+- Group: `planning`
+- Purpose: Recommend the minimal pytest test set for current changes or given paths.
+- Inputs: repository root plus optional changed paths.
+- Outputs: `changed_files`, `test_files`, a single `command`, and
+  `executes_in_v1: false`.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network; recommend-only and does not execute pytest.
+- Example shape: `{"tool": "select_tests", "ok": true, "data": {...}}`
+
 ### `mark_finding`
 
 - Group: `health`
-- Purpose: Record finding lifecycle status after external evidence.
+- Purpose: Record finding lifecycle status after external evidence. Requested
+  `resolved` status is evidence-gated: without a passing verification record or
+  clean rescan evidence, CodeScent stores `needs_review` and reports that the
+  request was gated.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
@@ -281,6 +311,21 @@ events, and telemetry.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
 - Example shape: `{"tool": "mark_finding", "ok": true, "data": {...}}`
+
+### `record_verification`
+
+- Group: `health`
+- Purpose: Record the result of a verification command that the caller already
+  ran for a finding. CodeScent stores the caller-supplied command, exit code,
+  and bounded output summary; it never executes commands.
+- Inputs: repository root, finding id, command, exit code, and short output
+  summary.
+- Outputs: JSON-compatible structured payload with the verification row id,
+  status code, bounded summary, and truncation signal.
+- Bounds: source-read-only for analyzed files; writes only `.codescent` ledger
+  state; bounded output by default; runtime no-network; no command execution.
+- Example shape:
+  `{"tool": "record_verification", "ok": true, "data": {...}}`
 
 ### `rescan`
 

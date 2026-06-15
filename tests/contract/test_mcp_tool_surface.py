@@ -17,6 +17,7 @@ ABSENT_POST_MVP_TOOL_NAMES = {
 MVP_TOOL_NAMES = {
     "get_repo_map",
     "get_repo_status",
+    "start_task",
     "search_files",
     "search_content",
     "multi_search_content",
@@ -42,8 +43,10 @@ MVP_TOOL_NAMES = {
     "get_next_improvement",
     "plan_refactor",
     "suggest_tests",
+    "select_tests",
     "verify_change",
     "mark_finding",
+    "record_verification",
     "rescan",
     "review_diff_risk",
     "get_changed_file_health",
@@ -100,6 +103,7 @@ async def test_no_post_mvp_tools_exposed() -> None:
     assert "get_changed_file_health" in tool_names
     assert "retrieve_result" in tool_names
     assert "context_stats" in tool_names
+    assert "record_verification" in tool_names
     assert "report" not in tool_names
     assert "reset" not in tool_names
     assert tool_names.isdisjoint(ABSENT_POST_MVP_TOOL_NAMES)

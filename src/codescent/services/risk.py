@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from codescent.core.paths import resolve_repo_root
 from codescent.services.code_health import CodeHealthService
@@ -10,6 +10,9 @@ from codescent.services.search import SearchService
 from codescent.services.verification import VerificationService
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import FindingRepository, FindingRow
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 DEFAULT_CHANGED_FILE_LIMIT: Final = 20
 HIGH_RISK_THRESHOLD: Final = 0.75
@@ -51,7 +54,7 @@ class DiffRiskReport:
 
 @dataclass(frozen=True, slots=True)
 class RiskService:
-    repo_root: str
+    repo_root: Path | str
 
     def review_diff_risk(self) -> DiffRiskReport:
         changed_files = _changed_files(self.repo_root)
@@ -122,13 +125,13 @@ class RiskService:
         )
 
 
-def _changed_files(repo_root: str) -> tuple[str, ...]:
+def _changed_files(repo_root: Path | str) -> tuple[str, ...]:
     root = resolve_repo_root(repo_root)
     results = SearchService(root).search_changed_files(limit=DEFAULT_CHANGED_FILE_LIMIT)
     return tuple(result["path"] for result in results)
 
 
-def _repository(repo_root: str) -> FindingRepository:
+def _repository(repo_root: Path | str) -> FindingRepository:
     state = initialize_storage(repo_root)
     return FindingRepository(RepositoryStorage(state))
 
@@ -139,7 +142,7 @@ def _change_note(path: str, is_changed: bool) -> str:
     return f"not currently changed: {path}"
 
 
-def _ensure_findings(repo_root: str) -> None:
+def _ensure_findings(repo_root: Path | str) -> None:
     if _repository(repo_root).list_findings():
         return
     _ = CodeHealthService(repo_root).scan()

@@ -8,11 +8,31 @@ starting, honor its STOP conditions, and update the status row here when done.
 
 | Plan | Title                                       | Priority | Effort | Depends on | Status |
 | ---- | ------------------------------------------- | -------- | ------ | ---------- | ------ |
-| 001  | Fix file-context related files              | P1       | S      | -          | TODO   |
-| 002  | Reduce changed-source test false positives  | P1       | S/M    | 001        | TODO   |
-| 003  | Batch multi-query content search            | P1       | M      | -          | TODO   |
-| 004  | Use the persisted index for context lookups | P1       | L      | 001, 003   | TODO   |
-| 005  | Bound source-file input reads               | P1       | M/L    | 004        | TODO   |
+| 001  | Fix file-context related files              | P1       | S      | -          | DONE   |
+| 002  | Reduce changed-source test false positives  | P1       | S/M    | 001        | DONE   |
+| 003  | Batch multi-query content search            | P1       | M      | -          | DONE   |
+| 004  | Use the persisted index for context lookups | P1       | L      | 001, 003   | DONE   |
+| 005  | Bound source-file input reads               | P1       | M/L    | 004        | DONE   |
+
+### Feature set B — "top 10" capability ideas (generated 2026-06-15)
+
+A second, independent set of 10 feature plans. These are additive capabilities,
+not bug fixes, and do not depend on plans 001–005. Recommended order below is by
+leverage; only 007 hard-depends on 006, and 013/014 must coordinate their
+`SCHEMA_VERSION` bump.
+
+| Plan | Title                                            | Priority | Effort | Depends on | Status |
+| ---- | ------------------------------------------------ | -------- | ------ | ---------- | ------ |
+| 006  | Git logical co-change coupling in related/impact | P1       | M      | -          | DONE   |
+| 007  | Hotspot prioritization (churn × size)            | P1       | M      | 006 (soft) | DONE   |
+| 008  | Architecture boundary constraints from config    | P1       | M      | -          | DONE   |
+| 009  | Dead-code / unused-export candidates             | P2       | M      | -          | DONE   |
+| 010  | Structural near-duplicate (AI-slop) detector     | P1       | M      | -          | DONE   |
+| 011  | Coverage-data ingestion → precise test gaps      | P1       | M      | -          | DONE   |
+| 012  | `select_tests` minimal verification set          | P1       | M      | 006 (soft) | DONE   |
+| 013  | Code-health ratchet (per-file debt budget)       | P1       | M/L    | schema     | DONE   |
+| 014  | Evidence-gated resolution + verification ledger  | P2       | M/L    | schema     | DONE   |
+| 015  | `start_task` one-shot task brief (router)        | P1       | M      | 006 (soft) | DONE   |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale).
@@ -31,6 +51,25 @@ REJECTED (with one-line rationale).
 - 005 depends on 004 because bounded-read changes touch many of the same
   search/context/rule paths; doing it after the index-backed refactor reduces
   conflict and makes the remaining reads easier to cap.
+
+### Feature set B dependencies
+
+- 007 should land after 006 (soft): both add single-pass `git log` history
+  parsing to `services/git.py`; doing 006 first establishes the efficient helper
+  idiom and avoids the per-commit-subprocess anti-pattern the audit flagged.
+- 012 and 015 are richer once 006 is in (co-change improves related-file
+  signal), but both work without it. Treat as soft dependencies.
+- 013 and 014 both add a SQLite table via a `SCHEMA_VERSION` bump in
+  `storage/schema.py`. They must NOT both claim the same version. Whichever
+  lands second takes the next free integer; `migrate()` applies versions in
+  ascending order, so this is safe as long as numbers don't collide. Each plan's
+  STOP conditions tell the executor to check and report a collision.
+- 008, 009, 010, 011 are fully independent of each other and of 001–005. Each
+  adds a deterministic rule/finding and self-disables when not configured or
+  when no input file is present (no default-behavior change).
+- 012, 014, 015 each add exactly one new MCP tool name to
+  `core/public_surface.py`; do them on separate branches to avoid contract-test
+  merge churn.
 
 ## Recommended Verification Baseline
 

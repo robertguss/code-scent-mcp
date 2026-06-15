@@ -1,4 +1,5 @@
 import sqlite3
+import subprocess
 from contextlib import closing
 from pathlib import Path
 from typing import ClassVar
@@ -21,6 +22,8 @@ class ScanCliPayload(BaseModel):
 class ScanFindingPayload(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
+    rule_id: str
+    file_path: str
     stable_key: str
 
 
@@ -50,6 +53,8 @@ def load_config() -> dict[str, str]:
     assert payload.findings_created >= 2
     assert "python.todo_cluster" in payload.rule_ids
     assert "python.changed_source_without_related_test" in payload.rule_ids
+    assert "python.dead_code_candidate" in payload.rule_ids
+    assert "python.uncovered_symbol" not in payload.rule_ids
     assert all(finding.stable_key for finding in payload.findings)
     with closing(sqlite3.connect(repo / ".codescent" / "index.sqlite")) as connection:
         persisted_sql = "\n".join(connection.iterdump())
@@ -59,3 +64,135 @@ def load_config() -> dict[str, str]:
     assert "python.duplicate_literal" in persisted_sql
     assert "python.changed_source_without_related_test" in persisted_sql
     assert "evidence_json" in persisted_sql
+
+
+def test_changed_source_accepts_behavior_style_test_location(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "pkg" / "workflow.py"
+    test_file = repo / "tests" / "integration" / "test_workflow.py"
+    source.parent.mkdir(parents=True)
+    test_file.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """def build_daily_plan(name: str) -> str:
+    return f'{name}: reconcile inbox'
+""",
+    )
+    _ = test_file.write_text(
+        """from src.pkg.workflow import build_daily_plan
+
+def test_build_daily_plan() -> None:
+    assert build_daily_plan('ana') == 'ana: reconcile inbox'
+""",
+    )
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "qa@example.invalid")
+    _git(repo, "config", "user.name", "QA")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "baseline")
+    _ = source.write_text(
+        """def build_daily_plan(name: str) -> str:
+    return f'{name}: reconcile priority inbox'
+""",
+    )
+
+    result = CliRunner().invoke(app, ["scan", "--repo", str(repo), "--json"])
+    payload = ScanCliPayload.model_validate_json(result.output)
+    changed_source_findings = {
+        finding.file_path
+        for finding in payload.findings
+        if finding.rule_id == "python.changed_source_without_related_test"
+    }
+
+    assert result.exit_code == 0
+    assert "src/pkg/workflow.py" not in changed_source_findings
+
+
+def test_scan_adds_coverage_findings_when_report_present(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "pkg" / "workflow.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """def build_daily_plan(name: str) -> str:
+    normalized = name.strip()
+    if normalized:
+        return f"{normalized}: reconcile inbox"
+    return "unknown: reconcile inbox"
+""",
+    )
+    _ = (repo / "coverage.xml").write_text(
+        """
+        <coverage>
+          <packages>
+            <package name="pkg">
+              <classes>
+                <class filename="src/pkg/workflow.py">
+                  <lines>
+                    <line number="2" hits="0" />
+                    <line number="4" hits="0" />
+                  </lines>
+                </class>
+              </classes>
+            </package>
+          </packages>
+        </coverage>
+        """,
+    )
+
+    result = CliRunner().invoke(app, ["scan", "--repo", str(repo), "--json"])
+    payload = ScanCliPayload.model_validate_json(result.output)
+    coverage_findings = tuple(
+        finding
+        for finding in payload.findings
+        if finding.rule_id == "python.uncovered_symbol"
+    )
+
+    assert result.exit_code == 0
+    assert len(coverage_findings) == 1
+    assert coverage_findings[0].file_path == "src/pkg/workflow.py"
+    assert coverage_findings[0].stable_key.startswith("python.uncovered_symbol:")
+
+
+def test_scan_uses_configured_coverage_path(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "pkg" / "workflow.py"
+    config_path = repo / ".codescent" / "config.toml"
+    report_path = repo / "reports" / "custom-coverage.xml"
+    source.parent.mkdir(parents=True)
+    config_path.parent.mkdir(parents=True)
+    report_path.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """def build_daily_plan(name: str) -> str:
+    normalized = name.strip()
+    return f"{normalized}: reconcile inbox"
+""",
+    )
+    _ = config_path.write_text('coverage_path = "reports/custom-coverage.xml"\n')
+    _ = report_path.write_text(
+        """
+        <coverage>
+          <packages>
+            <package name="pkg">
+              <classes>
+                <class filename="src/pkg/workflow.py">
+                  <lines>
+                    <line number="2" hits="0" />
+                  </lines>
+                </class>
+              </classes>
+            </package>
+          </packages>
+        </coverage>
+        """,
+    )
+
+    result = CliRunner().invoke(app, ["scan", "--repo", str(repo), "--json"])
+    payload = ScanCliPayload.model_validate_json(result.output)
+
+    assert result.exit_code == 0
+    assert "python.uncovered_symbol" in payload.rule_ids
+
+
+def _git(repo: Path, *args: str) -> None:
+    _ = subprocess.run(["git", *args], cwd=repo, check=True)

@@ -25,6 +25,21 @@ class MarkToolPayload(BaseModel):
     ok: bool
     finding_id: str
     status: str
+    requested_status: str
+    gated: bool
+    message: str
+
+
+class RecordVerificationPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    finding_id: str
+    verification_id: int
+    command: str
+    exit_code: int
+    output_summary: str
+    output_truncated: bool
 
 
 class FindingDetailPayload(BaseModel):
@@ -144,12 +159,60 @@ async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
     )
     assert mark_payload.ok is True
     assert mark_payload.status == "in_progress"
+    assert mark_payload.requested_status == "in_progress"
+    assert mark_payload.gated is False
+    assert mark_payload.message == ""
     assert detail_payload.ok is True
     assert detail_payload.finding_id == scan_payload.finding_ids[0]
     assert detail_payload.evidence
     assert detail_payload.status_history[-1]["event_type"] == "status_changed"
     assert detail_payload.score_inputs["confidence"]
     assert rescan_payload.ok is True
+    assert source_snapshot(repo) == before
+
+
+@pytest.mark.anyio
+async def test_record_verification_tool_records_caller_supplied_result(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_todo(tmp_path)
+    before = source_snapshot(repo)
+    scan_result = await _scan_repo(repo)
+    finding_id = scan_result.finding_ids[0]
+
+    async with Client(mcp) as client:
+        record_result = await client.call_tool(
+            "record_verification",
+            {
+                "repo": str(repo),
+                "finding_id": finding_id,
+                "command": "uv run pytest tests/integration/test_findings.py",
+                "exit_code": 0,
+                "output_summary": "x" * 1100,
+            },
+        )
+        mark_result = await client.call_tool(
+            "mark_finding",
+            {
+                "repo": str(repo),
+                "finding_id": finding_id,
+                "status": "resolved",
+            },
+        )
+
+    record_payload = RecordVerificationPayload.model_validate_json(
+        _text_content(record_result.content),
+    )
+    mark_payload = MarkToolPayload.model_validate_json(
+        _text_content(mark_result.content),
+    )
+    assert record_payload.ok is True
+    assert record_payload.finding_id == finding_id
+    assert record_payload.exit_code == 0
+    assert record_payload.output_truncated is True
+    assert len(record_payload.output_summary) == 1000
+    assert mark_payload.status == "resolved"
+    assert mark_payload.gated is False
     assert source_snapshot(repo) == before
 
 

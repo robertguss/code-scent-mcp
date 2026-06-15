@@ -60,7 +60,13 @@ def test_retrieves_stored_result_after_service_restart(tmp_path: Path) -> None:
             "snippet": "class UserService: ...",
         },
     )
-    assert restarted_service.repository.get_result(stored.id).retrieval_count == 1
+    assert (
+        restarted_service.repository.get_result(
+            stored.id,
+            now=created_at + timedelta(minutes=5),
+        ).retrieval_count
+        == 1
+    )
 
 
 def test_exact_retrieval_is_bounded_with_partial_warning(tmp_path: Path) -> None:
