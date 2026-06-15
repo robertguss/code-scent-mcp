@@ -25,9 +25,9 @@
 `get_next_improvement` currently ranks findings by severity then a tiny
 hard-coded rule bonus. A 600-line file nobody touches outranks a churny 120-line
 file edited weekly — exactly backwards from where bugs and slop accumulate.
-Adding a **hotspot score** = (recent change frequency) × (file size) makes
-"what should I improve next?" track real risk, which is the product's promise.
-The inputs are already available: git history (churn) and `line_count` (size,
+Adding a **hotspot score** = (recent change frequency) × (file size) makes "what
+should I improve next?" track real risk, which is the product's promise. The
+inputs are already available: git history (churn) and `line_count` (size,
 present in the `files` table and in finding evidence).
 
 ## Current state
@@ -66,9 +66,9 @@ def _finding_priority(finding: FindingRow) -> tuple[int, int, str]:
     return (severity_rank, rule_rank, finding.id)
 ```
 
-  `FindingRow` (in `src/codescent/storage/repositories/findings.py`) has
-  `.file_path`, `.severity`, `.rule_id`, `.id`, `.evidence_json`. There is no
-  churn or size field on the row today.
+`FindingRow` (in `src/codescent/storage/repositories/findings.py`) has
+`.file_path`, `.severity`, `.rule_id`, `.id`, `.evidence_json`. There is no
+churn or size field on the row today.
 
 - Git churn: plan 006 added single-pass git history parsing. For this plan add a
   `git_change_counts(repo_root)` helper returning `dict[str, int]` (commits
@@ -79,17 +79,18 @@ git helpers degrade to empty on failure with a timeout.
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Focused tests | `uv run pytest tests/integration -k "next_improvement or hotspot or priority"` | exit 0 |
-| Full tests | `uv run pytest` | exit 0 |
-| Lint | `uv run ruff check .` | exit 0 |
-| Format | `uv run ruff format --check .` | exit 0 |
-| Typecheck | `uv run basedpyright` | exit 0 |
+| Purpose       | Command                                                                        | Expected |
+| ------------- | ------------------------------------------------------------------------------ | -------- |
+| Focused tests | `uv run pytest tests/integration -k "next_improvement or hotspot or priority"` | exit 0   |
+| Full tests    | `uv run pytest`                                                                | exit 0   |
+| Lint          | `uv run ruff check .`                                                          | exit 0   |
+| Format        | `uv run ruff format --check .`                                                 | exit 0   |
+| Typecheck     | `uv run basedpyright`                                                          | exit 0   |
 
 ## Scope
 
 **In scope**:
+
 - `src/codescent/services/git.py` — add `git_change_counts(repo_root)`.
 - `src/codescent/services/findings.py` — compute a hotspot score and use it in
   `get_next_improvement` ranking (and expose it on `get_backlog` ordering if
@@ -98,6 +99,7 @@ git helpers degrade to empty on failure with a timeout.
 - `plans/README.md` status row.
 
 **Out of scope**:
+
 - Do NOT change `FindingRow`'s persisted schema. Compute the score at ranking
   time from git + evidence; do not add a DB column in this plan.
 - Do NOT remove severity as the primary sort key — hotspot is a tiebreaker/
@@ -121,7 +123,9 @@ def git_change_counts(repo_root: Path) -> dict[str, int]:
     each path. Excludes ``.codescent``. Returns ``{}`` on any git failure.
     """
 ```
-- Single subprocess: `git -C <root> log --no-renames --format=%H --name-only -n <cap> -- . ":(exclude).codescent"`.
+
+- Single subprocess:
+  `git -C <root> log --no-renames --format=%H --name-only -n <cap> -- . ":(exclude).codescent"`.
 - `check=False`, `timeout=GIT_HISTORY_TIMEOUT_SECONDS`; return `{}` on failure.
 - Reuse `GIT_LOG_MAX_COMMITS` if plan 006 added it; otherwise add it.
 
@@ -137,8 +141,10 @@ def _hotspot_score(finding: FindingRow, change_counts: dict[str, int]) -> float:
     size = _evidence_line_count(finding)  # parse evidence_json -> line_count or 1
     return float(churn + 1) * float(size + 1)
 ```
+
 - `_evidence_line_count` parses `finding.evidence_json` (JSON string) and reads
-  `line_count` if present, else returns 0. Use `json.loads`; on any error return 0.
+  `line_count` if present, else returns 0. Use `json.loads`; on any error
+  return 0.
 
 Then make ranking hotspot-aware. Replace the sort in `get_next_improvement` so
 the key is `(severity_rank, rule_rank, -hotspot_score, finding.id)`. Compute
@@ -155,6 +161,7 @@ Concretely, update `get_next_improvement`:
             key=lambda f: (*_finding_priority(f)[:2], -_hotspot_score(f, change_counts), f.id),
         )
 ```
+
 (Import `git_change_counts` and `resolve_repo_root` at module top — no inline
 imports; see the repo's no-inline-imports rule.)
 
@@ -186,7 +193,8 @@ from `tests/integration/test_context.py`.
 - [ ] `get_next_improvement` ranking incorporates churn × size as a secondary
       key after severity.
 - [ ] Behavior is unchanged when git is unavailable (graceful `{}`).
-- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright` exit 0.
+- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright`
+      exit 0.
 - [ ] No DB schema change; no new public-surface entry.
 - [ ] No files outside in-scope modified.
 - [ ] `plans/README.md` status row for 007 updated.
@@ -194,6 +202,7 @@ from `tests/integration/test_context.py`.
 ## STOP conditions
 
 Stop and report if:
+
 - Existing `get_next_improvement` tests assert an exact ordering that hotspot
   would break — report the conflict rather than weakening severity precedence.
 - `evidence_json` is not valid JSON for some findings (handle by returning size

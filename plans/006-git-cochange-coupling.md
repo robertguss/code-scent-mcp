@@ -23,14 +23,14 @@
 
 ## Why this matters
 
-CodeScent's import graph only sees *structural* dependencies. The single
+CodeScent's import graph only sees _structural_ dependencies. The single
 highest-signal predictor of real blast radius — which files historically change
-*together* — is invisible today. Adding deterministic **temporal coupling**
+_together_ — is invisible today. Adding deterministic **temporal coupling**
 (co-change) from local `git log` makes `get_related_files` and `get_impact`
 dramatically better at answering "if I touch X, what else tends to move?" It is
 100% local, no network, and reuses git the tool already shells out to. A prior
-audit flagged that the existing `git_related_paths` shells out *once per
-commit*; this plan deliberately uses a **single** `git log --name-only` pass so
+audit flagged that the existing `git_related_paths` shells out _once per
+commit_; this plan deliberately uses a **single** `git log --name-only` pass so
 the new signal is cheap.
 
 ## Current state
@@ -47,9 +47,9 @@ def git_related_paths(repo_root: Path, path: str) -> tuple[str, ...]:
         show_result = subprocess.run([... "show" ...])  # one subprocess per commit
 ```
 
-  The module's conventions: use `which("git")`, `subprocess.run` with
-  `capture_output=True`, `text=True`, a `timeout=`, and return empty on any
-  failure. Reuse `GIT_HISTORY_TIMEOUT_SECONDS` (currently `5`).
+The module's conventions: use `which("git")`, `subprocess.run` with
+`capture_output=True`, `text=True`, a `timeout=`, and return empty on any
+failure. Reuse `GIT_HISTORY_TIMEOUT_SECONDS` (currently `5`).
 
 - `src/codescent/services/context.py:204-243` — `get_related_files` builds a
   `reasons: dict[str, set[str]]` then sorts. Reason strings currently used:
@@ -70,24 +70,26 @@ def git_related_paths(repo_root: Path, path: str) -> tuple[str, ...]:
   a new reason string needs a weight there or it will score as zero/unknown.
 
 Repo conventions to preserve:
+
 - Strict typing (BasedPyright `all`), Google-style docstrings, 88-col format.
 - Services return structured data; never edit analyzed source; no network.
 - Keep output bounded; co-change candidates must be capped (use a constant).
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Focused unit tests | `uv run pytest tests/unit -k "co_change or coupling or git"` | exit 0 |
-| Context integration tests | `uv run pytest tests/integration/test_context.py` | exit 0 |
-| Full tests | `uv run pytest` | exit 0 |
-| Lint | `uv run ruff check .` | exit 0 |
-| Format | `uv run ruff format --check .` | exit 0 |
-| Typecheck | `uv run basedpyright` | exit 0 |
+| Purpose                   | Command                                                      | Expected on success |
+| ------------------------- | ------------------------------------------------------------ | ------------------- |
+| Focused unit tests        | `uv run pytest tests/unit -k "co_change or coupling or git"` | exit 0              |
+| Context integration tests | `uv run pytest tests/integration/test_context.py`            | exit 0              |
+| Full tests                | `uv run pytest`                                              | exit 0              |
+| Lint                      | `uv run ruff check .`                                        | exit 0              |
+| Format                    | `uv run ruff format --check .`                               | exit 0              |
+| Typecheck                 | `uv run basedpyright`                                        | exit 0              |
 
 ## Scope
 
 **In scope**:
+
 - `src/codescent/services/git.py` — add `git_co_change_counts` (new helper).
 - `src/codescent/services/context.py` — call it in `get_related_files`.
 - `src/codescent/services/context_support.py` — add a weight for the new reason.
@@ -97,6 +99,7 @@ Repo conventions to preserve:
 - `plans/README.md` status row.
 
 **Out of scope** (do NOT touch):
+
 - `git_related_paths` — leave it exactly as is; do not refactor it into the new
   helper in this plan.
 - `get_impact` in `refactor_planning.py` — it already consumes
@@ -131,13 +134,19 @@ def git_co_change_counts(repo_root: Path, path: str) -> tuple[tuple[str, int], .
 ```
 
 Implementation requirements:
-- Guard: if `not (repo_root / ".git").exists()` or `which("git") is None`, return `()`.
-- Run `git -C <root> log --no-renames --format=%H --name-only -n <GIT_LOG_MAX_COMMITS> -- <path>`
-  with `capture_output=True, text=True, check=False, timeout=GIT_HISTORY_TIMEOUT_SECONDS`.
+
+- Guard: if `not (repo_root / ".git").exists()` or `which("git") is None`,
+  return `()`.
+- Run
+  `git -C <root> log --no-renames --format=%H --name-only -n <GIT_LOG_MAX_COMMITS> -- <path>`
+  with
+  `capture_output=True, text=True, check=False, timeout=GIT_HISTORY_TIMEOUT_SECONDS`.
 - Parse: blank-line-separated commit blocks; first non-empty line is the hash,
-  subsequent lines are changed paths. Count co-occurring paths across all blocks.
+  subsequent lines are changed paths. Count co-occurring paths across all
+  blocks.
 - Exclude `path` itself and any path that starts with `.codescent`.
-- Return `tuple(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))[:CO_CHANGE_MAX_RESULTS]`.
+- Return
+  `tuple(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))[:CO_CHANGE_MAX_RESULTS]`.
 - Return `()` on `subprocess.TimeoutExpired` or non-zero return code.
 
 **Verify**: `uv run pytest tests/unit -k co_change` → passes after Step 2.
@@ -145,8 +154,8 @@ Implementation requirements:
 ### Step 2: Unit-test the helper against a temporary git repo
 
 In `tests/unit/test_git_co_change.py`, create a temporary directory, `git init`,
-configure a throwaway user, and make commits where two files change together
-and a third changes alone. Assert `git_co_change_counts(root, "a.py")` returns
+configure a throwaway user, and make commits where two files change together and
+a third changes alone. Assert `git_co_change_counts(root, "a.py")` returns
 `b.py` with the expected count and excludes `c.py` (never co-changed) and `a.py`
 itself. Model the temp-git pattern on the existing test
 `test_related_files_include_import_test_directory_and_git_reasons` in
@@ -182,13 +191,13 @@ Extend `tests/integration/test_context.py` (reuse the temp-git fixture) to
 assert that a file which historically co-changed with the target appears in
 `get_related_files(...)["results"]` with `"co_change"` in its `reasons`.
 
-**Verify**: `uv run pytest` , `uv run ruff check .`, `uv run ruff format --check .`,
-`uv run basedpyright` → all exit 0.
+**Verify**: `uv run pytest` , `uv run ruff check .`,
+`uv run ruff format --check .`, `uv run basedpyright` → all exit 0.
 
 ## Test plan
 
-- New: `tests/unit/test_git_co_change.py` — helper happy path, exclusion of
-  self and non-co-changed files, empty result for non-git dir.
+- New: `tests/unit/test_git_co_change.py` — helper happy path, exclusion of self
+  and non-co-changed files, empty result for non-git dir.
 - Extend: `tests/integration/test_context.py` — `co_change` reason surfaces in
   related files. Pattern after the existing git-backed related-files test.
 - Verification: `uv run pytest` → all pass including the new tests.
@@ -196,11 +205,13 @@ assert that a file which historically co-changed with the target appears in
 ## Done criteria
 
 - [ ] `git_co_change_counts` exists in `services/git.py` and uses exactly ONE
-      git subprocess invocation (`grep -c "subprocess.run" src/codescent/services/git.py`
-      increases by exactly 1 versus baseline).
+      git subprocess invocation
+      (`grep -c "subprocess.run" src/codescent/services/git.py` increases by
+      exactly 1 versus baseline).
 - [ ] `get_related_files` can return a `"co_change"` reason.
 - [ ] `uv run pytest` exits 0 with the new tests present.
-- [ ] `uv run ruff check .`, `uv run ruff format --check .`, `uv run basedpyright` exit 0.
+- [ ] `uv run ruff check .`, `uv run ruff format --check .`,
+      `uv run basedpyright` exit 0.
 - [ ] No new MCP tool name added (`git diff` shows no change to
       `src/codescent/core/public_surface.py`).
 - [ ] No files outside the in-scope list modified.
@@ -209,6 +220,7 @@ assert that a file which historically co-changed with the target appears in
 ## STOP conditions
 
 Stop and report if:
+
 - `context_support.py` has no per-reason weight mapping (the scoring model
   differs from what this plan assumes) — do not invent one.
 - `get_related_files` no longer builds a `reasons: dict[str, set[str]]`.

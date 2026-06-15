@@ -21,13 +21,14 @@
 
 ## Why this matters
 
-Today's test-gap signal is heuristic: `python.changed_source_without_related_test`
-guesses based on filename convention. If the project already produces a coverage
-report locally (`coverage.xml`, Cobertura format), CodeScent can convert a guess
-into a fact: "this function spans uncovered lines." Reading an artifact file is
-local, no network, no execution — squarely within the read-only ethos — and it
-sharply raises the reliability of test-gap findings. It also composes with the
-hotspot ranking (uncovered + churny = the best finding to surface).
+Today's test-gap signal is heuristic:
+`python.changed_source_without_related_test` guesses based on filename
+convention. If the project already produces a coverage report locally
+(`coverage.xml`, Cobertura format), CodeScent can convert a guess into a fact:
+"this function spans uncovered lines." Reading an artifact file is local, no
+network, no execution — squarely within the read-only ethos — and it sharply
+raises the reliability of test-gap findings. It also composes with the hotspot
+ranking (uncovered + churny = the best finding to surface).
 
 ## Current state
 
@@ -63,18 +64,20 @@ runtime inputs only — coverage files are read-only inputs, not written.
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Focused tests | `uv run pytest tests -k "coverage or uncovered"` | exit 0 |
-| Full tests | `uv run pytest` | exit 0 |
-| Lint | `uv run ruff check .` | exit 0 |
-| Format | `uv run ruff format --check .` | exit 0 |
-| Typecheck | `uv run basedpyright` | exit 0 |
+| Purpose       | Command                                          | Expected |
+| ------------- | ------------------------------------------------ | -------- |
+| Focused tests | `uv run pytest tests -k "coverage or uncovered"` | exit 0   |
+| Full tests    | `uv run pytest`                                  | exit 0   |
+| Lint          | `uv run ruff check .`                            | exit 0   |
+| Format        | `uv run ruff format --check .`                   | exit 0   |
+| Typecheck     | `uv run basedpyright`                            | exit 0   |
 
 ## Scope
 
 **In scope**:
-- `src/codescent/services/coverage.py` (create) — parse Cobertura `coverage.xml`.
+
+- `src/codescent/services/coverage.py` (create) — parse Cobertura
+  `coverage.xml`.
 - `src/codescent/engine/rules/coverage_gaps.py` (create) OR a function composed
   into the scan — produce `python.uncovered_symbol` findings.
 - `src/codescent/services/code_health.py` — compose coverage findings into the
@@ -85,13 +88,14 @@ runtime inputs only — coverage files are read-only inputs, not written.
 - `plans/README.md` status row.
 
 **Out of scope**:
-- Do NOT run the project's test suite or `coverage` tool to *generate* the file
+
+- Do NOT run the project's test suite or `coverage` tool to _generate_ the file
   — only read an existing one.
 - Do NOT support every coverage format. Support Cobertura `coverage.xml` only
   (the `coverage.py --xml` and `pytest-cov --cov-report=xml` default). LCOV is a
   future plan.
-- Do NOT emit any coverage finding when no coverage file exists (zero cost,
-  zero noise by default).
+- Do NOT emit any coverage finding when no coverage file exists (zero cost, zero
+  noise by default).
 - `tests/fixtures/` source.
 
 ## Steps
@@ -110,8 +114,10 @@ class FileCoverage:
 def load_coverage(repo_root: Path, *, coverage_path: str = "coverage.xml") -> tuple[FileCoverage, ...]:
     """Parse a Cobertura coverage.xml at repo_root. Returns () if missing/invalid."""
 ```
-- Cobertura shape: `<coverage><packages><package><classes><class filename="...">
-  <lines><line number="N" hits="H"/>...`. Collect lines with `hits == 0`.
+
+- Cobertura shape:
+  `<coverage><packages><package><classes><class filename="..."> <lines><line number="N" hits="H"/>...`.
+  Collect lines with `hits == 0`.
 - Normalize `filename` to a repo-relative posix path. Cobertura paths may be
   relative to a source root; if a `<sources><source>` element exists, try
   joining, but always reduce to a path that matches the indexed `files.path`
@@ -131,7 +137,9 @@ def coverage_findings(repo_root, *, config=None) -> tuple[CodeHealthFinding, ...
     # and for each function/method/class symbol whose [start_line, end_line]
     # range overlaps uncovered_lines, emit one finding.
 ```
+
 Finding shape:
+
 ```python
 build_finding(FindingSpec(
     rule_id="python.uncovered_symbol",
@@ -145,6 +153,7 @@ build_finding(FindingSpec(
     suggested_action="Add a test exercising the uncovered lines before changing behavior.",
 ))
 ```
+
 - Bound output: emit per-symbol, but cap total coverage findings (e.g. 200) to
   avoid flooding; if capped, that is acceptable (most-uncovered first).
 
@@ -160,6 +169,7 @@ the `findings` tuple, e.g.:
             *coverage_findings(state.repo_root, config=ConfigService(state.repo_root).load()),
         )
 ```
+
 `coverage_findings` returns `()` when no coverage file exists, so default
 behavior is unchanged.
 
@@ -195,9 +205,11 @@ optional with the sensible default.
 
 - [ ] `python.uncovered_symbol` findings appear ONLY when a parseable
       `coverage.xml` exists.
-- [ ] No coverage tool is executed (`grep -rn "subprocess" src/codescent/services/coverage.py`
-      returns nothing).
-- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright` exit 0.
+- [ ] No coverage tool is executed
+      (`grep -rn "subprocess" src/codescent/services/coverage.py` returns
+      nothing).
+- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright`
+      exit 0.
 - [ ] `docs/configuration.md` documents the coverage path.
 - [ ] No analyzed source edited; `tests/fixtures/` untouched.
 - [ ] `plans/README.md` status row for 011 updated.
@@ -205,6 +217,7 @@ optional with the sensible default.
 ## STOP conditions
 
 Stop and report if:
+
 - Cobertura `filename` paths cannot be reliably mapped to indexed `files.path`
   for this repo's layout — report the mismatch (path-mapping is the main risk).
 - Composing coverage findings changes the count/shape of existing scan tests

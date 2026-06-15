@@ -34,6 +34,7 @@ already exist.
 ## Current state
 
 The services to orchestrate (all already implemented):
+
 - `ContextService` (`services/context.py`): `find_symbol(query, limit)`,
   `get_file_context(path)`, `get_related_files(path, limit)`.
 - `SearchService` (`services/search.py`) — read this file for the exact method
@@ -57,18 +58,19 @@ sources, so cap every list (files ≤ 8, symbols ≤ 12, tests ≤ 8, findings �
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Contract tests | `uv run pytest tests/contract` | exit 0 |
-| Focused tests | `uv run pytest tests -k "start_task or task_brief"` | exit 0 |
-| Full tests | `uv run pytest` | exit 0 |
-| Lint | `uv run ruff check .` | exit 0 |
-| Format | `uv run ruff format --check .` | exit 0 |
-| Typecheck | `uv run basedpyright` | exit 0 |
+| Purpose        | Command                                             | Expected |
+| -------------- | --------------------------------------------------- | -------- |
+| Contract tests | `uv run pytest tests/contract`                      | exit 0   |
+| Focused tests  | `uv run pytest tests -k "start_task or task_brief"` | exit 0   |
+| Full tests     | `uv run pytest`                                     | exit 0   |
+| Lint           | `uv run ruff check .`                               | exit 0   |
+| Format         | `uv run ruff format --check .`                      | exit 0   |
+| Typecheck      | `uv run basedpyright`                               | exit 0   |
 
 ## Scope
 
 **In scope**:
+
 - `src/codescent/services/task_brief.py` (create) — `TaskBriefService`.
 - `src/codescent/mcp/repo_tools.py` (add the tool here, or a new
   `task_tools.py` + register it in `server.py`) — register `start_task`.
@@ -78,6 +80,7 @@ sources, so cap every list (files ≤ 8, symbols ≤ 12, tests ≤ 8, findings �
 - `plans/README.md` status row.
 
 **Out of scope**:
+
 - Do NOT add LLM calls or any network. Resolution is deterministic: search +
   graph + findings only.
 - Do NOT return raw file source (only summaries/paths/symbol names and the
@@ -110,30 +113,32 @@ class TaskBriefService:
                    focus_symbol: str | None = None) -> TaskBrief:
         ...
 ```
+
 Resolution logic (all deterministic, all bounded):
+
 1. Determine seed files:
    - if `focus_path` given, seed = `[focus_path]`;
-   - elif `focus_symbol` given, `ContextService.find_symbol(focus_symbol, limit=3)`
-     → seed = their `path`s;
+   - elif `focus_symbol` given,
+     `ContextService.find_symbol(focus_symbol, limit=3)` → seed = their `path`s;
    - else use `SearchService` file + content search on `query` (read
      `services/search.py` for the exact call) → top file paths.
-2. For each seed file (cap the seed set to ~4): collect
-   `get_file_context(path)` symbols + likely_tests, and
-   `get_related_files(path, limit=6)` results (paths + which are tests).
+2. For each seed file (cap the seed set to ~4): collect `get_file_context(path)`
+   symbols + likely_tests, and `get_related_files(path, limit=6)` results
+   (paths + which are tests).
 3. `open_findings`: from `FindingsService(...).get_smell_report().findings`,
    keep those whose `file_path` is in the relevant-files set, status open/
    actionable, cap 10.
 4. `index_fresh`: from the status service.
-5. `next_tools`: e.g. `("get_symbol_context:<top symbol>",
-   "get_finding_context:<top finding id>", "select_tests")` — only include
-   entries that exist.
+5. `next_tools`: e.g.
+   `("get_symbol_context:<top symbol>", "get_finding_context:<top finding id>", "select_tests")`
+   — only include entries that exist.
 6. Dedupe + apply caps to every list.
 
 ### Step 2: Register the MCP tool
 
-Add a `StartTaskToolPayload(TypedDict)` and a thin `start_task(query: str,
-repo: str = ".", focus_path: str | None = None, focus_symbol: str | None =
-None)` that calls `TaskBriefService(...).start_task(...)` and serializes to the
+Add a `StartTaskToolPayload(TypedDict)` and a thin
+`start_task(query: str, repo: str = ".", focus_path: str | None = None, focus_symbol: str | None = None)`
+that calls `TaskBriefService(...).start_task(...)` and serializes to the
 payload. Register with a description:
 
 > "Use CodeScent FIRST when beginning a task. Returns a bounded brief: relevant
@@ -180,13 +185,15 @@ call it in `server.py`.
       `public_surface.py`.
 - [ ] Returns a bounded brief (every list capped) with no network and no raw
       file dumps.
-- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright` exit 0.
+- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright`
+      exit 0.
 - [ ] No orchestrated service behavior changed; `tests/fixtures/` untouched.
 - [ ] `plans/README.md` status row for 015 updated.
 
 ## STOP conditions
 
 Stop and report if:
+
 - `SearchService`'s method names/signatures differ from what Step 1 assumes —
   read the file and adapt; if search cannot return file candidates for a NL
   query, report and fall back to requiring `focus_path`/`focus_symbol`.

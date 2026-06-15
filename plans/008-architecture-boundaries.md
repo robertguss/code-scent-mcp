@@ -24,11 +24,11 @@
 AI agents routinely create spaghetti by importing across layers to make
 something work (e.g. a `services` module importing `cli`, or `engine` importing
 `dashboard`). CodeScent already extracts imports per file but enforces no
-intended architecture. Letting a maintainer declare forbidden layer
-dependencies in config and flagging violations deterministically turns the
-tribal knowledge in this repo's own `AGENTS.md` ("Do not import FastMCP or Typer
-in services") into an enforced, evidence-backed finding. This is the highest-
-leverage way to keep an AI-maintained codebase structurally sound.
+intended architecture. Letting a maintainer declare forbidden layer dependencies
+in config and flagging violations deterministically turns the tribal knowledge
+in this repo's own `AGENTS.md` ("Do not import FastMCP or Typer in services")
+into an enforced, evidence-backed finding. This is the highest- leverage way to
+keep an AI-maintained codebase structurally sound.
 
 ## Current state
 
@@ -66,9 +66,8 @@ class ProjectConfig(BaseModel):
     )
 ```
 
-- The Python parser exposes imports already; each `ParsedImport` has
-  `.module` (e.g. `"codescent.services.git"` or relative `".context"`) and
-  `.name`:
+- The Python parser exposes imports already; each `ParsedImport` has `.module`
+  (e.g. `"codescent.services.git"` or relative `".context"`) and `.name`:
 
 ```python
 # src/codescent/engine/parsers/python.py:54-67
@@ -91,17 +90,18 @@ findings; no network.
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Focused tests | `uv run pytest tests -k "boundary or architecture"` | exit 0 |
-| Full tests | `uv run pytest` | exit 0 |
-| Lint | `uv run ruff check .` | exit 0 |
-| Format | `uv run ruff format --check .` | exit 0 |
-| Typecheck | `uv run basedpyright` | exit 0 |
+| Purpose       | Command                                             | Expected |
+| ------------- | --------------------------------------------------- | -------- |
+| Focused tests | `uv run pytest tests -k "boundary or architecture"` | exit 0   |
+| Full tests    | `uv run pytest`                                     | exit 0   |
+| Lint          | `uv run ruff check .`                               | exit 0   |
+| Format        | `uv run ruff format --check .`                      | exit 0   |
+| Typecheck     | `uv run basedpyright`                               | exit 0   |
 
 ## Scope
 
 **In scope**:
+
 - `src/codescent/core/models.py` — add an `ArchitectureRules` model + field on
   `ProjectConfig`.
 - `src/codescent/engine/rules/architecture.py` (create) — the boundary scanner.
@@ -113,6 +113,7 @@ findings; no network.
 - `plans/README.md` status row.
 
 **Out of scope**:
+
 - Do NOT auto-fix imports or edit analyzed source.
 - Do NOT change existing rule IDs or finding shapes.
 - Do NOT make the rule run when no architecture rules are configured (must be
@@ -142,7 +143,9 @@ class ArchitectureRules(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
     rules: tuple[ArchitectureRule, ...] = ()
 ```
-Add to `ProjectConfig`: `architecture: ArchitectureRules = Field(default_factory=ArchitectureRules)`.
+
+Add to `ProjectConfig`:
+`architecture: ArchitectureRules = Field(default_factory=ArchitectureRules)`.
 
 ### Step 2: Write the boundary scanner
 
@@ -156,7 +159,10 @@ def scan_architecture(
 ) -> tuple[CodeHealthFinding, ...]:
     ...
 ```
-Logic (mirror `scan_python_health`'s structure in `engine/rules/python.py:31-50`):
+
+Logic (mirror `scan_python_health`'s structure in
+`engine/rules/python.py:31-50`):
+
 - If `config.architecture.rules` is empty, return `()` immediately.
 - Iterate `build_file_inventory(repo_root, config=...)`; for python files,
   `parse_python_file(...)`.
@@ -211,7 +217,8 @@ Add a short `[architecture]` example to `docs/configuration.md`.
 
 ## Test plan
 
-- `scan_architecture` violation detected; evidence has `layer`, `imported`, `line`.
+- `scan_architecture` violation detected; evidence has `layer`, `imported`,
+  `line`.
 - Self-disables with empty config (zero findings, no crash).
 - Config load parses the new section.
 - Verification: `uv run pytest` → all pass.
@@ -221,7 +228,8 @@ Add a short `[architecture]` example to `docs/configuration.md`.
 - [ ] New rule `architecture.boundary_violation` exists and only fires when
       configured.
 - [ ] Default behavior (no `[architecture]` config) produces zero new findings.
-- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright` exit 0.
+- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright`
+      exit 0.
 - [ ] `docs/configuration.md` documents the section.
 - [ ] No analyzed source edited; `tests/fixtures/` untouched.
 - [ ] `plans/README.md` status row for 008 updated.
@@ -229,6 +237,7 @@ Add a short `[architecture]` example to `docs/configuration.md`.
 ## STOP conditions
 
 Stop and report if:
+
 - Adding `architecture.boundary_violation` requires registering a new MCP tool
   or changing `core/public_surface.py` (it should not — findings flow through
   the existing scan/report tools).

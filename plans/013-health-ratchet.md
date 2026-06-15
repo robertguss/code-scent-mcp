@@ -23,8 +23,8 @@
 
 Absolute thresholds are useless on legacy or AI-generated code — everything
 fails on day one, so teams disable the gate. A **ratchet** records a per-file
-baseline of finding counts and fails CI only when a file gets *worse than its
-baseline*. Existing debt is grandfathered; new debt is blocked. This is what
+baseline of finding counts and fails CI only when a file gets _worse than its
+baseline_. Existing debt is grandfathered; new debt is blocked. This is what
 makes CodeScent enforceable in practice and is the perfect leash for AI agents:
 an agent cannot make a file messier than it found it.
 
@@ -41,7 +41,8 @@ an agent cannot make a file messier than it found it.
         changed_file_health = _health_from_scan(scan.findings)
         return CiReport(ok=_passes(threshold, risk_level), ...)
 ```
-  `scan.findings` is a tuple of `CodeHealthFinding` each with `.file_path`.
+
+`scan.findings` is a tuple of `CodeHealthFinding` each with `.file_path`.
 
 - Schema migrations: `src/codescent/storage/schema.py`. `SCHEMA_VERSION` is
   currently `5`. New tables are added by bumping `SCHEMA_VERSION` and adding a
@@ -64,21 +65,23 @@ MIGRATION_STATEMENTS: Final[dict[int, tuple[str, ...]]] = {
   exists per `core/public_surface.py:201`). The reporting/admin command modules
   are `cli/reporting.py` and `cli/admin.py`.
 
-Repo conventions: strict typing; write state only under `.codescent`; no network.
+Repo conventions: strict typing; write state only under `.codescent`; no
+network.
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Focused tests | `uv run pytest tests -k "ratchet or baseline or ci"` | exit 0 |
-| Full tests | `uv run pytest` | exit 0 |
-| Lint | `uv run ruff check .` | exit 0 |
-| Format | `uv run ruff format --check .` | exit 0 |
-| Typecheck | `uv run basedpyright` | exit 0 |
+| Purpose       | Command                                              | Expected |
+| ------------- | ---------------------------------------------------- | -------- |
+| Focused tests | `uv run pytest tests -k "ratchet or baseline or ci"` | exit 0   |
+| Full tests    | `uv run pytest`                                      | exit 0   |
+| Lint          | `uv run ruff check .`                                | exit 0   |
+| Format        | `uv run ruff format --check .`                       | exit 0   |
+| Typecheck     | `uv run basedpyright`                                | exit 0   |
 
 ## Scope
 
 **In scope**:
+
 - `src/codescent/storage/schema.py` — add a `health_baseline` table (new
   migration version).
 - `src/codescent/services/ci.py` — add ratchet comparison + a way to write the
@@ -91,6 +94,7 @@ Repo conventions: strict typing; write state only under `.codescent`; no network
 - `plans/README.md` status row.
 
 **Out of scope**:
+
 - Do NOT change the default `ci` behavior when `--ratchet` is not passed.
 - Do NOT add a new MCP tool.
 - Do NOT execute project commands.
@@ -116,6 +120,7 @@ create table if not exists health_baseline (
 ### Step 2: Baseline read/write + comparison in `ci.py`
 
 Add to `CiService`:
+
 - `update_baseline() -> int`: run a scan, count findings per `file_path`, and
   upsert into `health_baseline` (delete-all-then-insert, or upsert on
   `file_path`). Return the number of files recorded. Use `write_transaction()`.
@@ -141,8 +146,8 @@ new `CiService` methods. Match the existing Typer option style in that file.
 ### Step 4: Tests
 
 - Establish a baseline on a temp repo, then add a finding to one file (e.g.
-  enlarge a file past `LARGE_FILE_LINES`), run `ci --ratchet`, assert `ok is
-  False` and the file is in `ratchet_regressions`.
+  enlarge a file past `LARGE_FILE_LINES`), run `ci --ratchet`, assert
+  `ok is False` and the file is in `ratchet_regressions`.
 - Reduce/keep findings at-or-below baseline → `ci --ratchet` `ok is True`.
 - `ci` without `--ratchet` behaves exactly as before (assert against an existing
   CI test if present).
@@ -165,13 +170,15 @@ new `CiService` methods. Match the existing Typer option style in that file.
 - [ ] `ci --update-baseline` records per-file counts; `ci --ratchet` fails only
       on per-file regressions.
 - [ ] Default `ci` behavior unchanged.
-- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright` exit 0.
+- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright`
+      exit 0.
 - [ ] No MCP tool added; no source edited; `tests/fixtures/` untouched.
 - [ ] `plans/README.md` status row for 013 updated.
 
 ## STOP conditions
 
 Stop and report if:
+
 - `SCHEMA_VERSION` is not `5` at start (another schema plan landed first) — use
   the next free version and report the coordination.
 - Existing CI tests assert a fixed `CiReport` field set that adding

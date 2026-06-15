@@ -46,8 +46,10 @@ class ParsedPythonFile:
     references: tuple[ParsedReference, ...]
     parse_error: str | None = None
 ```
-  `ParsedReference.name` is the called name (`ast.Name.id` or `ast.Attribute.attr`),
-  confidence `0.4`. `ParsedImport` has `.module` and `.name` (imported symbol).
+
+`ParsedReference.name` is the called name (`ast.Name.id` or
+`ast.Attribute.attr`), confidence `0.4`. `ParsedImport` has `.module` and
+`.name` (imported symbol).
 
 - Rule emission pattern and the scan loop are in
   `src/codescent/engine/rules/python.py` (`scan_python_health`, lines 31-50) and
@@ -59,17 +61,18 @@ rather than imply certainty; no network; never edit analyzed source.
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Focused tests | `uv run pytest tests -k "dead_code or unused"` | exit 0 |
-| Full tests | `uv run pytest` | exit 0 |
-| Lint | `uv run ruff check .` | exit 0 |
-| Format | `uv run ruff format --check .` | exit 0 |
-| Typecheck | `uv run basedpyright` | exit 0 |
+| Purpose       | Command                                        | Expected |
+| ------------- | ---------------------------------------------- | -------- |
+| Focused tests | `uv run pytest tests -k "dead_code or unused"` | exit 0   |
+| Full tests    | `uv run pytest`                                | exit 0   |
+| Lint          | `uv run ruff check .`                          | exit 0   |
+| Format        | `uv run ruff format --check .`                 | exit 0   |
+| Typecheck     | `uv run basedpyright`                          | exit 0   |
 
 ## Scope
 
 **In scope**:
+
 - `src/codescent/engine/rules/dead_code.py` (create) — the reachability scan.
 - `src/codescent/engine/packs.py` — register it in the python rule pack OR call
   it from `scan_python_health` (choose one; see Step 3).
@@ -77,6 +80,7 @@ rather than imply certainty; no network; never edit analyzed source.
 - `plans/README.md` status row.
 
 **Out of scope**:
+
 - Do NOT delete or edit any analyzed source.
 - Do NOT attempt cross-language reachability (Python only here).
 - Do NOT mark anything dead with high confidence — cap confidence at 0.6 and
@@ -92,6 +96,7 @@ Create `src/codescent/engine/rules/dead_code.py`. Implement
 mirroring `scan_python_health`'s inventory iteration.
 
 First pass — collect, across ALL python files:
+
 - `used_names: set[str]` = every `ParsedReference.name` plus every
   `ParsedImport.name` that is not `None` (a name imported elsewhere counts as
   "used"). Also add any name appearing in a `__all__` assignment (parse the AST
@@ -104,14 +109,16 @@ not nested; the simplest reliable proxy: only consider symbols whose
 `qualified_name` equals `module + "." + name`).
 
 A symbol is a **dead-code candidate** when ALL hold:
+
 - its `name` is NOT in `used_names`;
 - `name` does not start with `_` is NOT required (unused private is still a
   candidate) — but DO exclude dunder names (`__init__`, `__main__`, etc.);
 - the file is not a test file (`parsed.is_test` is `False`);
 - the symbol is not a known entrypoint name: exclude `main`, `app`, `cli`,
-  `run`, and any name referenced from a `[project.scripts]`/`[project.entry-points]`
-  — for this plan, just exclude the fixed set `{"main", "app", "run"}` and note
-  the entry-points refinement as future work.
+  `run`, and any name referenced from a
+  `[project.scripts]`/`[project.entry-points]` — for this plan, just exclude the
+  fixed set `{"main", "app", "run"}` and note the entry-points refinement as
+  future work.
 
 ### Step 2: Emit findings with honest confidence
 
@@ -135,11 +142,11 @@ build_finding(
 
 Add `scan_dead_code` to the python pack. Simplest integration that matches the
 codebase: call it inside `scan_python_health` and extend the returned findings
-(like `secondary_findings` is already composed at
-`engine/rules/python.py:49`), OR add it as a separate rule pack in
-`packs.py`. Prefer composing inside `scan_python_health` so it shares the single
-inventory pass. **Read `engine/rules/python_patterns.py` `secondary_findings`
-first to copy the exact composition style.**
+(like `secondary_findings` is already composed at `engine/rules/python.py:49`),
+OR add it as a separate rule pack in `packs.py`. Prefer composing inside
+`scan_python_health` so it shares the single inventory pass. **Read
+`engine/rules/python_patterns.py` `secondary_findings` first to copy the exact
+composition style.**
 
 **Verify**: `uv run pytest tests -k dead_code` → exit 0 after Step 4.
 
@@ -168,13 +175,15 @@ first to copy the exact composition style.**
       module-level symbols, with confidence 0.6.
 - [ ] Entrypoints (`main`/`app`/`run`), dunders, `__all__` exports, and
       test-referenced symbols are never flagged.
-- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright` exit 0.
+- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright`
+      exit 0.
 - [ ] No analyzed source edited; `tests/fixtures/` untouched.
 - [ ] `plans/README.md` status row for 009 updated.
 
 ## STOP conditions
 
 Stop and report if:
+
 - The name-use heuristic produces obvious false positives on this repo's own
   source (run a scan against `tests/fixtures/python-basic` and eyeball) — report
   the false-positive shape rather than shipping a noisy rule.
@@ -187,7 +196,8 @@ Stop and report if:
 
 - This is intentionally name-based (not full resolution), so confidence is
   capped at 0.6. Do not raise it without real reference resolution.
-- A future plan can promote confidence by using the persisted `symbol_references`
-  / `call_edges` tables (schema migration 3) for resolved references.
+- A future plan can promote confidence by using the persisted
+  `symbol_references` / `call_edges` tables (schema migration 3) for resolved
+  references.
 - Reviewers should check the exclusion list prevents flagging public API and
   CLI/MCP entrypoints.

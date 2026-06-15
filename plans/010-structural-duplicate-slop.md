@@ -22,7 +22,7 @@
 ## Why this matters
 
 "AI slop" is CodeScent's headline thesis, yet today the duplicate detection only
-catches repeated *string literals* (`python.duplicate_literal`). The disease AI
+catches repeated _string literals_ (`python.duplicate_literal`). The disease AI
 agents actually cause is **copy-paste-and-rename**: two or more functions with
 the same structure under different names. Detecting type-2/3 clones via an
 AST-normalized, rename-invariant fingerprint is deterministic, local, and
@@ -57,17 +57,18 @@ network; never edit analyzed source.
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Focused tests | `uv run pytest tests -k "near_duplicate or clone or structural"` | exit 0 |
-| Full tests | `uv run pytest` | exit 0 |
-| Lint | `uv run ruff check .` | exit 0 |
-| Format | `uv run ruff format --check .` | exit 0 |
-| Typecheck | `uv run basedpyright` | exit 0 |
+| Purpose       | Command                                                          | Expected |
+| ------------- | ---------------------------------------------------------------- | -------- |
+| Focused tests | `uv run pytest tests -k "near_duplicate or clone or structural"` | exit 0   |
+| Full tests    | `uv run pytest`                                                  | exit 0   |
+| Lint          | `uv run ruff check .`                                            | exit 0   |
+| Format        | `uv run ruff format --check .`                                   | exit 0   |
+| Typecheck     | `uv run basedpyright`                                            | exit 0   |
 
 ## Scope
 
 **In scope**:
+
 - `src/codescent/engine/rules/structural_dup.py` (create) — the fingerprint +
   near-duplicate scan, operating across all python files.
 - `src/codescent/engine/rules/python.py` — compose the new scan into
@@ -76,6 +77,7 @@ network; never edit analyzed source.
 - `plans/README.md` status row.
 
 **Out of scope**:
+
 - Do NOT touch `_duplicate_literals` (different rule, keep it).
 - Do NOT attempt cross-language clone detection (Python only).
 - Do NOT auto-extract or edit source.
@@ -86,10 +88,10 @@ network; never edit analyzed source.
 
 ### Step 1: Build a rename-invariant structural fingerprint
 
-In `src/codescent/engine/rules/structural_dup.py`, implement a function that, for
-a given function/method AST node, produces a canonical token sequence that is
-invariant to identifier names and literal values but sensitive to control-flow
-structure:
+In `src/codescent/engine/rules/structural_dup.py`, implement a function that,
+for a given function/method AST node, produces a canonical token sequence that
+is invariant to identifier names and literal values but sensitive to
+control-flow structure:
 
 ```python
 MIN_FUNCTION_NODES: Final = 12  # skip trivial functions
@@ -109,17 +111,20 @@ def _structure_fingerprint(node: ast.AST) -> str:
             tokens.append(name)
     return hashlib.sha256("|".join(tokens).encode()).hexdigest()[:16]
 ```
+
 - Skip functions whose walked-node count `< MIN_FUNCTION_NODES` (too trivial to
   be meaningful duplicates — avoids flagging one-line getters).
 
 ### Step 2: Group functions by fingerprint across the repo
 
 `scan_structural_duplicates(root, *, config=None) -> tuple[CodeHealthFinding, ...]`:
+
 - Iterate inventory; `ast.parse` each python file (guard `SyntaxError` → skip).
 - For each top-level and nested `FunctionDef`/`AsyncFunctionDef`, compute the
-  fingerprint and record `(fingerprint -> list of (path, qualified-ish name, lineno))`.
-  Use the node's `name` and `lineno`; qualified name can be `f"{module}.{name}"`
-  approximated from the relative path, or just `name` — keep it informative.
+  fingerprint and record
+  `(fingerprint -> list of (path, qualified-ish name, lineno))`. Use the node's
+  `name` and `lineno`; qualified name can be `f"{module}.{name}"` approximated
+  from the relative path, or just `name` — keep it informative.
 - A fingerprint group with `>= 2` distinct `(path, lineno)` members is a clone
   cluster.
 
@@ -146,15 +151,17 @@ build_finding(
     ),
 )
 ```
+
 - `locations_str` must be a single string (evidence values are scalar). Cap the
   listed locations to e.g. 5 with a trailing "(+N more)".
 
 ### Step 4: Compose into the scan
 
-In `engine/rules/python.py`, call `scan_structural_duplicates(repo_root, config=...)`
-once (it does its own inventory pass, OR refactor to accept the already-parsed
-files — prefer the simplest correct version: its own pass) and extend the
-returned findings tuple. Keep it after the per-file loop in `scan_python_health`.
+In `engine/rules/python.py`, call
+`scan_structural_duplicates(repo_root, config=...)` once (it does its own
+inventory pass, OR refactor to accept the already-parsed files — prefer the
+simplest correct version: its own pass) and extend the returned findings tuple.
+Keep it after the per-file loop in `scan_python_health`.
 
 **Verify**: `uv run pytest tests -k near_duplicate` → exit 0 after Step 5.
 
@@ -163,7 +170,7 @@ returned findings tuple. Keep it after the per-file loop in `scan_python_health`
 - Temp repo with `a.py` and `b.py` each containing a non-trivial function with
   identical structure but different names/variables/strings. Assert exactly one
   `python.structural_near_duplicate` finding with `occurrences == 2`.
-- Assert two *structurally different* functions produce no finding.
+- Assert two _structurally different_ functions produce no finding.
 - Assert a trivial one-liner duplicated twice is NOT flagged (below
   `MIN_FUNCTION_NODES`).
 
@@ -181,13 +188,15 @@ returned findings tuple. Keep it after the per-file loop in `scan_python_health`
 - [ ] `python.structural_near_duplicate` fires for rename-invariant duplicates
       and not for distinct or trivial functions.
 - [ ] One finding per cluster; `locations` is a single bounded string.
-- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright` exit 0.
+- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright`
+      exit 0.
 - [ ] No analyzed source edited; `tests/fixtures/` untouched.
 - [ ] `plans/README.md` status row for 010 updated.
 
 ## STOP conditions
 
 Stop and report if:
+
 - Running against `tests/fixtures/python-basic` floods findings (the
   `MIN_FUNCTION_NODES` threshold is too low) — report the count and tune the
   threshold before shipping.

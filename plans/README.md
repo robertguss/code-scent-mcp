@@ -16,10 +16,10 @@ starting, honor its STOP conditions, and update the status row here when done.
 
 ### Feature set B — "top 10" capability ideas (generated 2026-06-15)
 
-A second, independent set of 10 feature plans. These are additive
-capabilities, not bug fixes, and do not depend on plans 001–005. Recommended
-order below is by leverage; only 007 hard-depends on 006, and 013/014 must
-coordinate their `SCHEMA_VERSION` bump.
+A second, independent set of 10 feature plans. These are additive capabilities,
+not bug fixes, and do not depend on plans 001–005. Recommended order below is by
+leverage; only 007 hard-depends on 006, and 013/014 must coordinate their
+`SCHEMA_VERSION` bump.
 
 | Plan | Title                                            | Priority | Effort | Depends on | Status |
 | ---- | ------------------------------------------------ | -------- | ------ | ---------- | ------ |

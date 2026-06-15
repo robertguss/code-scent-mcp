@@ -22,10 +22,10 @@
 ## Why this matters
 
 Agents love to declare victory. Today `mark_finding(resolved)` trusts the caller
-blindly — there is no record of *how* the finding was verified. Adding a
+blindly — there is no record of _how_ the finding was verified. Adding a
 verification ledger (what command ran, exit code, summary) plus **evidence-gated
 resolution** (mark "resolved" → recorded as `needs_review` unless verification
-evidence or a clean rescan exists) makes "resolved" mean *proven resolved*. This
+evidence or a clean rescan exists) makes "resolved" mean _proven resolved_. This
 converts the backlog from optimistic to auditable — exactly what teams reviewing
 AI-generated PRs need. CodeScent never executes anything; the agent reports
 results, CodeScent records and gates.
@@ -39,6 +39,7 @@ results, CodeScent records and gates.
     def mark_finding(self, finding_id, status, *, note="") -> FindingRow:
         return _repository(self.repo_root).update_status(finding_id, status, note=note)
 ```
+
 ```python
 # src/codescent/storage/repositories/findings.py:83-116
     def update_status(self, finding_id, status, *, note) -> FindingRow:
@@ -47,7 +48,7 @@ results, CodeScent records and gates.
 ```
 
 - The schema already has a `suggested_verifications` table (recommend-only
-  commands) but NO table for *executed/reported* verification results:
+  commands) but NO table for _executed/reported_ verification results:
 
 ```python
 # src/codescent/storage/schema.py:100-107
@@ -59,11 +60,11 @@ results, CodeScent records and gates.
         executes_in_v1 integer not null default 0
     )
 ```
-  `SCHEMA_VERSION` is `5`; add tables by bumping it and adding a
-  `MIGRATION_STATEMENTS` key (see `schema.py:138-211`).
 
-- `FindingStatus` enum already includes `NEEDS_REVIEW`
-  (`core/models.py:16-24`).
+`SCHEMA_VERSION` is `5`; add tables by bumping it and adding a
+`MIGRATION_STATEMENTS` key (see `schema.py:138-211`).
+
+- `FindingStatus` enum already includes `NEEDS_REVIEW` (`core/models.py:16-24`).
 
 - Finding MCP tools (scan/mark/rescan/backlog) live in
   `src/codescent/mcp/finding_tools.py`. New MCP tools must also be added to
@@ -74,21 +75,22 @@ execution of project commands; MCP tools thin.
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Contract tests | `uv run pytest tests/contract` | exit 0 |
-| Focused tests | `uv run pytest tests -k "verification_ledger or evidence_gate or mark_finding"` | exit 0 |
-| Full tests | `uv run pytest` | exit 0 |
-| Lint | `uv run ruff check .` | exit 0 |
-| Format | `uv run ruff format --check .` | exit 0 |
-| Typecheck | `uv run basedpyright` | exit 0 |
+| Purpose        | Command                                                                         | Expected |
+| -------------- | ------------------------------------------------------------------------------- | -------- |
+| Contract tests | `uv run pytest tests/contract`                                                  | exit 0   |
+| Focused tests  | `uv run pytest tests -k "verification_ledger or evidence_gate or mark_finding"` | exit 0   |
+| Full tests     | `uv run pytest`                                                                 | exit 0   |
+| Lint           | `uv run ruff check .`                                                           | exit 0   |
+| Format         | `uv run ruff format --check .`                                                  | exit 0   |
+| Typecheck      | `uv run basedpyright`                                                           | exit 0   |
 
 ## Scope
 
 **In scope**:
+
 - `src/codescent/storage/schema.py` — add `verification_runs` table.
-- `src/codescent/storage/repositories/findings.py` (or a new
-  `verification.py` repository) — insert/read verification runs.
+- `src/codescent/storage/repositories/findings.py` (or a new `verification.py`
+  repository) — insert/read verification runs.
 - `src/codescent/services/findings.py` — evidence-gated `mark_finding` +
   `record_verification`.
 - `src/codescent/mcp/finding_tools.py` — register a `record_verification` MCP
@@ -99,11 +101,12 @@ execution of project commands; MCP tools thin.
 - `plans/README.md` status row.
 
 **Out of scope**:
+
 - Do NOT execute any command. `record_verification` only stores results the
   caller passes in (command string, exit code, summary).
-- Do NOT change how the scanner auto-resolves absent findings
-  (`code_health.py` `_record_resolved_absent`) — that is rescan-based evidence
-  and is already legitimate.
+- Do NOT change how the scanner auto-resolves absent findings (`code_health.py`
+  `_record_resolved_absent`) — that is rescan-based evidence and is already
+  legitimate.
 - `tests/fixtures/` source.
 
 ## Steps
@@ -111,8 +114,8 @@ execution of project commands; MCP tools thin.
 ### Step 1: Add the ledger table
 
 In `schema.py`: bump `SCHEMA_VERSION` to the next free integer (expected `6`, or
-`7` if plan 013 already took `6` — **if `SCHEMA_VERSION` is not what you
-expect, use the next free number and report**). Add under that version:
+`7` if plan 013 already took `6` — **if `SCHEMA_VERSION` is not what you expect,
+use the next free number and report**). Add under that version:
 
 ```sql
 create table if not exists verification_runs (
@@ -130,8 +133,9 @@ create table if not exists verification_runs (
 Add to the finding repository (or a small new repository class following the
 existing dataclass-over-`RepositoryStorage` pattern in
 `storage/repositories/findings.py`):
-- `record_verification(finding_id, command, exit_code, output_summary) -> int`
-  → insert, return row id (use `write_transaction()`).
+
+- `record_verification(finding_id, command, exit_code, output_summary) -> int` →
+  insert, return row id (use `write_transaction()`).
 - `has_passing_verification(finding_id) -> bool` → true if any
   `verification_runs` row for the finding has `exit_code == 0`.
 
@@ -139,18 +143,20 @@ existing dataclass-over-`RepositoryStorage` pattern in
 
 In `FindingsService.mark_finding`, when the requested status is
 `FindingStatus.RESOLVED`:
+
 - If `has_passing_verification(finding_id)` is `True`, allow `resolved`.
-- Otherwise, downgrade to `FindingStatus.NEEDS_REVIEW`, append a `finding_events`
-  note explaining the gate (e.g. "resolution requires a passing verification or
-  a clean rescan"), and return that row. Add a clear field/return signal so the
-  MCP layer can tell the agent it was gated.
+- Otherwise, downgrade to `FindingStatus.NEEDS_REVIEW`, append a
+  `finding_events` note explaining the gate (e.g. "resolution requires a passing
+  verification or a clean rescan"), and return that row. Add a clear
+  field/return signal so the MCP layer can tell the agent it was gated.
 
 Keep all other statuses pass-through unchanged.
 
 ### Step 4: `record_verification` service + MCP tool
 
-- Service: `FindingsService.record_verification(finding_id, command, exit_code,
-  output_summary)` → repository insert; return a small dataclass.
+- Service:
+  `FindingsService.record_verification(finding_id, command, exit_code, output_summary)`
+  → repository insert; return a small dataclass.
 - MCP: in `finding_tools.py`, add a `record_verification` tool (thin) with a
   `TypedDict` payload, description:
   > "Use CodeScent to record the result of a verification you ran (command, exit
@@ -194,13 +200,16 @@ Keep all other statuses pass-through unchanged.
 - [ ] `mark_finding(RESOLVED)` without evidence yields `needs_review`; with a
       passing `verification_runs` row yields `resolved`.
 - [ ] `record_verification` MCP tool registered + documented; executes nothing.
-- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright` exit 0.
-- [ ] No project command executed; no source edited; `tests/fixtures/` untouched.
+- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright`
+      exit 0.
+- [ ] No project command executed; no source edited; `tests/fixtures/`
+      untouched.
 - [ ] `plans/README.md` status row for 014 updated.
 
 ## STOP conditions
 
 Stop and report if:
+
 - Existing tests assert that `mark_finding(RESOLVED)` always yields `resolved`
   unconditionally — report; the gate intentionally changes this and those tests
   may need updating, which the reviewer should approve.

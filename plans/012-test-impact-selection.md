@@ -62,18 +62,19 @@ read-only for source; tool descriptions are contract text.
 
 ## Commands you will need
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Contract tests | `uv run pytest tests/contract` | exit 0 |
-| Focused tests | `uv run pytest tests -k "select_tests or test_impact"` | exit 0 |
-| Full tests | `uv run pytest` | exit 0 |
-| Lint | `uv run ruff check .` | exit 0 |
-| Format | `uv run ruff format --check .` | exit 0 |
-| Typecheck | `uv run basedpyright` | exit 0 |
+| Purpose        | Command                                                | Expected |
+| -------------- | ------------------------------------------------------ | -------- |
+| Contract tests | `uv run pytest tests/contract`                         | exit 0   |
+| Focused tests  | `uv run pytest tests -k "select_tests or test_impact"` | exit 0   |
+| Full tests     | `uv run pytest`                                        | exit 0   |
+| Lint           | `uv run ruff check .`                                  | exit 0   |
+| Format         | `uv run ruff format --check .`                         | exit 0   |
+| Typecheck      | `uv run basedpyright`                                  | exit 0   |
 
 ## Scope
 
 **In scope**:
+
 - `src/codescent/services/verification.py` — add `select_tests(...)` to
   `VerificationService`.
 - `src/codescent/mcp/planning_tools.py` — register a `select_tests` MCP tool.
@@ -83,6 +84,7 @@ read-only for source; tool descriptions are contract text.
 - `plans/README.md` status row.
 
 **Out of scope**:
+
 - Do NOT execute pytest or any project command (recommend-only, like
   `verify_change`). `executes_in_v1` stays `False`.
 - Do NOT change `suggest_tests` behavior or shape.
@@ -112,8 +114,11 @@ def select_tests(self, *, paths: tuple[str, ...] | None = None) -> SelectedTests
     and build a single ``pytest <files...>`` command.
     """
 ```
+
 Implementation:
-- Resolve `repo_root`. `changed = paths or tuple(sorted(git_changed_paths(repo_root)))`.
+
+- Resolve `repo_root`.
+  `changed = paths or tuple(sorted(git_changed_paths(repo_root)))`.
 - For each changed python source file, call
   `ContextService(repo_root).get_related_files(path, limit=20)` and collect
   result paths that are tests (path startswith `tests/` or matches the repo's
@@ -121,8 +126,8 @@ Implementation:
 - Also include any changed path that is itself a test file directly.
 - Dedupe (`dict.fromkeys`), sort. `command = "pytest " + " ".join(test_files)`
   or `"pytest"` if none found. `executes_in_v1=False`.
-- Import `git_changed_paths`, `ContextService`, `resolve_repo_root` at module top
-  (no inline imports).
+- Import `git_changed_paths`, `ContextService`, `resolve_repo_root` at module
+  top (no inline imports).
 
 ### Step 2: Register the MCP tool
 
@@ -154,9 +159,11 @@ reference block format (Group: planning; recommend-only; bounded).
 
 ### Step 5: Tests
 
-- Integration: temp repo with `src/app/x.py`, `tests/test_x.py`, and an unrelated
-  `tests/test_y.py`. With `x.py` "changed", assert `select_tests(paths=("src/app/x.py",))`
-  returns `test_files == ("tests/test_x.py",)` and `command == "pytest tests/test_x.py"`.
+- Integration: temp repo with `src/app/x.py`, `tests/test_x.py`, and an
+  unrelated `tests/test_y.py`. With `x.py` "changed", assert
+  `select_tests(paths=("src/app/x.py",))` returns
+  `test_files == ("tests/test_x.py",)` and
+  `command == "pytest tests/test_x.py"`.
 - Edge: no related tests → `command == "pytest"`.
 - Contract: the registered tool surface includes `select_tests`.
 
@@ -176,13 +183,16 @@ reference block format (Group: planning; recommend-only; bounded).
       `docs/mcp-tools.md`.
 - [ ] Returns a single focused command from changed/related test mapping;
       `executes_in_v1` is `False`.
-- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright` exit 0.
-- [ ] No project command executed; no source edited; `tests/fixtures/` untouched.
+- [ ] `uv run pytest`, `ruff check`, `ruff format --check`, `basedpyright`
+      exit 0.
+- [ ] No project command executed; no source edited; `tests/fixtures/`
+      untouched.
 - [ ] `plans/README.md` status row for 012 updated.
 
 ## STOP conditions
 
 Stop and report if:
+
 - Contract tests reference an additional registry (e.g. a separate JSON/docs
   list) that must also be updated and is not in scope — report what else needs
   the name.
