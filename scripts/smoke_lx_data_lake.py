@@ -40,6 +40,8 @@ from codescent.smoke.lx_data_lake_contract import (
 
 __all__ = ["LX_REQUIRED_EXCLUDES", "build_smoke_plan"]
 
+GIT_STATUS_TIMEOUT_SECONDS = 5
+
 
 def run_smoke(repo: Path, out: Path, *, dry_run: bool) -> dict[str, JsonValue]:
     plan = build_smoke_plan(repo)
@@ -153,12 +155,16 @@ def _excluded_absence(
 
 
 def _git_status_without_codescent(repo: Path) -> tuple[str, ...]:
-    completed = subprocess.run(
-        ["git", "status", "--short", "--untracked-files=all"],
+    git_path = shutil.which("git")
+    if git_path is None:
+        return ()
+    completed = subprocess.run(  # nosec B603 - resolved git path, shell=False.
+        [git_path, "status", "--short", "--untracked-files=all"],
         cwd=repo,
         check=False,
         capture_output=True,
         text=True,
+        timeout=GIT_STATUS_TIMEOUT_SECONDS,
     )
     return tuple(
         line for line in completed.stdout.splitlines() if ".codescent/" not in line

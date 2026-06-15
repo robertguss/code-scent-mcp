@@ -4,10 +4,16 @@ const state = {
   enabledRulePacks: [],
 };
 
+const REQUEST_TIMEOUT_MS = 5000;
+
 const byId = (id) => document.getElementById(id);
+const requestSignal = () => AbortSignal.timeout(REQUEST_TIMEOUT_MS);
 
 async function loadJson(path) {
-  const response = await fetch(path, { headers: { Accept: "application/json" } });
+  const response = await fetch(path, {
+    headers: { Accept: "application/json" },
+    signal: requestSignal(),
+  });
   if (!response.ok) {
     throw new Error(`dashboard request failed: ${path}`);
   }
@@ -22,6 +28,7 @@ async function sendJson(path, payload) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
+    signal: requestSignal(),
   });
   if (!response.ok) {
     throw new Error(`dashboard request failed: ${path}`);
@@ -65,7 +72,7 @@ function renderFindings(payload) {
     meta.className = "finding-meta";
     meta.textContent = `${finding.file_path} · ${finding.severity} · ${finding.status}`;
     button.append(meta);
-    button.addEventListener("click", () => selectFinding(index));
+    button.onclick = () => selectFinding(index);
     list.append(button);
   });
   selectFinding(0);
@@ -151,7 +158,7 @@ function ruleItem(pack, enabled) {
   button.className = "rule-toggle";
   button.type = "button";
   button.textContent = enabled ? "Disable" : "Enable";
-  button.addEventListener("click", () => updateRulePack(pack, !enabled));
+  button.onclick = () => updateRulePack(pack, !enabled);
   item.append(label, button);
   return item;
 }
@@ -175,7 +182,7 @@ function renderExport(payload) {
   if (!button) {
     return;
   }
-  button.addEventListener("click", () => {
+  button.onclick = () => {
     const blob = new Blob([JSON.stringify(state.exportPayload, null, 2)], {
       type: "application/json",
     });
@@ -184,7 +191,7 @@ function renderExport(payload) {
     anchor.download = "codescent-dashboard-export.json";
     anchor.click();
     URL.revokeObjectURL(anchor.href);
-  });
+  };
 }
 
 async function bootDashboard() {

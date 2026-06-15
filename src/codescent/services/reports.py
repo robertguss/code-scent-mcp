@@ -109,7 +109,11 @@ def _score_reasons(finding: FindingRow) -> tuple[str, ...]:
 
 
 def _json_object(raw: str) -> JsonObject:
-    parsed = cast("object", json.loads(raw))
+    try:
+        decoded = cast("object", json.JSONDecoder().decode(raw))
+    except json.JSONDecodeError:
+        return {}
+    parsed = decoded
     if not isinstance(parsed, dict):
         return {}
     items = cast("dict[object, object]", parsed)

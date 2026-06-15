@@ -134,10 +134,10 @@ class ResultStoreService:
         created_at: datetime | None = None,
         expires_at: datetime | None = None,
     ) -> StoredResultRow:
-        _ = _load_json(input_json)
-        _ = _load_json(raw_result_json)
+        _validate_json(input_json)
+        _validate_json(raw_result_json)
         if summary_json is not None:
-            _ = _load_json(summary_json)
+            _validate_json(summary_json)
         return self.repository.create_result(
             StoredResultCreate(
                 project_id=project_id,
@@ -265,7 +265,7 @@ def _summary_response(
     row: StoredResultRow,
     *,
     summary_payload: JsonValue | None,
-    raw_payload: JsonValue,
+    raw_payload: JsonValue | None,
     limit: int,
 ) -> RetrievedResultPayload:
     if summary_payload is not None:
@@ -476,8 +476,21 @@ def _json_text(value: JsonValue) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
-def _load_json(payload: str) -> JsonValue:
-    return cast("JsonValue", json.loads(payload))
+def _validate_json(payload: str) -> None:
+    try:
+        decoded = cast("object", json.JSONDecoder().decode(payload))
+    except json.JSONDecodeError as exc:
+        message = "stored result payload must be valid JSON"
+        raise ValueError(message) from exc
+    _ = decoded
+
+
+def _load_json(payload: str) -> JsonValue | None:
+    try:
+        decoded = cast("object", json.JSONDecoder().decode(payload))
+    except json.JSONDecodeError:
+        return None
+    return cast("JsonValue", decoded)
 
 
 def _parse_timestamp(value: str) -> datetime:

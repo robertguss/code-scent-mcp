@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
-from xml.etree import ElementTree as ET
+from typing import TYPE_CHECKING, Final
+
+from defusedxml.ElementTree import ParseError
+from defusedxml.ElementTree import parse as parse_xml
 
 from codescent.engine.parsers.python import parse_python_file
 from codescent.engine.rules.model import (
@@ -11,6 +13,9 @@ from codescent.engine.rules.model import (
     FindingSpec,
     build_finding,
 )
+
+if TYPE_CHECKING:
+    from xml.etree import ElementTree as ET
 
 MAX_COVERAGE_FINDINGS: Final = 200
 
@@ -33,13 +38,17 @@ def load_coverage(
         return ()
 
     try:
-        tree = ET.parse(report_path)  # noqa: S314 - local Cobertura XML input
-    except (ET.ParseError, OSError):
+        tree = parse_xml(report_path)
+    except (ParseError, OSError):
         return ()
 
-    source_roots = _source_roots(root, tree.getroot())
+    coverage_root = tree.getroot()
+    if coverage_root is None:
+        return ()
+
+    source_roots = _source_roots(root, coverage_root)
     uncovered_by_path: dict[str, set[int]] = {}
-    for class_element in _elements_named(tree.getroot(), "class"):
+    for class_element in _elements_named(coverage_root, "class"):
         filename = class_element.get("filename")
         if not filename:
             continue

@@ -191,7 +191,11 @@ def _row_from_database(
 
 
 def _payload_from_json(raw_payload: str) -> SanitizedPayload:
-    parsed = cast("object", json.loads(raw_payload))
+    try:
+        decoded = cast("object", json.JSONDecoder().decode(raw_payload))
+    except json.JSONDecodeError:
+        return {}
+    parsed = decoded
     if not isinstance(parsed, dict):
         return {}
     sanitized: SanitizedPayload = {}

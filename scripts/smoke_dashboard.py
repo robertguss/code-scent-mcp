@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import hmac
 import http.client
 import json
 import os
@@ -56,7 +57,9 @@ def main() -> None:
 
     after = _source_hashes(repo)
     changed_source_paths = [
-        path for path, digest in before.items() if after.get(path) != digest
+        path
+        for path, digest in before.items()
+        if not hmac.compare_digest(after.get(path, ""), digest)
     ]
     created_source_paths = [path for path in after if path not in before]
     payload = {
@@ -142,10 +145,10 @@ def _capture_screenshot(url: str, screenshot: Path) -> None:
         f"--user-data-dir={profile}",
         "about:blank",
     ]
-    chrome_process = subprocess.Popen(
+    chrome_process = subprocess.Popen(  # nosec B603 - fixed Chrome command, shell=False.
         command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     try:
         _wait_for_chrome(remote_port)
@@ -155,7 +158,7 @@ def _capture_screenshot(url: str, screenshot: Path) -> None:
             "SCREENSHOT_PATH": str(screenshot),
             "REMOTE_PORT": str(remote_port),
         }
-        completed = subprocess.run(
+        completed = subprocess.run(  # nosec B603 - fixed Node script, shell=False.
             [
                 node,
                 str(Path(__file__).with_name("dashboard_screenshot.mjs")),
@@ -178,7 +181,11 @@ def _capture_screenshot(url: str, screenshot: Path) -> None:
 
 
 def _markdown_export(status_json: str) -> str:
-    parsed = json.loads(status_json)
+    try:
+        decoded = json.JSONDecoder().decode(status_json)
+    except json.JSONDecodeError:
+        return "# CodeScent Dashboard Export\n"
+    parsed = decoded
     if not isinstance(parsed, dict):
         return "# CodeScent Dashboard Export\n"
     return "\n".join(
