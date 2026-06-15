@@ -9,9 +9,12 @@ from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
 from codescent.services.config import ConfigService
 from codescent.services.git import detect_git_state
+from codescent.services.task_brief import TaskBriefService
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
+
+    from codescent.services.task_brief import TaskBrief
 
 SAMPLE_FILE_LIMIT: Final = 20
 CHANGED_FILE_LIMIT: Final = 20
@@ -41,7 +44,28 @@ class RepoStatusToolPayload(TypedDict):
     git_status: str
 
 
+class StartTaskToolPayload(TypedDict):
+    ok: bool
+    query: str
+    relevant_files: tuple[str, ...]
+    relevant_symbols: tuple[str, ...]
+    related_tests: tuple[str, ...]
+    open_findings: tuple[dict[str, str], ...]
+    index_fresh: bool
+    next_tools: tuple[str, ...]
+
+
 def register_repo_tools(mcp: FastMCP) -> None:
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent FIRST when beginning a task. Returns a bounded "
+            "brief: relevant files, key symbols, related tests, in-scope "
+            "findings, index freshness, and the next tool calls to make so "
+            "you avoid broad greps and many round trips. Read-only for "
+            "analyzed source; bounded output."
+        ),
+    )(start_task)
+
     _ = mcp.tool(
         description=(
             "Use CodeScent before broad grep or large reads to get a bounded "
@@ -59,6 +83,21 @@ def register_repo_tools(mcp: FastMCP) -> None:
     )(get_repo_status)
 
 
+def start_task(
+    query: str,
+    repo: str = ".",
+    focus_path: str | None = None,
+    focus_symbol: str | None = None,
+) -> StartTaskToolPayload:
+    return _task_brief_payload(
+        TaskBriefService(repo).start_task(
+            query,
+            focus_path=focus_path,
+            focus_symbol=focus_symbol,
+        ),
+    )
+
+
 def get_repo_map(repo: str = ".") -> RepoMapToolPayload:
     repo_root = resolve_repo_root(repo)
     config = ConfigService(repo_root).load()
@@ -73,6 +112,19 @@ def get_repo_map(repo: str = ".") -> RepoMapToolPayload:
         "top_level": _top_level(tuple(item.path for item in inventory)),
         "entrypoints": _entrypoints(tuple(item.path for item in inventory)),
         "sample_files": tuple(item.path for item in inventory[:SAMPLE_FILE_LIMIT]),
+    }
+
+
+def _task_brief_payload(brief: TaskBrief) -> StartTaskToolPayload:
+    return {
+        "ok": True,
+        "query": brief.query,
+        "relevant_files": brief.relevant_files,
+        "relevant_symbols": brief.relevant_symbols,
+        "related_tests": brief.related_tests,
+        "open_findings": brief.open_findings,
+        "index_fresh": brief.index_fresh,
+        "next_tools": brief.next_tools,
     }
 
 

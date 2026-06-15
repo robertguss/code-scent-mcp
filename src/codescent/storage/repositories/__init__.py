@@ -2,6 +2,7 @@ from codescent.storage.repositories.findings import (
     FindingEventRow,
     FindingRepository,
     FindingRow,
+    VerificationRunRow,
 )
 from codescent.storage.repositories.session_events import (
     SanitizedPayload,
@@ -31,5 +32,6 @@ __all__ = [
     "StoredResultRepository",
     "StoredResultRow",
     "StoredResultSummaryRow",
+    "VerificationRunRow",
     "sanitize_event_payload",
 ]

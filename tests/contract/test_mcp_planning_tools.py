@@ -40,6 +40,16 @@ class SuggestedTestsPayload(BaseModel):
     executes_in_v1: bool
 
 
+class SelectTestsPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    changed_files: tuple[str, ...]
+    test_files: tuple[str, ...]
+    command: str
+    executes_in_v1: bool
+
+
 class VerifyChangePayload(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
@@ -85,9 +95,18 @@ async def test_planning_tools_are_bounded_and_do_not_execute(tmp_path: Path) -> 
             "suggest_tests",
             {"repo": str(repo), "finding_id": finding_id},
         )
+        selected_tests_result = await client.call_tool(
+            "select_tests",
+            {"repo": str(repo), "paths": ["src/pkg/config.py"]},
+        )
 
     tool_names = {tool.name for tool in tools}
-    assert {"get_finding_context", "plan_refactor", "suggest_tests"} <= tool_names
+    assert {
+        "get_finding_context",
+        "plan_refactor",
+        "suggest_tests",
+        "select_tests",
+    } <= tool_names
 
     context = FindingContextPayload.model_validate_json(
         _text_content(context_result.content),
@@ -95,6 +114,9 @@ async def test_planning_tools_are_bounded_and_do_not_execute(tmp_path: Path) -> 
     plan = RefactorPlanPayload.model_validate_json(_text_content(plan_result.content))
     suggested = SuggestedTestsPayload.model_validate_json(
         _text_content(tests_result.content),
+    )
+    selected = SelectTestsPayload.model_validate_json(
+        _text_content(selected_tests_result.content),
     )
 
     assert context.ok is True
@@ -108,6 +130,11 @@ async def test_planning_tools_are_bounded_and_do_not_execute(tmp_path: Path) -> 
     assert plan.verification_recommendations == ("pytest tests/test_config.py",)
     assert suggested.ok is True
     assert suggested.executes_in_v1 is False
+    assert selected.ok is True
+    assert selected.changed_files == ("src/pkg/config.py",)
+    assert selected.test_files == ("tests/test_config.py",)
+    assert selected.command == "pytest tests/test_config.py"
+    assert selected.executes_in_v1 is False
     assert not (repo / ".pytest_cache").exists()
 
 

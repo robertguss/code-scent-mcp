@@ -2,6 +2,8 @@ import sqlite3
 from contextlib import closing
 from pathlib import Path
 
+import pytest
+
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import (
     SessionEventRepository,
@@ -46,14 +48,33 @@ def test_migrates_mvp_schema_to_latest_without_data_loss(tmp_path: Path) -> None
         )
         for statement in (
             "select 1 from call_edges limit 0",
+            "select 1 from health_baseline limit 0",
             "select 1 from symbol_references limit 0",
             "select 1 from session_events limit 0",
             "select 1 from stored_results limit 0",
+            "select 1 from verification_runs limit 0",
         ):
             cursor = connection.execute(statement)
             assert cursor.description is not None
+        assert _health_baseline_columns(connection) == {
+            "id": "integer",
+            "file_path": "text",
+            "finding_count": "integer",
+            "created_at": "text",
+        }
+        assert _verification_run_columns(connection) == {
+            "id": "integer",
+            "finding_id": "text",
+            "command": "text",
+            "exit_code": "integer",
+            "output_summary": "text",
+            "created_at": "text",
+        }
 
     storage = RepositoryStorage(state)
+    with pytest.raises(sqlite3.IntegrityError):
+        _insert_duplicate_health_baseline(storage)
+
     result = StoredResultRepository(storage).create_result(
         StoredResultCreate(
             project_id="project-alpha",
@@ -202,6 +223,42 @@ def _schema_version(connection: sqlite3.Connection) -> int:
         "select version from schema_version",
     ).fetchall()
     return rows[0][0]
+
+
+def _health_baseline_columns(connection: sqlite3.Connection) -> dict[str, str]:
+    rows: list[tuple[int, str, str, int, str | None, int]] = connection.execute(
+        "pragma table_info(health_baseline)",
+    ).fetchall()
+    return {row[1]: row[2].lower() for row in rows}
+
+
+def _verification_run_columns(connection: sqlite3.Connection) -> dict[str, str]:
+    rows: list[tuple[int, str, str, int, str | None, int]] = connection.execute(
+        "pragma table_info(verification_runs)",
+    ).fetchall()
+    return {row[1]: row[2].lower() for row in rows}
+
+
+def _insert_duplicate_health_baseline(storage: RepositoryStorage) -> None:
+    with storage.write_transaction() as connection:
+        _ = connection.execute(
+            """
+            insert into health_baseline (
+                file_path,
+                finding_count,
+                created_at
+            ) values ('app.py', 1, 'now')
+            """,
+        )
+        _ = connection.execute(
+            """
+            insert into health_baseline (
+                file_path,
+                finding_count,
+                created_at
+            ) values ('app.py', 2, 'later')
+            """,
+        )
 
 
 def _single_value(connection: sqlite3.Connection, query: str) -> str:

@@ -8,7 +8,9 @@
   "tool_calls": [
     {
       "data": {
-        "entrypoints": ["src/acme_tasks/cli.py"],
+        "entrypoints": [
+          "src/acme_tasks/cli.py"
+        ],
         "file_count": 11,
         "languages": {
           "python": 11
@@ -29,7 +31,10 @@
           "tests/test_workflow.py"
         ],
         "test_file_count": 3,
-        "top_level": ["src", "tests"]
+        "top_level": [
+          "src",
+          "tests"
+        ]
       },
       "tool": "get_repo_map"
     },
@@ -62,19 +67,26 @@
     {
       "data": {
         "limit": 20,
+        "next_cursor": null,
         "ok": true,
         "query": "workflow",
         "results": [
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": ["exact_path"],
-            "score": 100.0,
+            "reasons": [
+              "exact_path",
+              "changed_file"
+            ],
+            "score": 125.0,
             "snippet": null
           },
           {
             "path": "tests/test_workflow.py",
-            "reasons": ["exact_path"],
-            "score": 100.0,
+            "reasons": [
+              "exact_path",
+              "changed_file"
+            ],
+            "score": 125.0,
             "snippet": null
           }
         ]
@@ -84,50 +96,75 @@
     {
       "data": {
         "limit": 20,
+        "next_cursor": null,
         "ok": true,
         "query": "pending-review",
         "results": [
           {
-            "path": "src/acme_tasks/config.py",
-            "reasons": ["content_match"],
-            "score": 100.0,
-            "snippet": "DEFAULT_STATUS = \"pending-review\""
-          },
-          {
-            "path": "src/acme_tasks/config.py",
-            "reasons": ["content_match"],
-            "score": 100.0,
-            "snippet": "ESCALATION_STATUS = \"pending-review\""
-          },
-          {
-            "path": "src/acme_tasks/config.py",
-            "reasons": ["content_match"],
-            "score": 100.0,
-            "snippet": "NOTIFICATION_STATUS = \"pending-review\""
-          },
-          {
-            "path": "src/acme_tasks/report.py",
-            "reasons": ["content_match"],
-            "score": 100.0,
-            "snippet": "status = \"pending-review\""
-          },
-          {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": ["content_match"],
-            "score": 100.0,
+            "reasons": [
+              "content_match",
+              "changed_file",
+              "frecency"
+            ],
+            "score": 155.0,
             "snippet": "plan.append(f\"{user}: review pending-review queue\")"
           },
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": ["content_match"],
-            "score": 100.0,
+            "reasons": [
+              "content_match",
+              "changed_file",
+              "frecency"
+            ],
+            "score": 155.0,
             "snippet": "plan.append(f\"{user}: review pending-review reminders\")"
           },
           {
             "path": "src/acme_tasks/workflow.py",
-            "reasons": ["content_match"],
-            "score": 100.0,
+            "reasons": [
+              "content_match",
+              "changed_file",
+              "frecency"
+            ],
+            "score": 155.0,
             "snippet": "plan.append(f\"{user}: review pending-review exports\")"
+          },
+          {
+            "path": "src/acme_tasks/config.py",
+            "reasons": [
+              "content_match",
+              "changed_file"
+            ],
+            "score": 125.0,
+            "snippet": "DEFAULT_STATUS = \"pending-review\""
+          },
+          {
+            "path": "src/acme_tasks/config.py",
+            "reasons": [
+              "content_match",
+              "changed_file"
+            ],
+            "score": 125.0,
+            "snippet": "ESCALATION_STATUS = \"pending-review\""
+          },
+          {
+            "path": "src/acme_tasks/config.py",
+            "reasons": [
+              "content_match",
+              "changed_file"
+            ],
+            "score": 125.0,
+            "snippet": "NOTIFICATION_STATUS = \"pending-review\""
+          },
+          {
+            "path": "src/acme_tasks/report.py",
+            "reasons": [
+              "content_match",
+              "changed_file"
+            ],
+            "score": 125.0,
+            "snippet": "status = \"pending-review\""
           }
         ]
       },
@@ -149,16 +186,22 @@
           "python.missing_nearby_test:6a5072411e5c",
           "python.missing_nearby_test:267db4cb7a39",
           "python.large_function:51a81f47dacc",
-          "python.changed_source_without_related_test:77efbecf23af",
-          "python.changed_source_without_related_test:ee0d42dd72fb",
-          "python.changed_source_without_related_test:ef5be28c6ea8",
-          "python.changed_source_without_related_test:c443f18095af",
-          "python.changed_source_without_related_test:ab54f1b6a991"
+          "python.dead_code_candidate:1455f08fcb20",
+          "python.dead_code_candidate:2be8ecf7b829",
+          "python.dead_code_candidate:2ef31bceb575",
+          "python.dead_code_candidate:e72e2adacc33",
+          "python.dead_code_candidate:13dba0c78de4",
+          "python.dead_code_candidate:4ee2cd125ac8",
+          "python.dead_code_candidate:33ffa3beaecb",
+          "python.dead_code_candidate:ecee91c3607c",
+          "python.dead_code_candidate:d759056f3f7f",
+          "python.dead_code_candidate:60296a25dfd9",
+          "python.dead_code_candidate:84f06696cf08"
         ],
-        "findings_created": 18,
+        "findings_created": 24,
         "ok": true,
         "rule_ids": [
-          "python.changed_source_without_related_test",
+          "python.dead_code_candidate",
           "python.deep_nesting",
           "python.duplicate_literal",
           "python.large_class",
@@ -170,7 +213,7 @@
           "python.todo_cluster",
           "python.too_many_imports"
         ],
-        "scan_id": "97d69fb7040b42f0bff6141e441014eb",
+        "scan_id": "a0c5616c0baf4825bdca1293400fac7f",
         "status": "complete"
       },
       "tool": "scan_code_health"
@@ -180,48 +223,102 @@
         "findings": [
           {
             "confidence": 0.6,
-            "file_path": "src/acme_tasks/__init__.py",
-            "finding_id": "python.changed_source_without_related_test:77efbecf23af",
-            "rule_id": "python.changed_source_without_related_test",
+            "file_path": "src/acme_tasks/oversized.py",
+            "finding_id": "python.dead_code_candidate:1455f08fcb20",
+            "rule_id": "python.dead_code_candidate",
             "severity": "info",
             "status": "open",
-            "suggested_action": "Add or update the related test before changing behavior."
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
           },
           {
             "confidence": 0.6,
             "file_path": "src/acme_tasks/oversized.py",
-            "finding_id": "python.changed_source_without_related_test:ee0d42dd72fb",
-            "rule_id": "python.changed_source_without_related_test",
+            "finding_id": "python.dead_code_candidate:2be8ecf7b829",
+            "rule_id": "python.dead_code_candidate",
             "severity": "info",
             "status": "open",
-            "suggested_action": "Add or update the related test before changing behavior."
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
+          },
+          {
+            "confidence": 0.6,
+            "file_path": "src/acme_tasks/oversized.py",
+            "finding_id": "python.dead_code_candidate:2ef31bceb575",
+            "rule_id": "python.dead_code_candidate",
+            "severity": "info",
+            "status": "open",
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
+          },
+          {
+            "confidence": 0.6,
+            "file_path": "src/acme_tasks/oversized.py",
+            "finding_id": "python.dead_code_candidate:e72e2adacc33",
+            "rule_id": "python.dead_code_candidate",
+            "severity": "info",
+            "status": "open",
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
+          },
+          {
+            "confidence": 0.6,
+            "file_path": "src/acme_tasks/oversized.py",
+            "finding_id": "python.dead_code_candidate:13dba0c78de4",
+            "rule_id": "python.dead_code_candidate",
+            "severity": "info",
+            "status": "open",
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
+          },
+          {
+            "confidence": 0.6,
+            "file_path": "src/acme_tasks/oversized.py",
+            "finding_id": "python.dead_code_candidate:4ee2cd125ac8",
+            "rule_id": "python.dead_code_candidate",
+            "severity": "info",
+            "status": "open",
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
+          },
+          {
+            "confidence": 0.6,
+            "file_path": "src/acme_tasks/oversized.py",
+            "finding_id": "python.dead_code_candidate:33ffa3beaecb",
+            "rule_id": "python.dead_code_candidate",
+            "severity": "info",
+            "status": "open",
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
+          },
+          {
+            "confidence": 0.6,
+            "file_path": "src/acme_tasks/oversized.py",
+            "finding_id": "python.dead_code_candidate:ecee91c3607c",
+            "rule_id": "python.dead_code_candidate",
+            "severity": "info",
+            "status": "open",
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
           },
           {
             "confidence": 0.6,
             "file_path": "src/acme_tasks/payroll.py",
-            "finding_id": "python.changed_source_without_related_test:ef5be28c6ea8",
-            "rule_id": "python.changed_source_without_related_test",
+            "finding_id": "python.dead_code_candidate:d759056f3f7f",
+            "rule_id": "python.dead_code_candidate",
             "severity": "info",
             "status": "open",
-            "suggested_action": "Add or update the related test before changing behavior."
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
           },
           {
             "confidence": 0.6,
             "file_path": "src/acme_tasks/report.py",
-            "finding_id": "python.changed_source_without_related_test:c443f18095af",
-            "rule_id": "python.changed_source_without_related_test",
+            "finding_id": "python.dead_code_candidate:60296a25dfd9",
+            "rule_id": "python.dead_code_candidate",
             "severity": "info",
             "status": "open",
-            "suggested_action": "Add or update the related test before changing behavior."
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
           },
           {
             "confidence": 0.6,
             "file_path": "src/acme_tasks/storage.py",
-            "finding_id": "python.changed_source_without_related_test:ab54f1b6a991",
-            "rule_id": "python.changed_source_without_related_test",
+            "finding_id": "python.dead_code_candidate:84f06696cf08",
+            "rule_id": "python.dead_code_candidate",
             "severity": "info",
             "status": "open",
-            "suggested_action": "Add or update the related test before changing behavior."
+            "suggested_action": "Verify no dynamic entrypoint or external caller depends on this symbol before removing it."
           },
           {
             "confidence": 0.85,
@@ -342,21 +439,30 @@
           }
         ],
         "ok": true,
-        "open_count": 18,
+        "open_count": 24,
         "status_counts": {
-          "open": 18
+          "open": 24
         }
       },
       "tool": "get_smell_report"
     },
     {
       "data": {
-        "affected_files": ["src/acme_tasks/config.py"],
+        "affected_files": [
+          "src/acme_tasks/config.py"
+        ],
         "finding_id": "python.todo_cluster:ef36e5854db8",
-        "next_tools": ["plan_refactor", "suggest_tests"],
+        "next_tools": [
+          "plan_refactor",
+          "suggest_tests"
+        ],
         "ok": true,
-        "relevant_symbols": ["acme_tasks.config.load_config"],
-        "relevant_tests": ["tests/test_config.py"],
+        "relevant_symbols": [
+          "acme_tasks.config.load_config"
+        ],
+        "relevant_tests": [
+          "tests/test_config.py"
+        ],
         "risk_notes": [],
         "rule_id": "python.todo_cluster",
         "source_ranges": [
@@ -374,7 +480,9 @@
     },
     {
       "data": {
-        "affected_files": ["src/acme_tasks/config.py"],
+        "affected_files": [
+          "src/acme_tasks/config.py"
+        ],
         "expected_behavior_preservation": [
           "Keep existing imports and call sites working.",
           "Preserve test-observed behavior for likely related tests."
@@ -387,7 +495,9 @@
           "Do not change public behavior without tests."
         ],
         "ok": true,
-        "relevant_symbols": ["acme_tasks.config.load_config"],
+        "relevant_symbols": [
+          "acme_tasks.config.load_config"
+        ],
         "risk": "low",
         "steps": [
           "Review the bounded finding context and current tests.",
@@ -395,15 +505,21 @@
           "Run the suggested verification commands.",
           "Rescan with CodeScent and update the finding lifecycle."
         ],
-        "verification_recommendations": ["pytest tests/test_config.py"]
+        "verification_recommendations": [
+          "pytest tests/test_config.py"
+        ]
       },
       "tool": "plan_refactor"
     },
     {
       "data": {
-        "commands": ["pytest tests/test_config.py"],
+        "commands": [
+          "pytest tests/test_config.py"
+        ],
         "executes_in_v1": false,
-        "likely_tests": ["tests/test_config.py"],
+        "likely_tests": [
+          "tests/test_config.py"
+        ],
         "ok": true
       },
       "tool": "suggest_tests"
@@ -423,12 +539,24 @@
           "python.missing_nearby_test:40f6b76cf57f",
           "python.missing_nearby_test:6a5072411e5c",
           "python.missing_nearby_test:267db4cb7a39",
-          "python.large_function:51a81f47dacc"
+          "python.large_function:51a81f47dacc",
+          "python.dead_code_candidate:1455f08fcb20",
+          "python.dead_code_candidate:2be8ecf7b829",
+          "python.dead_code_candidate:2ef31bceb575",
+          "python.dead_code_candidate:e72e2adacc33",
+          "python.dead_code_candidate:13dba0c78de4",
+          "python.dead_code_candidate:4ee2cd125ac8",
+          "python.dead_code_candidate:33ffa3beaecb",
+          "python.dead_code_candidate:ecee91c3607c",
+          "python.dead_code_candidate:d759056f3f7f",
+          "python.dead_code_candidate:60296a25dfd9",
+          "python.dead_code_candidate:84f06696cf08"
         ],
-        "findings_created": 13,
+        "findings_created": 24,
         "ok": true,
         "regressed_finding_ids": [],
         "rule_ids": [
+          "python.dead_code_candidate",
           "python.deep_nesting",
           "python.duplicate_literal",
           "python.large_class",
@@ -440,7 +568,7 @@
           "python.todo_cluster",
           "python.too_many_imports"
         ],
-        "scan_id": "7150990fdabc4956910b54a4af36b765",
+        "scan_id": "1874f2bc04724bec8f490ad57894abdc",
         "status": "complete"
       },
       "tool": "rescan"

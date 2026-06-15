@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import tomllib
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from codescent.core.models import ProjectConfig
 from codescent.core.paths import resolve_repo_root
@@ -65,6 +65,7 @@ def _render_config(config: ProjectConfig) -> str:
             "language_packs": list(config.language_packs),
             "framework_packs": list(config.framework_packs),
             "rule_packs": list(config.rule_packs),
+            "coverage_path": config.coverage_path,
         },
     )
 
@@ -87,7 +88,7 @@ def _render_config_payload(payload: dict[str, TomlValue]) -> str:
     return "\n".join(lines)
 
 
-def _toml_value(value: TomlValue) -> str:
+def _toml_value(value: object) -> str:
     if isinstance(value, str):
         return json.dumps(value)
     if isinstance(value, bool):
@@ -95,7 +96,18 @@ def _toml_value(value: TomlValue) -> str:
     if isinstance(value, int | float):
         return str(value)
     if isinstance(value, list):
-        return "[" + ", ".join(_toml_value(item) for item in value) + "]"
+        items = cast("list[TomlValue]", value)
+        return "[" + ", ".join(_toml_value(item) for item in items) + "]"
+    if isinstance(value, dict):
+        table = cast("dict[str, TomlValue]", value)
+        return (
+            "{ "
+            + ", ".join(
+                f"{child_key} = {_toml_value(child_value)}"
+                for child_key, child_value in table.items()
+            )
+            + " }"
+        )
     if value is None:
         return '""'
     raise TypeError(type(value).__name__)

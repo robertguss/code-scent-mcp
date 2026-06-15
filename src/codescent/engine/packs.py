@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Protocol
 from codescent.core.models import ProjectConfig
 from codescent.engine.packs_ts import TS_EXTENSIONS, parse_typescript_file
 from codescent.engine.parsers.python import ParsedPythonFile, parse_python_file
+from codescent.engine.rules.architecture import scan_architecture
 from codescent.engine.rules.python import scan_python_health
 from codescent.engine.rules.ts_react_next import scan_ts_react_next_health
 
@@ -18,6 +19,7 @@ PYTHON_LANGUAGE_PACK = "python"
 PYTHON_RULE_PACK = "python-maintainability"
 TYPESCRIPT_LANGUAGE_PACK = "typescript"
 TYPESCRIPT_RULE_PACK = "ts-react-next"
+ARCHITECTURE_RULE_PACK = "architecture"
 
 
 class ParseFile(Protocol):
@@ -108,6 +110,13 @@ def _typescript_language_packs(enabled: tuple[str, ...]) -> tuple[LanguagePack, 
 
 def _rule_packs(enabled: tuple[str, ...]) -> tuple[RulePack, ...]:
     packs: list[RulePack] = []
+    packs.append(
+        RulePack(
+            name=ARCHITECTURE_RULE_PACK,
+            languages=("python",),
+            scan=_scan_architecture_health,
+        ),
+    )
     if PYTHON_RULE_PACK in enabled:
         packs.append(
             RulePack(
@@ -125,6 +134,13 @@ def _rule_packs(enabled: tuple[str, ...]) -> tuple[RulePack, ...]:
             ),
         )
     return tuple(packs)
+
+
+def _scan_architecture_health(
+    root: Path | str,
+    config: ProjectConfig,
+) -> tuple[CodeHealthFinding, ...]:
+    return scan_architecture(root, config=config)
 
 
 def _scan_python_health(

@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Annotated, TypedDict
+from typing import TYPE_CHECKING, Annotated, NotRequired, TypedDict
 
 import typer
 
-from codescent.services.ci import CiReport, CiService
+from codescent.services.ci import (
+    BaselineUpdateResult,
+    ChangedFileSummary,
+    CiReport,
+    CiService,
+)
 from codescent.services.findings import FindingsService
 from codescent.services.reports import ReportService
 from codescent.services.subjective_review import (
@@ -33,6 +38,8 @@ class ChangedFileHealthPayload(TypedDict):
     risk_level: str
     risk_score: float
     finding_count: int
+    baseline_count: NotRequired[int | None]
+    regressed: NotRequired[bool]
 
 
 class CiReportPayload(TypedDict):
@@ -42,6 +49,14 @@ class CiReportPayload(TypedDict):
     changed_file_health: list[ChangedFileHealthPayload]
     suggested_tests: list[str]
     recommended_commands: list[str]
+    ratchet_enabled: NotRequired[bool]
+    ratchet_regressions: NotRequired[list[ChangedFileHealthPayload]]
+
+
+class CiBaselineUpdatePayload(TypedDict):
+    ok: bool
+    files_recorded: int
+    finding_count: int
 
 
 def register_reporting_commands(app: typer.Typer) -> None:
@@ -169,8 +184,28 @@ def ci(
         str,
         typer.Option("--threshold", help="Fail at risk threshold: warn or high."),
     ] = "high",
+    ratchet: Annotated[
+        bool,
+        typer.Option(
+            "--ratchet/--no-ratchet",
+            help="Fail only when files exceed their stored health baseline.",
+        ),
+    ] = False,
+    update_baseline: Annotated[
+        bool,
+        typer.Option(
+            "--update-baseline",
+            help="Record current per-file finding counts as the CI baseline.",
+        ),
+    ] = False,
 ) -> None:
-    report_data = CiService(repo).run(threshold=threshold)
+    service = CiService(repo)
+    if update_baseline:
+        result = service.update_baseline()
+        _emit_ci_baseline_update(result, format_name)
+        return
+
+    report_data = service.run(threshold=threshold, ratchet=ratchet)
     _emit_ci_report(report_data, format_name)
     if not report_data.ok:
         raise typer.Exit(1)
@@ -232,22 +267,73 @@ def _emit_ci_report(report_data: CiReport, format_name: str) -> None:
 
 
 def _ci_payload(report_data: CiReport) -> CiReportPayload:
-    return {
+    payload: CiReportPayload = {
         "ok": report_data.ok,
         "risk_level": report_data.risk_level,
         "finding_count": report_data.finding_count,
         "changed_file_health": [
-            {
-                "path": health.path,
-                "risk_level": health.risk_level,
-                "risk_score": health.risk_score,
-                "finding_count": health.finding_count,
-            }
+            _changed_file_health_payload(
+                health,
+                include_ratchet=report_data.ratchet_enabled,
+            )
             for health in report_data.changed_file_health
         ],
         "suggested_tests": list(report_data.suggested_tests),
         "recommended_commands": list(report_data.recommended_commands),
     }
+    if report_data.ratchet_enabled:
+        payload["ratchet_enabled"] = True
+        payload["ratchet_regressions"] = [
+            _changed_file_health_payload(health, include_ratchet=True)
+            for health in report_data.ratchet_regressions
+        ]
+    return payload
+
+
+def _changed_file_health_payload(
+    health: ChangedFileSummary,
+    *,
+    include_ratchet: bool,
+) -> ChangedFileHealthPayload:
+    payload: ChangedFileHealthPayload = {
+        "path": health.path,
+        "risk_level": health.risk_level,
+        "risk_score": health.risk_score,
+        "finding_count": health.finding_count,
+    }
+    if include_ratchet:
+        payload["baseline_count"] = health.baseline_count
+        payload["regressed"] = health.regressed
+    return payload
+
+
+def _emit_ci_baseline_update(
+    result: BaselineUpdateResult,
+    format_name: str,
+) -> None:
+    payload: CiBaselineUpdatePayload = {
+        "ok": True,
+        "files_recorded": result.files_recorded,
+        "finding_count": result.finding_count,
+    }
+    if format_name == "json":
+        typer.echo(json.dumps(payload))
+        return
+    if format_name == "markdown":
+        typer.echo(_ci_baseline_markdown(payload))
+        return
+    raise typer.BadParameter(INVALID_FORMAT_MESSAGE)
+
+
+def _ci_baseline_markdown(payload: CiBaselineUpdatePayload) -> str:
+    return "\n".join(
+        (
+            "# CodeScent CI Baseline",
+            "",
+            f"Files recorded: {payload['files_recorded']}",
+            f"Findings: {payload['finding_count']}",
+        ),
+    )
 
 
 def _ci_markdown(payload: CiReportPayload) -> str:

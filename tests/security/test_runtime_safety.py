@@ -15,7 +15,12 @@ from scripts.prove_source_read_only import prove_source_read_only
 
 from codescent.engine.inventory import build_file_inventory
 from codescent.mcp.context_tools import find_symbol
-from codescent.mcp.finding_tools import get_smell_report, scan_code_health
+from codescent.mcp.finding_tools import (
+    get_smell_report,
+    mark_finding,
+    record_verification,
+    scan_code_health,
+)
 from codescent.mcp.planning_tools import suggest_tests
 from codescent.mcp.result_tools import retrieve_result
 from codescent.mcp.search_tools import search_content, search_files
@@ -145,6 +150,44 @@ def test_verification_commands_are_recommended_not_executed(
 
     assert suggested["commands"]
     assert suggested["executes_in_v1"] is False
+
+
+def test_record_verification_does_not_execute_or_mutate_fixture(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = Path("tests/fixtures/python-basic")
+    shutil.rmtree(repo / ".codescent", ignore_errors=True)
+    scan = scan_code_health(str(repo))
+    before = _source_hashes(repo)
+    finding_id = scan["finding_ids"][0]
+    attempts: list[str] = []
+
+    def fail_if_subprocess_runs(
+        *args: object,
+        **kwargs: object,
+    ) -> subprocess.CompletedProcess[str]:
+        _ = args, kwargs
+        attempts.append("subprocess")
+        message = "record_verification must not execute commands"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(subprocess, "run", fail_if_subprocess_runs)
+
+    recorded = record_verification(
+        finding_id,
+        command="python -c 'raise SystemExit(99)'",
+        exit_code=0,
+        output_summary="caller reported success",
+        repo=str(repo),
+    )
+    marked = mark_finding(finding_id, "resolved", repo=str(repo))
+
+    assert recorded["ok"] is True
+    assert recorded["command"] == "python -c 'raise SystemExit(99)'"
+    assert marked["status"] == "resolved"
+    assert marked["gated"] is False
+    assert attempts == []
+    assert _source_hashes(repo) == before
 
 
 def test_subjective_review_is_disabled_by_default_and_uses_fake_provider_in_tests(

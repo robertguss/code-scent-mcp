@@ -8,11 +8,11 @@ starting, honor its STOP conditions, and update the status row here when done.
 
 | Plan | Title                                       | Priority | Effort | Depends on | Status |
 | ---- | ------------------------------------------- | -------- | ------ | ---------- | ------ |
-| 001  | Fix file-context related files              | P1       | S      | -          | TODO   |
-| 002  | Reduce changed-source test false positives  | P1       | S/M    | 001        | TODO   |
-| 003  | Batch multi-query content search            | P1       | M      | -          | TODO   |
-| 004  | Use the persisted index for context lookups | P1       | L      | 001, 003   | TODO   |
-| 005  | Bound source-file input reads               | P1       | M/L    | 004        | TODO   |
+| 001  | Fix file-context related files              | P1       | S      | -          | DONE   |
+| 002  | Reduce changed-source test false positives  | P1       | S/M    | 001        | DONE   |
+| 003  | Batch multi-query content search            | P1       | M      | -          | DONE   |
+| 004  | Use the persisted index for context lookups | P1       | L      | 001, 003   | DONE   |
+| 005  | Bound source-file input reads               | P1       | M/L    | 004        | DONE   |
 
 ### Feature set B — "top 10" capability ideas (generated 2026-06-15)
 
@@ -23,16 +23,16 @@ leverage; only 007 hard-depends on 006, and 013/014 must coordinate their
 
 | Plan | Title                                            | Priority | Effort | Depends on | Status |
 | ---- | ------------------------------------------------ | -------- | ------ | ---------- | ------ |
-| 006  | Git logical co-change coupling in related/impact | P1       | M      | -          | TODO   |
-| 007  | Hotspot prioritization (churn × size)            | P1       | M      | 006 (soft) | TODO   |
-| 008  | Architecture boundary constraints from config    | P1       | M      | -          | TODO   |
-| 009  | Dead-code / unused-export candidates             | P2       | M      | -          | TODO   |
-| 010  | Structural near-duplicate (AI-slop) detector     | P1       | M      | -          | TODO   |
-| 011  | Coverage-data ingestion → precise test gaps      | P1       | M      | -          | TODO   |
-| 012  | `select_tests` minimal verification set          | P1       | M      | 006 (soft) | TODO   |
-| 013  | Code-health ratchet (per-file debt budget)       | P1       | M/L    | schema     | TODO   |
-| 014  | Evidence-gated resolution + verification ledger  | P2       | M/L    | schema     | TODO   |
-| 015  | `start_task` one-shot task brief (router)        | P1       | M      | 006 (soft) | TODO   |
+| 006  | Git logical co-change coupling in related/impact | P1       | M      | -          | DONE   |
+| 007  | Hotspot prioritization (churn × size)            | P1       | M      | 006 (soft) | DONE   |
+| 008  | Architecture boundary constraints from config    | P1       | M      | -          | DONE   |
+| 009  | Dead-code / unused-export candidates             | P2       | M      | -          | DONE   |
+| 010  | Structural near-duplicate (AI-slop) detector     | P1       | M      | -          | DONE   |
+| 011  | Coverage-data ingestion → precise test gaps      | P1       | M      | -          | DONE   |
+| 012  | `select_tests` minimal verification set          | P1       | M      | 006 (soft) | DONE   |
+| 013  | Code-health ratchet (per-file debt budget)       | P1       | M/L    | schema     | DONE   |
+| 014  | Evidence-gated resolution + verification ledger  | P2       | M/L    | schema     | DONE   |
+| 015  | `start_task` one-shot task brief (router)        | P1       | M      | 006 (soft) | DONE   |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale).

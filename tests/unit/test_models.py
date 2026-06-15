@@ -7,6 +7,8 @@ import pytest
 from pydantic import ValidationError
 
 from codescent.core.models import (
+    ArchitectureRule,
+    ArchitectureRules,
     CommandHints,
     ConfigSource,
     ContextOptions,
@@ -94,6 +96,14 @@ def test_project_config_parses_full_prd_surface_with_precedence() -> None:
             },
             "token_budgets": {"context": 4500, "file": 600, "dashboard": 12000},
             "privacy": {"runtime_network": False, "allow_llm_review": True},
+            "architecture": {
+                "rules": [
+                    {
+                        "layer": "src/codescent/services",
+                        "forbidden_imports": ["codescent.cli", "fastmcp"],
+                    },
+                ],
+            },
             "llm": {"provider": "openai", "model": "gpt-5.4"},
         },
     )
@@ -119,6 +129,14 @@ def test_project_config_parses_full_prd_surface_with_precedence() -> None:
     assert config.token_budgets.context == 4500
     assert config.privacy.runtime_network is False
     assert config.privacy.allow_llm_review is True
+    assert config.architecture == ArchitectureRules(
+        rules=(
+            ArchitectureRule(
+                layer="src/codescent/services",
+                forbidden_imports=("codescent.cli", "fastmcp"),
+            ),
+        ),
+    )
     assert config.llm is not None
     assert config.llm.provider == "openai"
     assert merged.include == ("src",)
@@ -131,10 +149,19 @@ def test_project_config_defaults_enable_python_and_typescript_packs() -> None:
 
     assert config.language_packs == ("python", "typescript")
     assert config.rule_packs == ("python-maintainability", "ts-react-next")
+    assert config.architecture.rules == ()
+
+
+def test_project_config_parses_empty_architecture_rules() -> None:
+    config = ProjectConfig.model_validate({"architecture": {}})
+
+    assert config.architecture == ArchitectureRules()
 
 
 def test_core_model_inventory_is_available() -> None:
     required_models = [
+        ArchitectureRule,
+        ArchitectureRules,
         RepoConfig,
         IndexedFile,
         Symbol,
@@ -151,6 +178,8 @@ def test_core_model_inventory_is_available() -> None:
     ]
 
     assert [model.__name__ for model in required_models] == [
+        "ArchitectureRule",
+        "ArchitectureRules",
         "RepoConfig",
         "IndexedFile",
         "Symbol",

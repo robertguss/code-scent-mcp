@@ -8,11 +8,13 @@ from codescent.services.refactor_planning import (
     RefactorPlanningService,
     SafeRefactorPlan,
 )
+from codescent.services.verification import VerificationService
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
     from codescent.services.verification import (
+        SelectedTests,
         SuggestedTests,
         VerificationRecommendation,
     )
@@ -50,6 +52,14 @@ class SuggestedTestsToolPayload(TypedDict):
     ok: bool
     commands: tuple[str, ...]
     likely_tests: tuple[str, ...]
+    executes_in_v1: bool
+
+
+class SelectTestsToolPayload(TypedDict):
+    ok: bool
+    changed_files: tuple[str, ...]
+    test_files: tuple[str, ...]
+    command: str
     executes_in_v1: bool
 
 
@@ -93,6 +103,13 @@ def register_planning_tools(mcp: FastMCP) -> None:
     )(suggest_tests)
     _ = mcp.tool(
         description=(
+            "Use CodeScent to compute the bounded minimal test set for the "
+            "current changes or given paths and a single focused command. "
+            "Recommend-only; does not execute target project tests."
+        ),
+    )(select_tests)
+    _ = mcp.tool(
+        description=(
             "Use CodeScent to estimate local blast radius for a file, symbol, "
             "or finding with bounded confidence-labeled evidence."
         ),
@@ -126,6 +143,15 @@ def suggest_tests(
     repo: str = ".",
 ) -> SuggestedTestsToolPayload:
     return _tests_payload(RefactorPlanningService(repo).suggest_tests(finding_id))
+
+
+def select_tests(
+    repo: str = ".",
+    paths: tuple[str, ...] | None = None,
+) -> SelectTestsToolPayload:
+    return _select_tests_payload(
+        VerificationService(repo).select_tests(paths=paths),
+    )
 
 
 def get_impact(
@@ -187,6 +213,16 @@ def _tests_payload(suggested: SuggestedTests) -> SuggestedTestsToolPayload:
         "commands": suggested.commands,
         "likely_tests": suggested.likely_tests,
         "executes_in_v1": suggested.executes_in_v1,
+    }
+
+
+def _select_tests_payload(selected: SelectedTests) -> SelectTestsToolPayload:
+    return {
+        "ok": True,
+        "changed_files": selected.changed_files,
+        "test_files": selected.test_files,
+        "command": selected.command,
+        "executes_in_v1": selected.executes_in_v1,
     }
 
 

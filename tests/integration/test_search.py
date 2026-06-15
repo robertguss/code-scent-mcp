@@ -2,8 +2,12 @@ import subprocess
 from pathlib import Path
 from typing import ClassVar
 
+import pytest
 from pydantic import BaseModel, ConfigDict, Field
 
+import codescent.services.search as search_module
+from codescent.core.models import IndexedFile, ProjectConfig
+from codescent.engine.inventory import build_file_inventory
 from codescent.services.repo_index import RepoIndexService
 from codescent.services.search import SearchService
 from codescent.storage import RepositoryStorage, initialize_storage
@@ -184,6 +188,48 @@ def test_route_workflow() -> None:
     assert test_results[0]["path"] == "tests/test_workflow.py"
     assert "likely_test" in test_results[0]["reasons"]
     assert "symbol_match" in test_results[0]["reasons"]
+
+
+def test_multi_search_content_uses_one_inventory_pass(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    billing = repo / "src" / "billing.py"
+    workflow = repo / "src" / "workflow.py"
+    billing.parent.mkdir(parents=True)
+    _ = billing.write_text("TODO: reconcile billing\nbilling_total = 10\n")
+    _ = workflow.write_text("TODO: route workflow\nworkflow_state = 'billing'\n")
+    inventory_calls = 0
+
+    def counting_build_file_inventory(
+        root: Path | str,
+        *,
+        config: ProjectConfig | None = None,
+    ) -> tuple[IndexedFile, ...]:
+        nonlocal inventory_calls
+        inventory_calls += 1
+        return build_file_inventory(root, config=config)
+
+    monkeypatch.setattr(
+        search_module,
+        "build_file_inventory",
+        counting_build_file_inventory,
+    )
+
+    results = SearchService(repo).multi_search_content(
+        ("TODO", "billing"),
+        limit=5,
+    )
+    payloads = tuple(SearchPayload.model_validate(result) for result in results)
+    paths = tuple(payload.path for payload in payloads)
+
+    assert inventory_calls == 1
+    assert paths == tuple(dict.fromkeys(paths))
+    assert set(paths) == {"src/billing.py", "src/workflow.py"}
+    assert all(payload.snippet is not None for payload in payloads)
+    assert all("query:TODO" in payload.reasons for payload in payloads)
+    assert all("query:billing" in payload.reasons for payload in payloads)
 
 
 def test_frecency_and_pagination_affect_rank_without_unbounded_results(

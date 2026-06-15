@@ -20,12 +20,12 @@ MIXED_RESPONSIBILITY_VERB_MINIMUM: Final = 3
 
 def secondary_findings(
     parsed: ParsedPythonFile,
-    source_path: Path,
+    source_text: str,
     lines: list[str],
 ) -> tuple[CodeHealthFinding, ...]:
     findings: list[CodeHealthFinding] = []
     findings.extend(_too_many_imports(parsed))
-    findings.extend(_deep_nesting(parsed, source_path))
+    findings.extend(_deep_nesting(parsed, source_text))
     findings.extend(_missing_nearby_tests(parsed))
     findings.extend(_mixed_responsibilities(parsed, lines))
     findings.extend(_slop_candidate(parsed, lines))
@@ -61,10 +61,10 @@ def _too_many_imports(parsed: ParsedPythonFile) -> tuple[CodeHealthFinding, ...]
 
 def _deep_nesting(
     parsed: ParsedPythonFile,
-    source_path: Path,
+    source_text: str,
 ) -> tuple[CodeHealthFinding, ...]:
     try:
-        tree = ast.parse(source_path.read_text(), filename=parsed.path)
+        tree = ast.parse(source_text, filename=parsed.path)
     except SyntaxError:
         return ()
     depth = _max_nesting(tree)

@@ -2,9 +2,12 @@ import subprocess
 from pathlib import Path
 from typing import ClassVar
 
+import pytest
 from pydantic import BaseModel, ConfigDict, Field
 
 from codescent.services.context import ContextService
+from codescent.services.context_support import related_file_payload
+from codescent.services.repo_index import RepoIndexService
 
 
 class SourceRangePayload(BaseModel):
@@ -70,6 +73,43 @@ def test_file_context_is_bounded_summary() -> None:
     assert (
         "get_symbol_context:acme_tasks.workflow.build_daily_plan" in payload.next_tools
     )
+
+
+def test_file_context_related_files_are_broader_than_likely_tests(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    (repo / "tests").mkdir()
+    _ = (repo / "src" / "app.py").write_text(
+        "from helper import render\n\ndef run() -> str:\n    return render()\n",
+    )
+    _ = (repo / "src" / "helper.py").write_text(
+        "def render() -> str:\n    return 'ok'\n",
+    )
+    _ = (repo / "src" / "view.py").write_text(
+        "def render_view() -> str:\n    return 'ok'\n",
+    )
+    _ = (repo / "tests" / "test_app.py").write_text(
+        "from app import run\n\ndef test_run() -> None:\n    assert run() == 'ok'\n",
+    )
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "qa@example.invalid")
+    _git(repo, "config", "user.name", "QA")
+    _git(repo, "add", "src/app.py", "src/helper.py")
+    _git(repo, "commit", "-m", "app helper")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "tests and view")
+
+    context = ContextService(repo).get_file_context("src/app.py")
+    payload = FileContextPayload.model_validate(context)
+
+    assert payload.likely_tests == ("tests/test_app.py",)
+    assert "tests/test_app.py" in payload.related_files
+    assert "src/helper.py" in payload.related_files
+    assert "src/view.py" in payload.related_files
+    assert payload.related_files != payload.likely_tests
+    assert any(not path.startswith("tests/") for path in payload.related_files)
 
 
 def test_symbol_context_includes_likely_tests() -> None:
@@ -141,9 +181,57 @@ def test_related_files_include_import_test_directory_and_git_reasons(
     assert "test_match" in by_path["tests/test_app.py"]["reasons"]
     assert "import_graph" in by_path["tests/test_app.py"]["reasons"]
     assert "git_history" in by_path["src/helper.py"]["reasons"]
+    assert "co_change" in by_path["src/helper.py"]["reasons"]
     assert "directory_proximity" in by_path["src/view.py"]["reasons"]
     assert any("search_similarity" in item["reasons"] for item in related["results"])
     assert all(0 <= item["confidence"] <= 1 for item in related["results"])
+
+
+def test_co_change_reason_weight_sits_between_git_and_import() -> None:
+    git_history = related_file_payload(path="peer.py", reasons={"git_history"})
+    co_change = related_file_payload(path="peer.py", reasons={"co_change"})
+    import_graph = related_file_payload(path="peer.py", reasons={"import_graph"})
+
+    assert git_history["confidence"] < co_change["confidence"]
+    assert co_change["confidence"] < import_graph["confidence"]
+    assert co_change["reasons"] == ("co_change",)
+
+
+def test_context_hot_paths_use_persisted_index_after_indexing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    _ = (repo / "src" / "app.py").write_text(
+        "from helper import render\n\n\ndef run() -> str:\n    return render()\n",
+    )
+    _ = (repo / "src" / "helper.py").write_text(
+        "def render() -> str:\n    return 'ok'\n",
+    )
+
+    _ = RepoIndexService(repo).index_repo()
+
+    def fail_reparse(*_args: object, **_kwargs: object) -> object:
+        message = "context lookup reparsed the repo after indexing"
+        raise AssertionError(message)
+
+    monkeypatch.setattr("codescent.services.symbols.build_pack_registry", fail_reparse)
+
+    service = ContextService(repo)
+    matches = service.find_symbol("run")
+
+    assert matches
+    context = service.get_symbol_context(matches[0]["qualified_name"])
+    file_context = service.get_file_context("src/app.py")
+    related = service.get_related_files("src/app.py")
+    related_by_path = {item["path"]: item for item in related["results"]}
+
+    assert context["symbol"]["qualified_name"] == matches[0]["qualified_name"]
+    assert file_context["path"] == "src/app.py"
+    assert file_context["symbols"] == ("run",)
+    assert file_context["imports"] == ("helper:render",)
+    assert "import_graph" in related_by_path["src/helper.py"]["reasons"]
 
 
 def _git(repo: Path, *args: str) -> None:

@@ -1,9 +1,12 @@
+import json
 import shutil
 from pathlib import Path
 
 import pytest
 from tests.contract.cli_payloads import (
+    CiBaselinePayload,
     CiPayload,
+    CiRatchetPayload,
     ConfigPayload,
     DoctorPayload,
     ErrorPayload,
@@ -248,6 +251,7 @@ def test_ci_and_review_diff_emit_json_markdown_and_threshold_exit_codes() -> Non
     payload = CiPayload.model_validate_json(ci_result.output)
 
     assert ci_result.exit_code == 1
+    assert "ratchet_enabled" not in json.loads(ci_result.output)
     assert payload.ok is False
     assert payload.risk_level in {"medium", "high"}
     assert payload.changed_file_health
@@ -255,6 +259,74 @@ def test_ci_and_review_diff_emit_json_markdown_and_threshold_exit_codes() -> Non
     assert review_result.exit_code == 0
     assert "# CodeScent Diff Review" in review_result.output
     assert "Suggested tests" in review_result.output
+
+
+def test_ci_update_baseline_and_ratchet_flags(tmp_path: Path) -> None:
+    repo = _repo_with_related_test(tmp_path)
+
+    baseline_result = RUNNER.invoke(
+        app,
+        [
+            "ci",
+            "--repo",
+            str(repo),
+            "--format",
+            "json",
+            "--update-baseline",
+        ],
+    )
+    _ = (repo / "src" / "pkg" / "config.py").write_text(
+        """STATUS = "pending-review"
+
+
+def load_config() -> str:
+    # TODO: split config
+    # FIXME: preserve compatibility
+    # HACK: keep old queue name
+    return STATUS
+""",
+    )
+    default_result = RUNNER.invoke(
+        app,
+        [
+            "ci",
+            "--repo",
+            str(repo),
+            "--format",
+            "json",
+            "--threshold",
+            "high",
+        ],
+    )
+    ratchet_result = RUNNER.invoke(
+        app,
+        [
+            "ci",
+            "--repo",
+            str(repo),
+            "--format",
+            "json",
+            "--threshold",
+            "high",
+            "--ratchet",
+        ],
+    )
+
+    baseline_payload = CiBaselinePayload.model_validate_json(baseline_result.output)
+    ratchet_payload = CiRatchetPayload.model_validate_json(ratchet_result.output)
+    regression = ratchet_payload.ratchet_regressions[0]
+
+    assert baseline_result.exit_code == 0
+    assert baseline_payload.ok is True
+    assert baseline_payload.files_recorded == 2
+    assert baseline_payload.finding_count == 0
+    assert default_result.exit_code == 0
+    assert "ratchet_enabled" not in json.loads(default_result.output)
+    assert ratchet_result.exit_code == 1
+    assert ratchet_payload.ratchet_enabled is True
+    assert regression["path"] == "src/pkg/config.py"
+    assert regression["baseline_count"] == 0
+    assert regression["regressed"] is True
 
 
 def test_doctor_json_reports_invalid_repo_root(tmp_path: Path) -> None:
@@ -313,3 +385,25 @@ def test_doctor_reports_mcp_availability(
     assert result.exit_code == 0
     assert payload.ok is False
     assert payload.checks.mcp_available is False
+
+
+def _repo_with_related_test(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "pkg" / "config.py"
+    test = repo / "tests" / "test_config.py"
+    source.parent.mkdir(parents=True)
+    test.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """def load_config() -> str:
+    return "ok"
+""",
+    )
+    _ = test.write_text(
+        """from src.pkg.config import load_config
+
+
+def test_load_config() -> None:
+    assert load_config() == "ok"
+""",
+    )
+    return repo

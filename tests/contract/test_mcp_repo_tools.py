@@ -7,6 +7,7 @@ from mcp.types import ContentBlock, TextContent
 from pydantic import BaseModel, ConfigDict, Field
 
 from codescent.mcp.server import mcp
+from codescent.services.code_health import CodeHealthService
 
 
 class RepoMapPayload(BaseModel):
@@ -42,6 +43,19 @@ class RepoStatusPayload(BaseModel):
     git_status: str
 
 
+class StartTaskPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    query: str
+    relevant_files: tuple[str, ...]
+    relevant_symbols: tuple[str, ...]
+    related_tests: tuple[str, ...]
+    open_findings: tuple[dict[str, str], ...]
+    index_fresh: bool
+    next_tools: tuple[str, ...]
+
+
 @pytest.mark.anyio
 async def test_mcp_lists_repo_tools() -> None:
     async with Client(mcp) as client:
@@ -49,12 +63,16 @@ async def test_mcp_lists_repo_tools() -> None:
 
     repo_tools = {tool.name: tool for tool in tools}
 
-    assert {"get_repo_map", "get_repo_status"} <= repo_tools.keys()
+    assert {"get_repo_map", "get_repo_status", "start_task"} <= repo_tools.keys()
     for tool_name in ("get_repo_map", "get_repo_status"):
         description = repo_tools[tool_name].description or ""
         assert "CodeScent before broad grep" in description
         assert "large reads" in description
         assert "read-only" in description
+    start_task_description = repo_tools["start_task"].description or ""
+    assert "CodeScent FIRST" in start_task_description
+    assert "bounded brief" in start_task_description
+    assert "Read-only" in start_task_description
 
 
 @pytest.mark.anyio
@@ -99,6 +117,65 @@ async def test_get_repo_map_and_status_are_bounded(tmp_path: Path) -> None:
     )
     assert repo_status.database_ok is False
     assert not (repo / ".codescent").exists()
+
+
+@pytest.mark.anyio
+async def test_start_task_returns_useful_bounded_brief(tmp_path: Path) -> None:
+    repo = _repo_with_task_target(tmp_path)
+    _ = CodeHealthService(repo).scan()
+
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "start_task",
+            {
+                "repo": str(repo),
+                "query": "do thing",
+                "focus_path": "src/app/x.py",
+            },
+        )
+
+    payload = StartTaskPayload.model_validate_json(_text_content(result.content))
+
+    assert payload.ok is True
+    assert payload.query == "do thing"
+    assert "src/app/x.py" in payload.relevant_files
+    assert "app.x.do_thing" in payload.relevant_symbols
+    assert payload.related_tests == ("tests/test_x.py",)
+    assert any(
+        finding["file_path"] == "src/app/x.py" for finding in payload.open_findings
+    )
+    assert payload.index_fresh is True
+    assert "select_tests" in payload.next_tools
+    assert len(payload.relevant_files) <= 8
+    assert len(payload.relevant_symbols) <= 12
+    assert len(payload.related_tests) <= 8
+    assert len(payload.open_findings) <= 10
+    assert "TODO" not in payload.model_dump_json()
+
+
+def _repo_with_task_target(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app" / "x.py"
+    test = repo / "tests" / "test_x.py"
+    source.parent.mkdir(parents=True)
+    test.parent.mkdir()
+    _ = source.write_text(
+        """def do_thing() -> str:
+    # TODO: split orchestration
+    # FIXME: keep compatibility
+    # HACK: preserve old behavior
+    return "done"
+""",
+    )
+    _ = test.write_text(
+        """from app.x import do_thing
+
+
+def test_do_thing() -> None:
+    assert do_thing() == "done"
+""",
+    )
+    return repo
 
 
 def _text_content(content: list[ContentBlock]) -> str:

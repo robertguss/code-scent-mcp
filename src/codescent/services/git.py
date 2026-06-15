@@ -6,6 +6,10 @@ from typing import Final
 
 GIT_STATUS_TIMEOUT_SECONDS: Final = 5
 GIT_HISTORY_TIMEOUT_SECONDS: Final = 5
+GIT_LOG_MAX_COMMITS: Final = 400
+CO_CHANGE_MAX_RESULTS: Final = 10
+COMMIT_HASH_LENGTH: Final = 40
+COMMIT_HASH_CHARACTERS: Final = frozenset("0123456789abcdef")
 PORCELAIN_STATUS_PREFIX_WIDTH: Final = 3
 MIN_PORCELAIN_STATUS_LINE_LENGTH: Final = PORCELAIN_STATUS_PREFIX_WIDTH + 1
 
@@ -125,6 +129,136 @@ def git_related_paths(repo_root: Path, path: str) -> tuple[str, ...]:
             if changed_path and changed_path != path:
                 related.add(changed_path)
     return tuple(sorted(related))
+
+
+def git_co_change_counts(repo_root: Path, path: str) -> tuple[tuple[str, int], ...]:
+    """Return paths that changed in the same commits as ``path``."""
+    if not (repo_root / ".git").exists():
+        return ()
+
+    git_path = which("git")
+    if git_path is None:
+        return ()
+
+    try:
+        result = subprocess.run(
+            [
+                git_path,
+                "-C",
+                str(repo_root),
+                "log",
+                "--full-diff",
+                "--no-renames",
+                "--format=%H",
+                "--name-only",
+                "-n",
+                str(GIT_LOG_MAX_COMMITS),
+                "--",
+                path,
+            ],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=GIT_HISTORY_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return ()
+    if result.returncode != 0:
+        return ()
+
+    counts: dict[str, int] = {}
+    commit_paths: set[str] = set()
+    for line in result.stdout.splitlines():
+        changed_path = line.strip()
+        if not changed_path:
+            continue
+        if _is_commit_hash(changed_path):
+            _add_co_change_counts(counts, commit_paths, path)
+            commit_paths.clear()
+            continue
+        commit_paths.add(changed_path)
+    _add_co_change_counts(counts, commit_paths, path)
+
+    return tuple(
+        sorted(counts.items(), key=lambda item: (-item[1], item[0]))[
+            :CO_CHANGE_MAX_RESULTS
+        ],
+    )
+
+
+def git_change_counts(repo_root: Path) -> dict[str, int]:
+    """Return recent commit counts per path from one git history pass."""
+    if not (repo_root / ".git").exists():
+        return {}
+
+    git_path = which("git")
+    if git_path is None:
+        return {}
+
+    try:
+        result = subprocess.run(
+            [
+                git_path,
+                "-C",
+                str(repo_root),
+                "log",
+                "--no-renames",
+                "--format=%H",
+                "--name-only",
+                "-n",
+                str(GIT_LOG_MAX_COMMITS),
+                "--",
+                ".",
+                ":(exclude).codescent",
+            ],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=GIT_HISTORY_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return {}
+    if result.returncode != 0:
+        return {}
+
+    counts: dict[str, int] = {}
+    commit_paths: set[str] = set()
+    for line in result.stdout.splitlines():
+        changed_path = line.strip()
+        if not changed_path:
+            continue
+        if _is_commit_hash(changed_path):
+            _add_change_counts(counts, commit_paths)
+            commit_paths.clear()
+            continue
+        commit_paths.add(changed_path)
+    _add_change_counts(counts, commit_paths)
+
+    return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
+def _add_change_counts(counts: dict[str, int], commit_paths: set[str]) -> None:
+    for changed_path in commit_paths:
+        if changed_path.startswith(".codescent"):
+            continue
+        counts[changed_path] = counts.get(changed_path, 0) + 1
+
+
+def _add_co_change_counts(
+    counts: dict[str, int],
+    commit_paths: set[str],
+    target_path: str,
+) -> None:
+    for changed_path in commit_paths:
+        if changed_path == target_path or changed_path.startswith(".codescent"):
+            continue
+        counts[changed_path] = counts.get(changed_path, 0) + 1
+
+
+def _is_commit_hash(line: str) -> bool:
+    return len(line) == COMMIT_HASH_LENGTH and all(
+        character in COMMIT_HASH_CHARACTERS for character in line
+    )
 
 
 def _parse_git_status_paths(stdout: str) -> tuple[str, ...]:

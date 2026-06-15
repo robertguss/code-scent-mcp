@@ -64,6 +64,7 @@ def test_schema_migration_idempotent(tmp_path: Path) -> None:
             "select 1 from stored_results limit 0",
             "select 1 from symbols limit 0",
             "select 1 from telemetry limit 0",
+            "select 1 from verification_runs limit 0",
         ):
             cursor = connection.execute(statement)
             assert cursor.description is not None

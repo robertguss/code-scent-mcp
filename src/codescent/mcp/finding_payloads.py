@@ -88,6 +88,19 @@ class MarkFindingToolPayload(TypedDict):
     ok: bool
     finding_id: str
     status: str
+    requested_status: str
+    gated: bool
+    message: str
+
+
+class RecordVerificationToolPayload(TypedDict):
+    ok: bool
+    finding_id: str
+    verification_id: int
+    command: str
+    exit_code: int
+    output_summary: str
+    output_truncated: bool
 
 
 class RescanToolPayload(TypedDict):

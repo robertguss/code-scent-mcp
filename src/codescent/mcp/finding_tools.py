@@ -8,6 +8,7 @@ from codescent.mcp.finding_payloads import (
     MarkFindingToolPayload,
     NextImprovementToolPayload,
     ProgressToolPayload,
+    RecordVerificationToolPayload,
     RegressionsToolPayload,
     RescanToolPayload,
     ScanHealthToolPayload,
@@ -73,6 +74,13 @@ def register_finding_tools(mcp: FastMCP) -> None:
             "This never edits analyzed source files."
         ),
     )(mark_finding)
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to record a caller-supplied verification result "
+            "for a finding. CodeScent stores the command, exit code, and a "
+            "bounded output summary; it never executes commands."
+        ),
+    )(record_verification)
     _ = mcp.tool(
         description=(
             "Use CodeScent to rescan and compare finding lifecycle state. "
@@ -162,12 +170,43 @@ def mark_finding(
     repo: str = ".",
     note: str = "",
 ) -> MarkFindingToolPayload:
-    finding = FindingsService(repo).mark_finding(
+    result = FindingsService(repo).mark_finding(
         finding_id,
         status_from_string(status),
         note=note,
     )
-    return {"ok": True, "finding_id": finding.id, "status": finding.status.value}
+    return {
+        "ok": True,
+        "finding_id": result.id,
+        "status": result.applied_status.value,
+        "requested_status": result.requested_status.value,
+        "gated": result.gated,
+        "message": result.message,
+    }
+
+
+def record_verification(
+    finding_id: str,
+    command: str,
+    exit_code: int,
+    output_summary: str,
+    repo: str = ".",
+) -> RecordVerificationToolPayload:
+    verification = FindingsService(repo).record_verification(
+        finding_id,
+        command=command,
+        exit_code=exit_code,
+        output_summary=output_summary,
+    )
+    return {
+        "ok": True,
+        "finding_id": verification.finding_id,
+        "verification_id": verification.id,
+        "command": verification.command,
+        "exit_code": verification.exit_code,
+        "output_summary": verification.output_summary,
+        "output_truncated": verification.output_truncated,
+    }
 
 
 def rescan(repo: str = ".") -> RescanToolPayload:

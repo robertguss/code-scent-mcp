@@ -1,4 +1,5 @@
 from pathlib import Path
+from textwrap import dedent
 
 from codescent.engine.rules.python import scan_python_health
 
@@ -44,3 +45,50 @@ def test_finding_stable_key_survives_line_shift(tmp_path: Path) -> None:
         finding for finding in second if finding.rule_id == "python.large_function"
     )
     assert first_large.stable_key == second_large.stable_key
+
+
+def test_scan_python_health_includes_structural_duplicate_findings(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    _write(
+        repo / "src" / "alpha.py",
+        """
+        def summarize_orders(orders):
+            total = 0
+            for order in orders:
+                if order.active:
+                    total += order.amount * 2
+            return total
+        """,
+    )
+    _write(
+        repo / "src" / "beta.py",
+        """
+        def build_invoice_lines(records):
+            subtotal = 0
+            for record in records:
+                if record.enabled:
+                    subtotal += record.price * 7
+            return subtotal
+        """,
+    )
+
+    findings = scan_python_health(repo)
+    duplicate = next(
+        finding
+        for finding in findings
+        if finding.rule_id == "python.structural_near_duplicate"
+    )
+
+    assert duplicate.file_path == "src/alpha.py"
+    assert duplicate.symbol == "summarize_orders"
+    assert duplicate.evidence["count"] == 2
+    assert duplicate.evidence["locations"] == (
+        "src/alpha.py:2-7:summarize_orders; src/beta.py:2-7:build_invoice_lines"
+    )
+
+
+def _write(path: Path, source: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    _ = path.write_text(dedent(source))
