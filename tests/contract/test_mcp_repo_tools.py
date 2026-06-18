@@ -53,6 +53,12 @@ class StartTaskPayload(BaseModel):
     related_tests: tuple[str, ...]
     open_findings: tuple[dict[str, str], ...]
     index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
+    warnings: tuple[str, ...]
+    confidence: str
     next_tools: tuple[str, ...]
 
 
@@ -72,6 +78,7 @@ async def test_mcp_lists_repo_tools() -> None:
     start_task_description = repo_tools["start_task"].description or ""
     assert "CodeScent FIRST" in start_task_description
     assert "bounded brief" in start_task_description
+    assert "auto-refresh metadata" in start_task_description
     assert "Read-only" in start_task_description
 
 
@@ -145,12 +152,45 @@ async def test_start_task_returns_useful_bounded_brief(tmp_path: Path) -> None:
         finding["file_path"] == "src/app/x.py" for finding in payload.open_findings
     )
     assert payload.index_fresh is True
+    assert payload.index_was_stale is False
+    assert payload.auto_refreshed is False
+    assert payload.refresh_error is None
+    assert payload.confidence == "high"
+    assert payload.warnings == ()
     assert "select_tests" in payload.next_tools
     assert len(payload.relevant_files) <= 8
     assert len(payload.relevant_symbols) <= 12
     assert len(payload.related_tests) <= 8
     assert len(payload.open_findings) <= 10
     assert "TODO" not in payload.model_dump_json()
+
+
+@pytest.mark.anyio
+async def test_start_task_auto_refreshes_stale_index(tmp_path: Path) -> None:
+    repo = _repo_with_task_target(tmp_path)
+
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "start_task",
+            {
+                "repo": str(repo),
+                "query": "do thing",
+                "focus_path": "src/app/x.py",
+            },
+        )
+
+    payload = StartTaskPayload.model_validate_json(_text_content(result.content))
+
+    assert payload.ok is True
+    assert payload.index_fresh is True
+    assert payload.index_was_stale is True
+    assert payload.auto_refreshed is True
+    assert payload.refresh_error is None
+    assert set(payload.changed_files) == {"src/app/x.py", "tests/test_x.py"}
+    assert "src/app/x.py" in payload.relevant_files
+    assert "app.x.do_thing" in payload.relevant_symbols
+    assert payload.confidence == "medium"
+    assert any("automatically refreshed" in warning for warning in payload.warnings)
 
 
 def _repo_with_task_target(tmp_path: Path) -> Path:

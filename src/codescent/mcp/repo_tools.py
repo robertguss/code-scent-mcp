@@ -52,6 +52,12 @@ class StartTaskToolPayload(TypedDict):
     related_tests: tuple[str, ...]
     open_findings: tuple[dict[str, str], ...]
     index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
+    warnings: tuple[str, ...]
+    confidence: str
     next_tools: tuple[str, ...]
 
 
@@ -60,9 +66,10 @@ def register_repo_tools(mcp: FastMCP) -> None:
         description=(
             "Use CodeScent FIRST when beginning a task. Returns a bounded "
             "brief: relevant files, key symbols, related tests, in-scope "
-            "findings, index freshness, and the next tool calls to make so "
-            "you avoid broad greps and many round trips. Read-only for "
-            "analyzed source; bounded output."
+            "findings, index freshness, auto-refresh metadata, warnings, "
+            "confidence, and the next tool calls to make so you avoid broad "
+            "greps and many round trips. Read-only for analyzed source; "
+            "bounded output."
         ),
     )(start_task)
 
@@ -124,6 +131,12 @@ def _task_brief_payload(brief: TaskBrief) -> StartTaskToolPayload:
         "related_tests": brief.related_tests,
         "open_findings": brief.open_findings,
         "index_fresh": brief.index_fresh,
+        "index_was_stale": brief.index_was_stale,
+        "auto_refreshed": brief.auto_refreshed,
+        "changed_files": brief.changed_files,
+        "refresh_error": brief.refresh_error,
+        "warnings": brief.warnings,
+        "confidence": brief.confidence,
         "next_tools": brief.next_tools,
     }
 

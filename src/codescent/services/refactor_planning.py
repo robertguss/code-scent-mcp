@@ -151,11 +151,15 @@ class RefactorPlanningService:
             resolved_target = finding.id
             file_path = finding.file_path
         elif target_type == "symbol" and target is not None:
-            symbol = ContextService(self.repo_root).find_symbol(target, limit=1)[0]
+            symbol = ContextService(self.repo_root, auto_refresh=False).find_symbol(
+                target,
+                limit=1,
+            )[0]
             file_path = symbol["path"]
 
-        file_context = ContextService(self.repo_root).get_file_context(file_path)
-        related = ContextService(self.repo_root).get_related_files(file_path, limit=10)
+        context = ContextService(self.repo_root, auto_refresh=False)
+        file_context = context.get_file_context(file_path)
+        related = context.get_related_files(file_path, limit=10)
         related_files = tuple(item["path"] for item in related["results"])
         likely_tests = _dedupe(
             (

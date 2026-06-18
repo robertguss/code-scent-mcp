@@ -31,6 +31,13 @@ class FileContextPayload(BaseModel):
     source_ranges: tuple[SourceRangePayload, ...]
     risk_notes: tuple[str, ...]
     next_tools: tuple[str, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 class SymbolSearchPayload(BaseModel):
@@ -51,9 +58,17 @@ class SymbolContextPayload(BaseModel):
     likely_tests: tuple[str, ...]
     source_ranges: tuple[SourceRangePayload, ...]
     risk_notes: tuple[str, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 def test_file_context_is_bounded_summary() -> None:
+    _ = RepoIndexService("tests/fixtures/python-basic").index_repo()
     context = ContextService("tests/fixtures/python-basic").get_file_context(
         "src/acme_tasks/workflow.py",
     )
@@ -65,6 +80,9 @@ def test_file_context_is_bounded_summary() -> None:
     assert payload.imports == ("__future__:annotations",)
     assert payload.likely_tests == ("tests/test_workflow.py",)
     assert payload.source_ranges
+    assert payload.index_fresh is True
+    assert payload.refresh_error is None
+    assert payload.confidence in {"high", "medium"}
     assert all(
         source_range.end_line - source_range.start_line + 1 <= 8
         for source_range in payload.source_ranges
@@ -130,6 +148,8 @@ def test_symbol_context_includes_likely_tests() -> None:
         payload.source_ranges[0].end_line - payload.source_ranges[0].start_line + 1 <= 8
     )
     assert any("low-confidence" in note for note in payload.risk_notes)
+    assert payload.index_fresh is True
+    assert payload.refresh_error is None
 
 
 def test_reference_graph_context_is_bounded_and_confidence_labeled() -> None:
@@ -146,6 +166,14 @@ def test_reference_graph_context_is_bounded_and_confidence_labeled() -> None:
     assert references["results"][0]["certainty"] in {"low", "medium", "high"}
     assert callers["results"][0]["caller"] is not None
     assert callees["results"][0]["path"] == "src/acme_tasks/workflow.py"
+
+    missing = service.find_references("not_a_real_reference_name", limit=1)
+
+    assert missing["results"] == ()
+    assert missing["confidence"] == "low"
+    assert any("no graph results found" in warning for warning in missing["warnings"])
+    assert "search_files" in missing["next_tools"]
+    assert missing["index_fresh"] is True
 
 
 def test_related_files_include_import_test_directory_and_git_reasons(
@@ -232,6 +260,29 @@ def test_context_hot_paths_use_persisted_index_after_indexing(
     assert file_context["symbols"] == ("run",)
     assert file_context["imports"] == ("helper:render",)
     assert "import_graph" in related_by_path["src/helper.py"]["reasons"]
+
+
+def test_context_auto_refreshes_unindexed_repo(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    _ = (repo / "src" / "app.py").write_text(
+        "def run() -> str:\n    return 'ok'\n",
+    )
+
+    service = ContextService(repo)
+
+    file_context = FileContextPayload.model_validate(
+        service.get_file_context("src/app.py"),
+    )
+    matches = service.find_symbol("run")
+
+    assert matches[0]["qualified_name"] == "app.run"
+    assert file_context.index_fresh is True
+    assert file_context.index_was_stale is True
+    assert file_context.auto_refreshed is True
+    assert file_context.refresh_error is None
+    assert file_context.symbols == ("run",)
+    assert (repo / ".codescent" / "index.sqlite").exists()
 
 
 def _git(repo: Path, *args: str) -> None:

@@ -123,6 +123,10 @@ events, and telemetry.
   unbounded source dump.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
+- Example shape: `{"tool": "scan_code_health", "ok": true, "data": {...}}`
+  `next_tools` so agents know how much to trust the miss and what to try next.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network.
 - Example shape: `{"tool": "get_repo_map", "ok": true, "data": {...}}`
 
 ### `get_repo_status`
@@ -145,9 +149,12 @@ events, and telemetry.
 - Inputs: repository root, required `query`, optional `focus_path`, and optional
   `focus_symbol`.
 - Outputs: `query`, `relevant_files`, `relevant_symbols`, `related_tests`,
-  `open_findings`, `index_fresh`, and `next_tools`.
+  `open_findings`, `index_fresh`, `index_was_stale`, `auto_refreshed`,
+  `changed_files`, `refresh_error`, `warnings`, `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network; no raw source dumps.
+  runtime no-network; no raw source dumps. If the index is stale, `start_task`
+  refreshes `.codescent` state before answering and reports that refresh in the
+  advisory fields.
 - Example shape: `{"tool": "start_task", "ok": true, "data": {...}}`
 
 ### `search_files`
@@ -157,7 +164,8 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Empty results include `warnings`, `confidence`, and
+  `next_tools` so agents know how much to trust the miss and what to try next.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
 - Example shape: `{"tool": "search_files", "ok": true, "data": {...}}`
@@ -169,7 +177,8 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Empty results include `warnings`, `confidence`, and
+  `next_tools` so agents know how much to trust the miss and what to try next.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
 - Example shape: `{"tool": "search_content", "ok": true, "data": {...}}`
@@ -183,10 +192,13 @@ events, and telemetry.
   `mode`, `original_result_id`, `omitted_count`, `retrieval_available`,
   `retrieval_hints`, `warnings`, and `stats`.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. The payload also includes `index_fresh`,
+  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
+  `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   `find_symbol` envelopes large results instead of returning unbounded symbol
-  lists; runtime no-network.
+  lists; runtime no-network. If the index is stale, `find_symbol` refreshes
+  `.codescent` state before answering.
 - Example shape: `{"ok": true, "kind": "symbol_search", "mode": "exact",
   "items": []}`
 
@@ -197,9 +209,12 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Index-backed context tools include `index_fresh`,
+  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
+  `warnings`, `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  runtime no-network. If the index is stale, the tool refreshes `.codescent`
+  state before answering.
 - Example shape: `{"tool": "get_file_context", "ok": true, "data": {...}}`
 
 ### `get_symbol_context`
@@ -209,9 +224,12 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Index-backed context tools include `index_fresh`,
+  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
+  `warnings`, and `confidence`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  runtime no-network. If the index is stale, the tool refreshes `.codescent`
+  state before answering.
 - Example shape: `{"tool": "get_symbol_context", "ok": true, "data": {...}}`
 
 ### `scan_code_health`
@@ -233,9 +251,12 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Index-backed graph tools include `index_fresh`,
+  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
+  `warnings`, `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  runtime no-network. If the index is stale, the tool refreshes `.codescent`
+  state before answering.
 - Example shape: `{"tool": "get_smell_report", "ok": true, "data": {...}}`
 
 ### `get_finding_context`
@@ -245,9 +266,12 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Index-backed graph tools include `index_fresh`,
+  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
+  `warnings`, `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  runtime no-network. If the index is stale, the tool refreshes `.codescent`
+  state before answering.
 - Example shape: `{"tool": "get_finding_context", "ok": true, "data": {...}}`
 
 ### `get_next_improvement`
@@ -257,9 +281,12 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Index-backed graph tools include `index_fresh`,
+  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
+  `warnings`, `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  runtime no-network. If the index is stale, the tool refreshes `.codescent`
+  state before answering.
 - Example shape: `{"tool": "get_next_improvement", "ok": true, "data": {...}}`
 
 ### `plan_refactor`
@@ -269,9 +296,12 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Index-backed related-file results include
+  `index_fresh`, `index_was_stale`, `auto_refreshed`, `changed_files`,
+  `refresh_error`, `warnings`, `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  runtime no-network. If the index is stale, the tool refreshes `.codescent`
+  state before answering.
 - Example shape: `{"tool": "plan_refactor", "ok": true, "data": {...}}`
 
 ### `suggest_tests`
@@ -346,7 +376,8 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Empty results include `warnings`, `confidence`, and
+  `next_tools` so agents know how much to trust the miss and what to try next.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
 - Example shape: `{"tool": "multi_search_content", "ok": true, "data": {...}}`
@@ -370,7 +401,8 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Empty results include `warnings`, `confidence`, and
+  `next_tools` so agents know how much to trust the miss and what to try next.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
 - Example shape: `{"tool": "search_todos", "ok": true, "data": {...}}`
@@ -382,7 +414,8 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Empty results include `warnings`, `confidence`, and
+  `next_tools` so agents know how much to trust the miss and what to try next.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
 - Example shape: `{"tool": "search_tests", "ok": true, "data": {...}}`
@@ -394,9 +427,12 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Index-backed graph tools include `index_fresh`,
+  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
+  `warnings`, `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  runtime no-network. If the index is stale, the tool refreshes `.codescent`
+  state before answering.
 - Example shape: `{"tool": "find_references", "ok": true, "data": {...}}`
 
 ### `find_callers`
@@ -406,9 +442,12 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Index-backed graph tools include `index_fresh`,
+  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
+  `warnings`, `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  runtime no-network. If the index is stale, the tool refreshes `.codescent`
+  state before answering.
 - Example shape: `{"tool": "find_callers", "ok": true, "data": {...}}`
 
 ### `find_callees`
@@ -418,9 +457,12 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Index-backed graph tools include `index_fresh`,
+  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
+  `warnings`, `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  runtime no-network. If the index is stale, the tool refreshes `.codescent`
+  state before answering.
 - Example shape: `{"tool": "find_callees", "ok": true, "data": {...}}`
 
 ### `get_related_files`
@@ -430,9 +472,12 @@ events, and telemetry.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+  unbounded source dump. Index-backed related-file results include
+  `index_fresh`, `index_was_stale`, `auto_refreshed`, `changed_files`,
+  `refresh_error`, `warnings`, `confidence`, and `next_tools`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  runtime no-network. If the index is stale, the tool refreshes `.codescent`
+  state before answering.
 - Example shape: `{"tool": "get_related_files", "ok": true, "data": {...}}`
 
 ### `get_impact`

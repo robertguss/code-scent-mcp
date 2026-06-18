@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, TypedDict
 
+from codescent.services.freshness import confidence_for_results, warnings_for_results
 from codescent.services.search import SearchService
 
 if TYPE_CHECKING:
@@ -33,12 +34,21 @@ class TestSearchResultPayload(TypedDict):
     snippet: str | None
 
 
+class AdvisoryToolFields(TypedDict):
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
+
+
 class SearchToolPayload(TypedDict):
     ok: bool
     query: str
     limit: int
     next_cursor: str | None
     results: tuple[SearchResultPayload, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
 
 
 class MultiSearchToolPayload(TypedDict):
@@ -46,6 +56,9 @@ class MultiSearchToolPayload(TypedDict):
     queries: tuple[str, ...]
     limit: int
     results: tuple[SearchResultPayload, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
 
 
 class TodoSearchToolPayload(TypedDict):
@@ -53,6 +66,9 @@ class TodoSearchToolPayload(TypedDict):
     query: str
     limit: int
     results: tuple[TodoSearchResultPayload, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
 
 
 class TestSearchToolPayload(TypedDict):
@@ -63,6 +79,9 @@ class TestSearchToolPayload(TypedDict):
     finding_id: str | None
     limit: int
     results: tuple[TestSearchResultPayload, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
 
 
 def register_search_tools(mcp: FastMCP) -> None:
@@ -70,7 +89,7 @@ def register_search_tools(mcp: FastMCP) -> None:
         description=(
             "Use CodeScent before broad grep or large reads to search paths with "
             "bounded results and ranking reasons. This read-only tool returns "
-            "paths and reasons, never source content."
+            "paths, reasons, confidence, and warnings, never source content."
         ),
     )(search_files)
 
@@ -78,7 +97,8 @@ def register_search_tools(mcp: FastMCP) -> None:
         description=(
             "Use CodeScent before broad grep or large reads to search content "
             "with bounded snippets and ranking reasons. This read-only tool "
-            "returns capped snippets instead of full source files."
+            "returns capped snippets, confidence, and warnings instead of full "
+            "source files."
         ),
     )(search_content)
 
@@ -125,6 +145,11 @@ def search_files(
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "next_cursor": page["next_cursor"],
         "results": page["results"],
+        **_advisory_fields(
+            has_results=bool(page["results"]),
+            result_kind="file paths",
+            next_tools=("search_content", "get_repo_map"),
+        ),
     }
 
 
@@ -146,6 +171,11 @@ def search_content(
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "next_cursor": page["next_cursor"],
         "results": page["results"],
+        **_advisory_fields(
+            has_results=bool(page["results"]),
+            result_kind="content matches",
+            next_tools=("search_files", "get_repo_map"),
+        ),
     }
 
 
@@ -164,6 +194,11 @@ def multi_search_content(
         "queries": queries,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "results": results,
+        **_advisory_fields(
+            has_results=bool(results),
+            result_kind="content matches",
+            next_tools=("search_files", "search_content", "get_repo_map"),
+        ),
     }
 
 
@@ -179,6 +214,11 @@ def search_changed_files(
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "next_cursor": None,
         "results": results,
+        **_advisory_fields(
+            has_results=bool(results),
+            result_kind="changed files",
+            next_tools=("get_repo_status", "get_repo_map"),
+        ),
     }
 
 
@@ -193,6 +233,11 @@ def search_todos(
         "query": query,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "results": results,
+        **_advisory_fields(
+            has_results=bool(results),
+            result_kind="todo markers",
+            next_tools=("search_content", "search_files"),
+        ),
     }
 
 
@@ -219,4 +264,25 @@ def search_tests(  # noqa: PLR0913 - MCP tool exposes distinct target inputs.
         "finding_id": finding_id,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
         "results": results,
+        **_advisory_fields(
+            has_results=bool(results),
+            result_kind="likely tests",
+            next_tools=("select_tests", "search_files", "search_content"),
+        ),
+    }
+
+
+def _advisory_fields(
+    *,
+    has_results: bool,
+    result_kind: str,
+    next_tools: tuple[str, ...],
+) -> AdvisoryToolFields:
+    return {
+        "warnings": warnings_for_results(
+            has_results=has_results,
+            result_kind=result_kind,
+        ),
+        "confidence": confidence_for_results(has_results=has_results),
+        "next_tools": next_tools,
     }

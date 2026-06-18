@@ -19,6 +19,13 @@ class ContextToolPayload(BaseModel):
     source_ranges: tuple[dict[str, str | int], ...] = ()
     likely_tests: tuple[str, ...] = ()
     next_tools: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()
+    confidence: str = "high"
+    index_fresh: bool = True
+    index_was_stale: bool = False
+    auto_refreshed: bool = False
+    changed_files: tuple[str, ...] = ()
+    refresh_error: str | None = None
 
 
 class GraphResultPayload(BaseModel):
@@ -39,6 +46,14 @@ class GraphToolPayload(BaseModel):
     query: str
     results: tuple[GraphResultPayload, ...]
     next_cursor: int | None = None
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 class SymbolEnvelopePayload(BaseModel):
@@ -53,7 +68,14 @@ class SymbolEnvelopePayload(BaseModel):
     original_result_id: str | None = None
     retrieval_available: bool
     retrieval_hints: tuple[str, ...]
+    confidence: str
     warnings: tuple[str, ...]
+    next_tools: tuple[str, ...]
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
     stats: dict[str, int | float]
 
 
@@ -97,6 +119,8 @@ async def test_context_tools_do_not_dump_whole_files() -> None:
 
     assert file_payload.ok is True
     assert symbol_payload.ok is True
+    assert file_payload.index_fresh is True
+    assert symbol_payload.index_fresh is True
     assert file_payload.source_ranges
     assert symbol_payload.likely_tests == ("tests/test_workflow.py",)
     assert "archive completed tickets" not in combined
@@ -158,6 +182,9 @@ async def test_reference_graph_tools_return_bounded_graph_results() -> None:
     )
     assert any(result.caller is not None for result in callers.results)
     assert all(result.path.endswith(".py") for result in callees.results)
+    assert references.index_fresh is True
+    assert callers.index_fresh is True
+    assert callees.index_fresh is True
     assert "archive completed tickets" not in combined
     assert "source_content" not in combined
 
@@ -191,6 +218,10 @@ async def test_find_symbol_large_result_returns_stored_summary_envelope(
     assert payload.retrieval_available is True
     assert any("retrieve_result" in hint for hint in payload.retrieval_hints)
     assert payload.stats["total_results"] == 20
+    assert payload.index_fresh is True
+    assert payload.index_was_stale is True
+    assert payload.auto_refreshed is True
+    assert payload.confidence == "medium"
 
     stored = ResultStoreService(repo).retrieve_result(
         payload.original_result_id,
@@ -228,8 +259,35 @@ async def test_find_symbol_small_result_is_exact_without_omission_warning(
     assert payload.original_result_id is None
     assert payload.retrieval_available is False
     assert payload.retrieval_hints == ()
-    assert payload.warnings == ()
+    assert any("automatically refreshed" in warning for warning in payload.warnings)
+    assert payload.next_tools == ("search_files", "search_content", "get_repo_map")
+    assert payload.index_fresh is True
+    assert payload.index_was_stale is True
+    assert payload.auto_refreshed is True
     assert payload.stats["total_results"] == 1
+
+
+@pytest.mark.anyio
+async def test_find_symbol_empty_result_has_recovery_guidance(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _write_many_symbol_repo(repo, count=1)
+
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "find_symbol",
+            {"repo": str(repo), "query": "missing_symbol", "limit": 20},
+        )
+
+    payload = SymbolEnvelopePayload.model_validate_json(_text_content(result.content))
+
+    assert payload.ok is True
+    assert payload.mode == "exact"
+    assert payload.items == ()
+    assert payload.confidence == "low"
+    assert payload.index_fresh is True
+    assert payload.auto_refreshed is True
+    assert any("no symbols found" in warning for warning in payload.warnings)
+    assert "search_files" in payload.next_tools
 
 
 def _text_content(content: list[ContentBlock]) -> str:

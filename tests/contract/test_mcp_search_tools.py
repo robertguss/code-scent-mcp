@@ -26,6 +26,9 @@ class SearchToolPayload(BaseModel):
     limit: int = Field(ge=1, le=20)
     next_cursor: str | None = None
     results: tuple[ToolSearchResult, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
 
 
 class MultiSearchToolPayload(BaseModel):
@@ -35,6 +38,9 @@ class MultiSearchToolPayload(BaseModel):
     queries: tuple[str, ...]
     limit: int = Field(ge=1, le=20)
     results: tuple[ToolSearchResult, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
 
 
 class ChangedSearchToolPayload(BaseModel):
@@ -44,6 +50,9 @@ class ChangedSearchToolPayload(BaseModel):
     query: str
     limit: int = Field(ge=1, le=20)
     results: tuple[ToolSearchResult, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
 
 
 class TodoSearchResult(BaseModel):
@@ -64,6 +73,9 @@ class TodoSearchToolPayload(BaseModel):
     query: str
     limit: int = Field(ge=1, le=20)
     results: tuple[TodoSearchResult, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
 
 
 class LikelyTestSearchResult(BaseModel):
@@ -85,6 +97,9 @@ class LikelyTestSearchToolPayload(BaseModel):
     finding_id: str | None
     limit: int = Field(ge=1, le=20)
     results: tuple[LikelyTestSearchResult, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
 
 
 @pytest.mark.anyio
@@ -122,10 +137,15 @@ async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     )
 
     assert file_payload.ok is True
+    assert file_payload.confidence == "high"
+    assert file_payload.warnings == ()
+    assert file_payload.next_tools == ("search_content", "get_repo_map")
     assert file_payload.results[0].path == "src/app.py"
     assert file_payload.results[0].reasons
     assert file_payload.next_cursor is None
     assert content_payload.ok is True
+    assert content_payload.confidence == "high"
+    assert content_payload.warnings == ()
     assert content_payload.results[0].path == "src/app.py"
     assert "content_match" in content_payload.results[0].reasons
     assert content_payload.results[0].snippet == "# TODO: handle billing"
@@ -157,6 +177,8 @@ async def test_multi_search_content_merges_and_dedupes_bounded_results(
 
     assert payload.ok is True
     assert payload.queries == ("TODO", "billing")
+    assert payload.confidence == "high"
+    assert payload.warnings == ()
     assert paths == tuple(dict.fromkeys(paths))
     assert set(paths) == {"src/billing.py", "src/workflow.py"}
     assert all(item.snippet is not None for item in payload.results)
@@ -189,6 +211,8 @@ async def test_search_changed_files_returns_bounded_changed_paths(
     assert payload.ok is True
     assert payload.query == ""
     assert payload.limit == 20
+    assert payload.confidence == "high"
+    assert payload.warnings == ()
     assert tuple(item.path for item in payload.results) == ("src/app.py",)
     assert "changed_file" in payload.results[0].reasons
     assert all(".codescent" not in item.path for item in payload.results)
@@ -249,6 +273,8 @@ def test_route_workflow() -> None:
     assert todo_payload.ok is True
     assert todo_payload.query == "workflow"
     assert todo_payload.limit == 2
+    assert todo_payload.confidence == "high"
+    assert todo_payload.warnings == ()
     assert len(todo_payload.results) == 2
     assert {item.marker for item in todo_payload.results} <= {"TODO", "FIXME", "HACK"}
     assert all(item.path == "src/workflow.py" for item in todo_payload.results)
@@ -258,12 +284,49 @@ def test_route_workflow() -> None:
 
     assert test_payload.ok is True
     assert test_payload.query == "workflow"
+    assert test_payload.confidence == "high"
+    assert test_payload.warnings == ()
     assert test_payload.path == "src/workflow.py"
     assert test_payload.symbol == "route_workflow"
     assert test_payload.finding_id == "python.large_function:src/workflow.py"
     assert test_payload.results[0].path == "tests/test_workflow.py"
     assert "likely_test" in test_payload.results[0].reasons
     assert "symbol_match" in test_payload.results[0].reasons
+
+
+@pytest.mark.anyio
+async def test_search_tools_empty_results_include_guidance(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("def run() -> None:\n    pass\n")
+
+    async with Client(mcp) as client:
+        file_result = await client.call_tool(
+            "search_files",
+            {"repo": str(repo), "query": "missing", "limit": 20},
+        )
+        todo_result = await client.call_tool(
+            "search_todos",
+            {"repo": str(repo), "query": "missing", "limit": 20},
+        )
+
+    file_payload = SearchToolPayload.model_validate_json(
+        _text_content(file_result.content),
+    )
+    todo_payload = TodoSearchToolPayload.model_validate_json(
+        _text_content(todo_result.content),
+    )
+
+    assert file_payload.results == ()
+    assert file_payload.confidence == "low"
+    assert any("no file paths found" in warning for warning in file_payload.warnings)
+    assert "search_content" in file_payload.next_tools
+
+    assert todo_payload.results == ()
+    assert todo_payload.confidence == "low"
+    assert any("no todo markers found" in warning for warning in todo_payload.warnings)
+    assert "search_content" in todo_payload.next_tools
 
 
 def _text_content(content: list[ContentBlock]) -> str:

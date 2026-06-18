@@ -13,6 +13,12 @@ from codescent.services.context import (
     RelatedFilePayload,
     SymbolMatchPayload,
 )
+from codescent.services.freshness import (
+    confidence_for_results,
+    ensure_fresh_index,
+    next_tools_with_refresh_recovery,
+    warnings_for_results,
+)
 from codescent.services.result_store import JsonValue, ResultStoreService
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import SessionEventRepository, SessionEventWrite
@@ -38,6 +44,13 @@ class FileContextToolPayload(TypedDict):
     source_ranges: tuple[dict[str, str | int], ...]
     risk_notes: tuple[str, ...]
     next_tools: tuple[str, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 class FindSymbolToolPayload(TypedDict, total=False):
@@ -53,6 +66,12 @@ class FindSymbolToolPayload(TypedDict, total=False):
     retrieval_hints: tuple[str, ...]
     confidence: str
     warnings: tuple[str, ...]
+    next_tools: tuple[str, ...]
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
     stats: dict[str, int | float] | None
     results: tuple[SymbolMatchPayload, ...]
 
@@ -63,6 +82,13 @@ class SymbolContextToolPayload(TypedDict):
     likely_tests: tuple[str, ...]
     source_ranges: tuple[dict[str, str | int], ...]
     risk_notes: tuple[str, ...]
+    warnings: tuple[str, ...]
+    confidence: str
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 class GraphToolPayload(TypedDict):
@@ -70,6 +96,14 @@ class GraphToolPayload(TypedDict):
     query: str
     results: tuple[GraphResultPayload, ...]
     next_cursor: int | None
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 class RelatedFilesToolPayload(TypedDict):
@@ -77,20 +111,30 @@ class RelatedFilesToolPayload(TypedDict):
     path: str
     results: tuple[RelatedFilePayload, ...]
     next_cursor: int | None
+    warnings: tuple[str, ...]
+    confidence: str
+    next_tools: tuple[str, ...]
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 def register_context_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
             "Use CodeScent before reading a whole file. Returns bounded file "
-            "context with summaries, likely tests, source ranges, and next tools."
+            "context with summaries, likely tests, source ranges, freshness "
+            "metadata, warnings, confidence, and next tools."
         ),
     )(get_file_context)
 
     _ = mcp.tool(
         description=(
             "Use CodeScent before broad grep to find symbols by name or qualified "
-            "name. Returns bounded matches with confidence and line ranges."
+            "name. Returns bounded matches with confidence, warnings, freshness "
+            "metadata, and line ranges."
         ),
     )(find_symbol)
 
@@ -143,6 +187,13 @@ def get_file_context(path: str, repo: str = ".") -> FileContextToolPayload:
         "source_ranges": payload["source_ranges"],
         "risk_notes": payload["risk_notes"],
         "next_tools": payload["next_tools"],
+        "warnings": payload["warnings"],
+        "confidence": payload["confidence"],
+        "index_fresh": payload["index_fresh"],
+        "index_was_stale": payload["index_was_stale"],
+        "auto_refreshed": payload["auto_refreshed"],
+        "changed_files": payload["changed_files"],
+        "refresh_error": payload["refresh_error"],
     }
 
 
@@ -153,7 +204,9 @@ def find_symbol(
     project_id: str | None = None,
     session_id: str | None = None,
 ) -> FindSymbolToolPayload:
-    results = ContextService(repo).find_symbol(query, limit=limit)
+    repo_root = resolve_repo_root(repo)
+    freshness = ensure_fresh_index(repo_root)
+    results = ContextService(repo_root).find_symbol(query, limit=limit)
     raw_payload = _symbol_raw_payload(query=query, limit=limit, results=results)
     raw_tokens = estimate_token_usage(json.dumps(raw_payload, sort_keys=True)).tokens
     _record_tool_called(
@@ -200,9 +253,32 @@ def find_symbol(
             result_count=len(results),
         )
 
+    payload = _envelope_payload(envelope)
+
     return {
         "ok": True,
-        **_envelope_payload(envelope),
+        **payload,
+        "warnings": (
+            *payload.get("warnings", ()),
+            *warnings_for_results(
+                has_results=bool(results),
+                result_kind="symbols",
+                freshness=freshness,
+            ),
+        ),
+        "confidence": confidence_for_results(
+            has_results=bool(results),
+            freshness=freshness,
+        ),
+        "next_tools": next_tools_with_refresh_recovery(
+            ("search_files", "search_content", "get_repo_map"),
+            freshness,
+        ),
+        "index_fresh": freshness.index_fresh,
+        "index_was_stale": freshness.index_was_stale,
+        "auto_refreshed": freshness.auto_refreshed,
+        "changed_files": freshness.changed_files,
+        "refresh_error": freshness.refresh_error,
     }
 
 
@@ -330,6 +406,13 @@ def get_symbol_context(
         "likely_tests": payload["likely_tests"],
         "source_ranges": payload["source_ranges"],
         "risk_notes": payload["risk_notes"],
+        "warnings": payload["warnings"],
+        "confidence": payload["confidence"],
+        "index_fresh": payload["index_fresh"],
+        "index_was_stale": payload["index_was_stale"],
+        "auto_refreshed": payload["auto_refreshed"],
+        "changed_files": payload["changed_files"],
+        "refresh_error": payload["refresh_error"],
     }
 
 
@@ -349,6 +432,14 @@ def find_references(
         "query": payload["query"],
         "results": payload["results"],
         "next_cursor": payload["next_cursor"],
+        "warnings": payload["warnings"],
+        "confidence": payload["confidence"],
+        "next_tools": payload["next_tools"],
+        "index_fresh": payload["index_fresh"],
+        "index_was_stale": payload["index_was_stale"],
+        "auto_refreshed": payload["auto_refreshed"],
+        "changed_files": payload["changed_files"],
+        "refresh_error": payload["refresh_error"],
     }
 
 
@@ -364,6 +455,14 @@ def find_callers(
         "query": payload["query"],
         "results": payload["results"],
         "next_cursor": payload["next_cursor"],
+        "warnings": payload["warnings"],
+        "confidence": payload["confidence"],
+        "next_tools": payload["next_tools"],
+        "index_fresh": payload["index_fresh"],
+        "index_was_stale": payload["index_was_stale"],
+        "auto_refreshed": payload["auto_refreshed"],
+        "changed_files": payload["changed_files"],
+        "refresh_error": payload["refresh_error"],
     }
 
 
@@ -379,6 +478,14 @@ def find_callees(
         "query": payload["query"],
         "results": payload["results"],
         "next_cursor": payload["next_cursor"],
+        "warnings": payload["warnings"],
+        "confidence": payload["confidence"],
+        "next_tools": payload["next_tools"],
+        "index_fresh": payload["index_fresh"],
+        "index_was_stale": payload["index_was_stale"],
+        "auto_refreshed": payload["auto_refreshed"],
+        "changed_files": payload["changed_files"],
+        "refresh_error": payload["refresh_error"],
     }
 
 
@@ -398,4 +505,12 @@ def get_related_files(
         "path": payload["path"],
         "results": payload["results"],
         "next_cursor": payload["next_cursor"],
+        "warnings": payload["warnings"],
+        "confidence": payload["confidence"],
+        "next_tools": payload["next_tools"],
+        "index_fresh": payload["index_fresh"],
+        "index_was_stale": payload["index_was_stale"],
+        "auto_refreshed": payload["auto_refreshed"],
+        "changed_files": payload["changed_files"],
+        "refresh_error": payload["refresh_error"],
     }

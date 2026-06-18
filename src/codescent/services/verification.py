@@ -41,9 +41,13 @@ class VerificationRecommendation:
 @dataclass(frozen=True, slots=True)
 class VerificationService:
     repo_root: Path | str
+    auto_refresh: bool = True
 
     def suggest_tests(self, file_path: str) -> SuggestedTests:
-        context = ContextService(self.repo_root).get_file_context(file_path)
+        context = ContextService(
+            self.repo_root,
+            auto_refresh=self.auto_refresh,
+        ).get_file_context(file_path)
         likely_tests = context["likely_tests"]
         commands = tuple(f"pytest {path}" for path in likely_tests)
         return SuggestedTests(
@@ -55,7 +59,7 @@ class VerificationService:
     def select_tests(self, *, paths: tuple[str, ...] | None = None) -> SelectedTests:
         repo_root = resolve_repo_root(self.repo_root)
         changed_files = _changed_files(repo_root, paths)
-        context = ContextService(repo_root)
+        context = ContextService(repo_root, auto_refresh=self.auto_refresh)
         test_files: set[str] = set()
 
         for path in changed_files:

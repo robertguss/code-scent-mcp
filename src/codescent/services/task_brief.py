@@ -8,8 +8,15 @@ from codescent.core.models import FindingStatus
 from codescent.core.paths import normalize_repo_path, resolve_repo_root
 from codescent.services.context import ContextService
 from codescent.services.findings import FindingsService
+from codescent.services.freshness import (
+    AdvisoryConfidence,
+    FreshnessMetadata,
+    confidence_for_results,
+    ensure_fresh_index,
+    next_tools_with_refresh_recovery,
+    warnings_for_results,
+)
 from codescent.services.search import SearchService
-from codescent.services.status import RepoStatusService
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -41,6 +48,12 @@ class TaskBrief:
     related_tests: tuple[str, ...]
     open_findings: tuple[dict[str, str], ...]
     index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
+    warnings: tuple[str, ...]
+    confidence: AdvisoryConfidence
     next_tools: tuple[str, ...]
 
 
@@ -63,6 +76,7 @@ class TaskBriefService:
         focus_symbol: str | None = None,
     ) -> TaskBrief:
         repo_root = resolve_repo_root(self.repo_root)
+        freshness = ensure_fresh_index(repo_root)
         context = ContextService(repo_root)
         search = SearchService(repo_root)
         request = StartTaskRequest(
@@ -106,7 +120,9 @@ class TaskBriefService:
         relevant_symbols = _dedupe_cap(symbol_candidates, RELEVANT_SYMBOL_LIMIT)
         related_tests = _dedupe_cap(test_candidates, RELATED_TEST_LIMIT)
         open_findings = _open_findings(repo_root, set(relevant_files))
-        index_fresh = RepoStatusService(repo_root).get_status().index_fresh
+        has_results = bool(
+            relevant_files or relevant_symbols or related_tests or open_findings
+        )
 
         return TaskBrief(
             query=query,
@@ -114,8 +130,26 @@ class TaskBriefService:
             relevant_symbols=relevant_symbols,
             related_tests=related_tests,
             open_findings=open_findings,
-            index_fresh=index_fresh,
-            next_tools=_next_tools(relevant_symbols, open_findings),
+            index_fresh=freshness.index_fresh,
+            index_was_stale=freshness.index_was_stale,
+            auto_refreshed=freshness.auto_refreshed,
+            changed_files=freshness.changed_files,
+            refresh_error=freshness.refresh_error,
+            warnings=warnings_for_results(
+                has_results=has_results,
+                result_kind="task brief context",
+                freshness=freshness,
+            ),
+            confidence=confidence_for_results(
+                has_results=has_results,
+                freshness=freshness,
+            ),
+            next_tools=_next_tools(
+                relevant_symbols,
+                open_findings,
+                freshness=freshness,
+                has_results=has_results,
+            ),
         )
 
 
@@ -198,6 +232,9 @@ def _finding_payload(finding: FindingRow) -> dict[str, str]:
 def _next_tools(
     relevant_symbols: tuple[str, ...],
     open_findings: tuple[dict[str, str], ...],
+    *,
+    freshness: FreshnessMetadata,
+    has_results: bool,
 ) -> tuple[str, ...]:
     candidates: list[str] = []
     if relevant_symbols:
@@ -205,7 +242,12 @@ def _next_tools(
     if open_findings:
         candidates.append(f"get_finding_context:{open_findings[0]['id']}")
     candidates.append("select_tests")
-    return _dedupe_cap(candidates, limit=4)
+    if not has_results:
+        candidates.extend(("search_files", "search_content", "get_repo_map"))
+    return next_tools_with_refresh_recovery(
+        _dedupe_cap(candidates, limit=6),
+        freshness,
+    )
 
 
 def _is_test_path(path: str) -> bool:

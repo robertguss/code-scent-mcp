@@ -27,6 +27,12 @@ def test_task_brief_aggregates_focus_path_context_and_findings(
         for finding in brief.open_findings
     )
     assert brief.index_fresh is True
+    assert brief.index_was_stale is False
+    assert brief.auto_refreshed is False
+    assert brief.changed_files == ()
+    assert brief.refresh_error is None
+    assert brief.warnings == ()
+    assert brief.confidence == "high"
     assert "get_symbol_context:app.x.do_thing" in brief.next_tools
     assert any(tool.startswith("get_finding_context:") for tool in brief.next_tools)
     assert "select_tests" in brief.next_tools
@@ -62,6 +68,23 @@ def test_task_brief_can_seed_from_query_search(tmp_path: Path) -> None:
     assert "tests/test_x.py" in brief.related_tests
 
 
+def test_task_brief_auto_refreshes_unindexed_repo(tmp_path: Path) -> None:
+    repo = _repo_with_task_target(tmp_path)
+
+    brief = TaskBriefService(repo).start_task("do_thing")
+
+    assert brief.index_fresh is True
+    assert brief.index_was_stale is True
+    assert brief.auto_refreshed is True
+    assert brief.refresh_error is None
+    assert set(brief.changed_files) == {"src/app/x.py", "tests/test_x.py"}
+    assert "src/app/x.py" in brief.relevant_files
+    assert "app.x.do_thing" in brief.relevant_symbols
+    assert "tests/test_x.py" in brief.related_tests
+    assert brief.confidence == "medium"
+    assert any("automatically refreshed" in warning for warning in brief.warnings)
+
+
 def test_task_brief_empty_query_has_bounded_fallback(tmp_path: Path) -> None:
     repo = _repo_with_task_target(tmp_path)
 
@@ -71,7 +94,17 @@ def test_task_brief_empty_query_has_bounded_fallback(tmp_path: Path) -> None:
     assert brief.relevant_symbols == ()
     assert brief.related_tests == ()
     assert brief.open_findings == ()
-    assert brief.next_tools == ("select_tests",)
+    assert brief.index_fresh is True
+    assert brief.index_was_stale is True
+    assert brief.auto_refreshed is True
+    assert brief.confidence == "low"
+    assert any("no task brief context found" in warning for warning in brief.warnings)
+    assert brief.next_tools == (
+        "select_tests",
+        "search_files",
+        "search_content",
+        "get_repo_map",
+    )
 
 
 def _repo_with_task_target(tmp_path: Path) -> Path:

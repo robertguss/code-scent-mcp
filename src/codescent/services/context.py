@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 from codescent.core.models import PageOptions
 from codescent.core.paths import normalize_repo_path, resolve_repo_root
@@ -25,7 +25,17 @@ from codescent.services.context_support import (
     related_file_payload,
     same_directory,
 )
+from codescent.services.freshness import (
+    CHANGED_FILE_LIMIT,
+    AdvisoryConfidence,
+    FreshnessMetadata,
+    confidence_for_results,
+    ensure_fresh_index,
+    next_tools_with_refresh_recovery,
+    warnings_for_results,
+)
 from codescent.services.git import git_co_change_counts, git_related_paths
+from codescent.services.status import RepoStatusService
 from codescent.services.symbols import (
     ensure_symbols_indexed,
     read_persisted_file_symbols,
@@ -35,11 +45,13 @@ from codescent.services.symbols import (
 from codescent.storage import RepositoryStorage
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from pathlib import Path
 
 type PersistedFileRow = tuple[str, int]
 type PersistedImportRow = tuple[str, str | None]
 type PersistedTextRow = tuple[str, str]
+type GraphRow = tuple[str, str, int, float] | tuple[str, str, int, float, str | None]
 
 __all__ = [
     "ContextService",
@@ -49,9 +61,20 @@ __all__ = [
 ]
 
 
+class FreshnessFields(TypedDict):
+    warnings: tuple[str, ...]
+    confidence: AdvisoryConfidence
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
+
+
 @dataclass(frozen=True, slots=True)
 class ContextService:
     repo_root: Path | str
+    auto_refresh: bool = True
 
     def find_symbol(
         self,
@@ -59,10 +82,16 @@ class ContextService:
         *,
         limit: int = 20,
     ) -> tuple[SymbolMatchPayload, ...]:
-        return read_persisted_symbols(self.repo_root, query, limit=limit)
+        repo_root = resolve_repo_root(self.repo_root)
+        _ = _freshness_for_service(repo_root, auto_refresh=self.auto_refresh)
+        return read_persisted_symbols(repo_root, query, limit=limit)
 
     def get_file_context(self, path: str) -> FileContextPayload:
         repo_root = resolve_repo_root(self.repo_root)
+        freshness = _freshness_for_service(
+            repo_root,
+            auto_refresh=self.auto_refresh,
+        )
         relative_path = (
             normalize_repo_path(repo_root, path).relative_to(repo_root).as_posix()
         )
@@ -96,10 +125,15 @@ class ContextService:
             "next_tools": tuple(
                 f"get_symbol_context:{symbol['qualified_name']}" for symbol in symbols
             ),
+            **_freshness_payload(freshness, has_results=bool(symbols)),
         }
 
     def get_symbol_context(self, qualified_name: str) -> SymbolContextPayload:
         repo_root = resolve_repo_root(self.repo_root)
+        freshness = _freshness_for_service(
+            repo_root,
+            auto_refresh=self.auto_refresh,
+        )
         symbol = read_persisted_symbol(repo_root, qualified_name)
         return {
             "symbol": symbol,
@@ -114,6 +148,7 @@ class ContextService:
                 ).to_payload(),
             ),
             "risk_notes": _persisted_risk_notes(repo_root, symbol["path"]),
+            **_freshness_payload(freshness, has_results=True),
         }
 
     def find_references(
@@ -124,7 +159,12 @@ class ContextService:
         cursor: int = 0,
     ) -> GraphToolPayload:
         page = PageOptions(limit=limit, offset=cursor)
-        state = ensure_graph_indexed(self.repo_root)
+        repo_root = resolve_repo_root(self.repo_root)
+        freshness = _freshness_for_service(
+            repo_root,
+            auto_refresh=self.auto_refresh,
+        )
+        state = ensure_graph_indexed(repo_root)
         with RepositoryStorage(state).read_connection() as connection:
             rows: list[tuple[str, str, int, float]] = connection.execute(
                 """
@@ -141,7 +181,7 @@ class ContextService:
                 """,
                 (like(query), page.limit + 1, page.offset),
             ).fetchall()
-        return graph_payload(query, rows, page)
+        return _graph_payload(query, rows, page, freshness=freshness)
 
     def find_callers(
         self,
@@ -151,7 +191,12 @@ class ContextService:
         cursor: int = 0,
     ) -> GraphToolPayload:
         page = PageOptions(limit=limit, offset=cursor)
-        state = ensure_graph_indexed(self.repo_root)
+        repo_root = resolve_repo_root(self.repo_root)
+        freshness = _freshness_for_service(
+            repo_root,
+            auto_refresh=self.auto_refresh,
+        )
+        state = ensure_graph_indexed(repo_root)
         with RepositoryStorage(state).read_connection() as connection:
             rows: list[tuple[str, str, int, float, str | None]] = connection.execute(
                 """
@@ -170,7 +215,7 @@ class ContextService:
                 """,
                 (like(query), page.limit + 1, page.offset),
             ).fetchall()
-        return graph_payload(query, rows, page)
+        return _graph_payload(query, rows, page, freshness=freshness)
 
     def find_callees(
         self,
@@ -180,7 +225,12 @@ class ContextService:
         cursor: int = 0,
     ) -> GraphToolPayload:
         page = PageOptions(limit=limit, offset=cursor)
-        state = ensure_graph_indexed(self.repo_root)
+        repo_root = resolve_repo_root(self.repo_root)
+        freshness = _freshness_for_service(
+            repo_root,
+            auto_refresh=self.auto_refresh,
+        )
+        state = ensure_graph_indexed(repo_root)
         with RepositoryStorage(state).read_connection() as connection:
             rows: list[tuple[str, str, int, float, str | None]] = connection.execute(
                 """
@@ -201,7 +251,7 @@ class ContextService:
                 """,
                 (like(query), like(query), page.limit + 1, page.offset),
             ).fetchall()
-        return graph_payload(query, rows, page)
+        return _graph_payload(query, rows, page, freshness=freshness)
 
     def get_related_files(
         self,
@@ -212,6 +262,10 @@ class ContextService:
     ) -> RelatedFilesPayload:
         page = PageOptions(limit=limit, offset=cursor)
         repo_root = resolve_repo_root(self.repo_root)
+        freshness = _freshness_for_service(
+            repo_root,
+            auto_refresh=self.auto_refresh,
+        )
         relative_path = (
             normalize_repo_path(repo_root, path).relative_to(repo_root).as_posix()
         )
@@ -232,7 +286,92 @@ class ContextService:
             "path": relative_path,
             "results": tuple(visible_rows),
             "next_cursor": next_cursor,
+            "warnings": warnings_for_results(
+                has_results=bool(visible_rows),
+                result_kind="related files",
+                freshness=freshness,
+            ),
+            "confidence": confidence_for_results(
+                has_results=bool(visible_rows),
+                freshness=freshness,
+            ),
+            "next_tools": next_tools_with_refresh_recovery(
+                ("search_files", "search_content", "get_repo_map"),
+                freshness,
+            ),
+            "index_fresh": freshness.index_fresh,
+            "index_was_stale": freshness.index_was_stale,
+            "auto_refreshed": freshness.auto_refreshed,
+            "changed_files": freshness.changed_files,
+            "refresh_error": freshness.refresh_error,
         }
+
+
+def _freshness_for_service(repo_root: Path, *, auto_refresh: bool) -> FreshnessMetadata:
+    if auto_refresh:
+        return ensure_fresh_index(repo_root)
+    status = RepoStatusService(repo_root).get_status()
+    return FreshnessMetadata(
+        index_fresh=status.index_fresh,
+        index_was_stale=not status.index_fresh,
+        auto_refreshed=False,
+        changed_files=status.changed_files[:CHANGED_FILE_LIMIT],
+    )
+
+
+def _freshness_payload(
+    freshness: FreshnessMetadata,
+    *,
+    has_results: bool,
+) -> FreshnessFields:
+    return {
+        "warnings": warnings_for_results(
+            has_results=has_results,
+            result_kind="context results",
+            freshness=freshness,
+        ),
+        "confidence": confidence_for_results(
+            has_results=has_results,
+            freshness=freshness,
+        ),
+        "index_fresh": freshness.index_fresh,
+        "index_was_stale": freshness.index_was_stale,
+        "auto_refreshed": freshness.auto_refreshed,
+        "changed_files": freshness.changed_files,
+        "refresh_error": freshness.refresh_error,
+    }
+
+
+def _graph_payload(
+    query: str,
+    rows: Sequence[GraphRow],
+    page: PageOptions,
+    *,
+    freshness: FreshnessMetadata,
+) -> GraphToolPayload:
+    payload = graph_payload(query, rows, page)
+    has_results = bool(payload["results"])
+    return {
+        **payload,
+        "warnings": warnings_for_results(
+            has_results=has_results,
+            result_kind="graph results",
+            freshness=freshness,
+        ),
+        "confidence": confidence_for_results(
+            has_results=has_results,
+            freshness=freshness,
+        ),
+        "next_tools": next_tools_with_refresh_recovery(
+            ("search_files", "search_content", "get_repo_map"),
+            freshness,
+        ),
+        "index_fresh": freshness.index_fresh,
+        "index_was_stale": freshness.index_was_stale,
+        "auto_refreshed": freshness.auto_refreshed,
+        "changed_files": freshness.changed_files,
+        "refresh_error": freshness.refresh_error,
+    }
 
 
 def _persisted_file_exists(repo_root: Path, path: str) -> bool:

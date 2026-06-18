@@ -104,7 +104,10 @@ class RiskService:
             for finding in _repository(self.repo_root).list_findings()
             if finding.file_path == path
         )
-        suggested = VerificationService(self.repo_root).suggest_tests(path)
+        suggested = VerificationService(
+            self.repo_root,
+            auto_refresh=False,
+        ).suggest_tests(path)
         impact = RefactorPlanningService(self.repo_root).get_impact(
             target=path,
             target_type="file",

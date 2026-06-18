@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from codescent.core.models import PageOptions
     from codescent.engine.context.ranges import SourceRange
     from codescent.engine.parsers.python import ParsedPythonFile, ParsedSymbol
+    from codescent.services.freshness import AdvisoryConfidence
 
 SOURCE_LINE_CAP = 8
 LOW_CONFIDENCE_THRESHOLD = 0.6
@@ -53,6 +54,13 @@ class FileContextPayload(TypedDict):
     source_ranges: tuple[dict[str, str | int], ...]
     risk_notes: tuple[str, ...]
     next_tools: tuple[str, ...]
+    warnings: tuple[str, ...]
+    confidence: AdvisoryConfidence
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 class SymbolContextPayload(TypedDict):
@@ -60,6 +68,13 @@ class SymbolContextPayload(TypedDict):
     likely_tests: tuple[str, ...]
     source_ranges: tuple[dict[str, str | int], ...]
     risk_notes: tuple[str, ...]
+    warnings: tuple[str, ...]
+    confidence: AdvisoryConfidence
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 class GraphResultPayload(TypedDict):
@@ -71,10 +86,21 @@ class GraphResultPayload(TypedDict):
     caller: str | None
 
 
-class GraphToolPayload(TypedDict):
+class BaseGraphToolPayload(TypedDict):
     query: str
     results: tuple[GraphResultPayload, ...]
     next_cursor: int | None
+
+
+class GraphToolPayload(BaseGraphToolPayload):
+    warnings: tuple[str, ...]
+    confidence: AdvisoryConfidence
+    next_tools: tuple[str, ...]
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 class RelatedFilePayload(TypedDict):
@@ -87,6 +113,14 @@ class RelatedFilesPayload(TypedDict):
     path: str
     results: tuple[RelatedFilePayload, ...]
     next_cursor: int | None
+    warnings: tuple[str, ...]
+    confidence: AdvisoryConfidence
+    next_tools: tuple[str, ...]
+    index_fresh: bool
+    index_was_stale: bool
+    auto_refreshed: bool
+    changed_files: tuple[str, ...]
+    refresh_error: str | None
 
 
 def symbol_payload(
@@ -219,7 +253,7 @@ def graph_payload(
         tuple[str, str, int, float] | tuple[str, str, int, float, str | None]
     ],
     page: PageOptions,
-) -> GraphToolPayload:
+) -> BaseGraphToolPayload:
     visible_rows = rows[: page.limit]
     results: list[GraphResultPayload] = []
     for row in visible_rows:
