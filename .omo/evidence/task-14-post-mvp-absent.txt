@@ -1,4 +1,0 @@
-mcp_absent= True
-cli_absent= True
-registry_names= []
-cli_names= []

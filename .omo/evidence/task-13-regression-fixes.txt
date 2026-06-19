@@ -1,8 +1,0 @@
-## stale resolution repro from verifier: fixed smells become resolved
-{"after_findings": [{"rule_id": "python.duplicate_literal", "status": "resolved"}, {"rule_id": "python.todo_cluster", "status": "resolved"}], "before_open_count": 2, "rescan_findings_resolved": 2}
-## regressed event history: resolved recurring finding records regression event
-complete
-True
-regressed
-regressed
-True

@@ -1,8 +1,0 @@
-src/codescent/storage/repositories/__init__.py        6
-src/codescent/storage/repositories/findings.py      129
-src/codescent/services/findings.py       75
-src/codescent/mcp/finding_tools.py      134
-src/codescent/services/code_health.py      237
-scripts/smoke_mcp.py       77
-tests/integration/test_findings.py       73
-tests/contract/test_mcp_finding_tools.py       98

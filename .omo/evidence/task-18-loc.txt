@@ -1,4 +1,0 @@
-scripts/smoke_lx_data_lake.py      220
-src/codescent/smoke/lx_data_lake_contract.py       45
-tests/smoke/test_lx_data_lake_smoke_config.py       37
-src/codescent/services/code_health.py      237

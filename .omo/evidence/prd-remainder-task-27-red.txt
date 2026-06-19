@@ -1,7 +1,0 @@
-Command:
-uv run pytest tests/contract/test_cli.py::test_ci_and_review_diff_emit_json_markdown_and_threshold_exit_codes -q
-
-Observed before implementation:
-The focused test failed because the ci and review-diff commands were not registered; Runner output was Typer usage text instead of parseable JSON.
-
-Result: RED for intended reason: missing public CLI commands.

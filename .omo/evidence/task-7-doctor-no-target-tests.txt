@@ -1,1 +1,0 @@
-{'ok': True, 'checks': {'database_ok': True, 'config_ok': True, 'exclusions_ok': True, 'mcp_available': True}, 'warnings': []}

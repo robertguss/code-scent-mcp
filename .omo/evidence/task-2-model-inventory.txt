@@ -1,2 +1,0 @@
-{'RepoConfig': True, 'IndexedFile': True, 'Symbol': True, 'Finding': True, 'ScanRun': True, 'RepoStatus': True, 'SearchResult': True, 'ContextPack': True, 'RefactorPlan': True, 'SuggestedVerification': True, 'EvalResult': True}
-exit=0

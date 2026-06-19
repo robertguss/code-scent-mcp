@@ -1,7 +1,0 @@
-final cleanup completed
-fixture .codescent removed
-lx .codescent removed
-.pytest_cache removed
-.ruff_cache removed
-.debug-journal.md removed
-workspace caches removed

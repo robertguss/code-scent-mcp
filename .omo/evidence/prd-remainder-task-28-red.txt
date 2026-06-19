@@ -1,7 +1,0 @@
-Command:
-uv run pytest tests/security/test_runtime_safety.py::test_subjective_review_is_disabled_by_default_and_uses_fake_provider_in_tests tests/integration/test_subjective_review.py -q
-
-Observed before implementation:
-ModuleNotFoundError: No module named 'codescent.services.subjective_review'
-
-Result: RED for intended reason: no subjective review service/provider/storage seam existed.

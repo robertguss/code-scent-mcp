@@ -1,4 +1,0 @@
-reviewer .codescent removed after task 16 confirmation
-fixture .codescent removed
-.pytest_cache removed
-.ruff_cache removed

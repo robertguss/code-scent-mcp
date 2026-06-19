@@ -1,4 +1,0 @@
-.........                                                                [100%]
-9 passed in 0.54s
-All checks passed!
-0 errors, 0 warnings, 0 notes

@@ -1,7 +1,0 @@
-Command:
-uv run pytest tests/integration/test_dashboard.py::test_dashboard_ui_renders_findings_trends_rules_and_exports -q
-
-Observed before implementation:
-The page route returned 404 JSON for `/`, `/static/dashboard.css`, and `/static/dashboard.js`.
-
-Result: RED for intended reason: dashboard UI template and local static assets were not served.

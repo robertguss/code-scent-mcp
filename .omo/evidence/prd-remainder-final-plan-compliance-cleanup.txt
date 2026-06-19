@@ -1,4 +1,0 @@
-F1 cleanup receipt:
-- tmux session ulw-qa-prd-f1 killed or absent after capture.
-- Temporary malformed-evidence directory removed by TemporaryDirectory.
-- No server, browser, port, container, or persistent temp resource spawned.

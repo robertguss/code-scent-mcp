@@ -1,5 +1,0 @@
-F3 cleanup receipt:
-- tmux session ulw-qa-prd-f3 killed or absent after capture.
-- Prompt-injection and dirty-worktree temp repos removed.
-- Fixture .codescent runtime state removed after smoke.
-- Python caches removed after evidence capture.

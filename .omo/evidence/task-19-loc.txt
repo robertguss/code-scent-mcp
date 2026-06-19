@@ -1,5 +1,0 @@
-scripts/prove_source_read_only.py      122
-scripts/smoke_lx_data_lake.py      220
-src/codescent/smoke/lx_data_lake_contract.py       45
-tests/security/test_runtime_safety.py       64
-src/codescent/services/code_health.py      237

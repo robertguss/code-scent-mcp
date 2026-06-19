@@ -1,6 +1,0 @@
-Usage: codescent [OPTIONS] COMMAND [ARGS]...
-Try 'codescent --help' for help.
-╭─ Error ──────────────────────────────────────────────────────────────────────╮
-│ No such option: --definitely-not-an-option                                   │
-╰──────────────────────────────────────────────────────────────────────────────╯
-exit=2

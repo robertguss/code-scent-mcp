@@ -1,3 +1,0 @@
-Initialized CodeScent state at /private/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/tmp.GCgzxZfflJ/.codescent
-/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/tmp.GCgzxZfflJ/.codescent/config.toml
-/var/folders/f8/ft7ygqg92pj8qh0rwplbw2x80000gn/T/tmp.GCgzxZfflJ/.codescent/index.sqlite

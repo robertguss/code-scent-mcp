@@ -1,1 +1,0 @@
-{"indexed_files": 11, "changed_files": [], "git_available": false, "git_status": "not_git"}

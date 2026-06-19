@@ -1,3 +1,0 @@
-F4 cleanup receipt:
-- repo-local __pycache__, .pytest_cache, and fixture .codescent directories removed.
-- remaining generated state scan:

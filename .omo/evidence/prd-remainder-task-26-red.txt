@@ -1,9 +1,0 @@
-Command:
-uv run pytest tests/evals/test_deterministic_eval.py::test_ts_react_next_pack_meets_expected_eval_thresholds -q
-
-Observed before implementation:
-F
-E   FileNotFoundError: [Errno 2] No such file or directory: 'evals/fixtures/ts-react-next.expected.json'
-
-Result:
-RED for the intended reason: the TypeScript/React/Next deterministic eval manifest did not exist.

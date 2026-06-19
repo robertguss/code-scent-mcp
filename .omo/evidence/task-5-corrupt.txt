@@ -1,2 +1,0 @@
-corrupt_database
-CodeScent database is corrupt; delete .codescent/index.sqlite to rebuild.

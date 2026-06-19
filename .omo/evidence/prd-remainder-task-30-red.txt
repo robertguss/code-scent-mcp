@@ -1,7 +1,0 @@
-Command:
-uv run pytest tests/integration/test_dashboard.py::test_dashboard_binds_loopback_and_serves_local_read_api -q
-
-Observed before implementation:
-ModuleNotFoundError: No module named 'codescent.dashboard'
-
-Result: RED for intended reason: no dashboard package/server existed.

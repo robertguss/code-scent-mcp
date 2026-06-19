@@ -1,4 +1,0 @@
-url=http://127.0.0.1:64311/
-actions=Page.navigate; wait rendered data; click .finding-button; click #exportJson; Page.captureScreenshot
-observable={"title":"CodeScent Dashboard","hasFindingsList":true,"hasDetail":true,"hasProgress":true,"hasRules":true,"hasExport":true,"activeFinding":true,"ruleItems":2,"trendRows":3,"lowerPanels":true,"bodyLength":1582}
-screenshot=.omo/evidence/prd-remainder-task-31-dashboard-browser.png

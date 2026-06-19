@@ -1,4 +1,0 @@
-SearchOptions greater_than_equal
-ContextOptions greater_than_equal
-ContextOptions less_than_equal
-exit=0

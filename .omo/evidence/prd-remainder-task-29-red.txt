@@ -1,7 +1,0 @@
-Command:
-uv run pytest tests/docs/test_docs.py::test_agent_routing_templates_are_documented_and_not_auto_written -q
-
-Observed before implementation:
-FileNotFoundError: docs/agent-routing.md did not exist.
-
-Result: RED for intended reason: routing docs/templates were missing and doctor had no routing template recommendation payload.

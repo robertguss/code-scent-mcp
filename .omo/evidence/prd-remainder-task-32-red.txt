@@ -1,7 +1,0 @@
-Command:
-uv run pytest tests/security/test_runtime_safety.py::test_dashboard_smoke_is_local_only_and_source_read_only -q
-
-Observed before implementation:
-The test failed because scripts/smoke_dashboard.py did not exist and no JSON artifact was written.
-
-Result: RED for intended reason: dashboard smoke script was missing.

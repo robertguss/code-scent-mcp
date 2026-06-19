@@ -1,3 +1,0 @@
-Resolving despite existing lockfile due to removal of global exclude newer
-..........                                                               [100%]
-10 passed in 2.23s

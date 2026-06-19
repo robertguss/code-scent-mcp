@@ -1,3 +1,0 @@
-no server running on /private/tmp/tmux-501/default
-
-exit=1

@@ -1,2 +1,0 @@
-evals/.gitkeep
-scripts/.gitkeep
