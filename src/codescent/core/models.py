@@ -148,6 +148,24 @@ class MaintainabilityThresholds(BaseModel):
         )
 
 
+class RatchetSettings(BaseModel):
+    """CI ratchet: fail only on new debt, not the pre-existing backlog.
+
+    The ratchet compares the current scan against an accepted baseline of finding
+    stable keys. A finding is *new* when its stable key is absent from the
+    baseline; CI fails only when a new finding is at least ``fail_on_new_severity``
+    severe. ``base_ref`` (empty = disabled) scopes the check to files changed
+    since that git ref.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    enabled: bool = False
+    base_ref: str = ""
+    fail_on_new_severity: str = "warning"
+    require_non_negative_net_health: bool = False
+
+
 class ProjectConfig(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
@@ -167,6 +185,7 @@ class ProjectConfig(BaseModel):
     thresholds: MaintainabilityThresholds = Field(
         default_factory=MaintainabilityThresholds,
     )
+    ratchet: RatchetSettings = Field(default_factory=RatchetSettings)
     llm: LlmSettings | None = None
 
     def with_overrides(

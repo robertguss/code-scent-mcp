@@ -87,6 +87,60 @@ def git_changed_paths(repo_root: Path) -> frozenset[str]:
     return frozenset(_parse_git_status_paths(result.stdout))
 
 
+def git_changed_paths_since(repo_root: Path, base_ref: str) -> frozenset[str] | None:
+    """Repo-relative paths changed since ``base_ref`` (merge-base..working tree).
+
+    Returns ``None`` when the diff cannot be computed (not a git repo, git
+    missing, or an unknown ref) so callers can fall back to whole-repo scoping
+    instead of treating "no diff" as "nothing changed".
+    """
+    if not base_ref or not (repo_root / ".git").exists():
+        return None
+    git_path = which("git")
+    if git_path is None:
+        return None
+    merge_base = _git_merge_base(git_path, repo_root, base_ref)
+    diff_target = merge_base or base_ref
+    try:
+        result = subprocess.run(
+            [
+                git_path,
+                "-C",
+                str(repo_root),
+                "diff",
+                "--name-only",
+                diff_target,
+                "--",
+                ".",
+                ":(exclude).codescent",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=GIT_STATUS_TIMEOUT_SECONDS,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    changed = frozenset(
+        line.strip() for line in result.stdout.splitlines() if line.strip()
+    )
+    return changed | git_changed_paths(repo_root)
+
+
+def _git_merge_base(git_path: str, repo_root: Path, base_ref: str) -> str | None:
+    try:
+        result = subprocess.run(
+            [git_path, "-C", str(repo_root), "merge-base", base_ref, "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=GIT_STATUS_TIMEOUT_SECONDS,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout.strip() or None
+
+
 def git_related_paths(repo_root: Path, path: str) -> tuple[str, ...]:
     if not (repo_root / ".git").exists():
         return ()

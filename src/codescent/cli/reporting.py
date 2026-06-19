@@ -42,6 +42,13 @@ class ChangedFileHealthPayload(TypedDict):
     regressed: NotRequired[bool]
 
 
+class NewFindingPayload(TypedDict):
+    stable_key: str
+    rule_id: str
+    file_path: str
+    severity: str
+
+
 class CiReportPayload(TypedDict):
     ok: bool
     risk_level: str
@@ -51,6 +58,11 @@ class CiReportPayload(TypedDict):
     recommended_commands: list[str]
     ratchet_enabled: NotRequired[bool]
     ratchet_regressions: NotRequired[list[ChangedFileHealthPayload]]
+    baseline_exists: NotRequired[bool]
+    base_ref: NotRequired[str]
+    new_finding_count: NotRequired[int]
+    resolved_count: NotRequired[int]
+    new_findings: NotRequired[list[NewFindingPayload]]
 
 
 class CiBaselineUpdatePayload(TypedDict):
@@ -174,7 +186,7 @@ def explain(
     typer.echo("\n".join(explanation.reasons))
 
 
-def ci(
+def ci(  # noqa: PLR0913 - CLI command exposes distinct options.
     repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
     format_name: Annotated[
         str,
@@ -188,14 +200,21 @@ def ci(
         bool,
         typer.Option(
             "--ratchet/--no-ratchet",
-            help="Fail only when files exceed their stored health baseline.",
+            help="Fail only on new findings versus the accepted baseline.",
         ),
     ] = False,
+    base: Annotated[
+        str,
+        typer.Option(
+            "--base",
+            help="Scope the ratchet to files changed since this git ref.",
+        ),
+    ] = "",
     update_baseline: Annotated[
         bool,
         typer.Option(
             "--update-baseline",
-            help="Record current per-file finding counts as the CI baseline.",
+            help="Accept the current findings as the CI baseline.",
         ),
     ] = False,
 ) -> None:
@@ -205,7 +224,7 @@ def ci(
         _emit_ci_baseline_update(result, format_name)
         return
 
-    report_data = service.run(threshold=threshold, ratchet=ratchet)
+    report_data = service.run(threshold=threshold, ratchet=ratchet, base_ref=base)
     _emit_ci_report(report_data, format_name)
     if not report_data.ok:
         raise typer.Exit(1)
@@ -286,6 +305,19 @@ def _ci_payload(report_data: CiReport) -> CiReportPayload:
         payload["ratchet_regressions"] = [
             _changed_file_health_payload(health, include_ratchet=True)
             for health in report_data.ratchet_regressions
+        ]
+        payload["baseline_exists"] = report_data.baseline_exists
+        payload["base_ref"] = report_data.base_ref
+        payload["new_finding_count"] = report_data.new_finding_count
+        payload["resolved_count"] = report_data.resolved_count
+        payload["new_findings"] = [
+            {
+                "stable_key": finding.stable_key,
+                "rule_id": finding.rule_id,
+                "file_path": finding.file_path,
+                "severity": finding.severity,
+            }
+            for finding in report_data.new_findings
         ]
     return payload
 

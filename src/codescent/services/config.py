@@ -76,6 +76,10 @@ def _render_config(config: ProjectConfig) -> str:
                 "dict[str, TomlValue]",
                 config.thresholds.model_dump(mode="python"),
             ),
+            "ratchet": cast(
+                "dict[str, TomlValue]",
+                config.ratchet.model_dump(mode="python"),
+            ),
         },
     )
 

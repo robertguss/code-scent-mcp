@@ -98,6 +98,30 @@ Tuning knobs: `relative_outlier_iqr_multiplier` raises/lowers the cutoff (higher
 metrics with too few samples to be meaningful;
 `relative_thresholds_enabled = false` turns the flavor off entirely.
 
+## CI Ratchet
+
+The CI ratchet (`codescent ci --ratchet`) fails only on _new_ debt versus an
+accepted baseline, never on the pre-existing backlog. Configure its defaults in
+`.codescent/config.toml`:
+
+```toml
+[ratchet]
+enabled = false                      # reserved; --ratchet enables per-run today
+base_ref = ""                        # default git ref for diff scoping ("" = whole repo)
+fail_on_new_severity = "warning"     # block new findings at this severity or worse
+require_non_negative_net_health = false
+```
+
+Accept a baseline with `codescent ci --update-baseline`; it records the current
+findings by stable key. A finding is _new_ when its stable key is absent from
+the baseline. `fail_on_new_severity` gates which new findings fail CI —
+`warning` (the default) ignores new `info` findings (e.g. a new TODO), `info`
+fails on any new finding. `base_ref` (or `--base <ref>`) restricts the check to
+files changed since that ref. The transient
+`python.changed_source_without_related_test` rule is excluded from the baseline
+comparison. CodeScent never runs tests; the ratchet reads only its own scan
+output and the local git diff.
+
 ## Coverage Report
 
 Coverage ingestion reads an existing Cobertura XML report when present. By

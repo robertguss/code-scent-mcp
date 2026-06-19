@@ -145,17 +145,25 @@ is exceeded.
 uv run codescent ci --repo "$repo" --format json --threshold high
 ```
 
-To gate only new or worsened findings, seed the per-file health baseline before
-enabling ratchet mode:
+To gate only new debt (and never the pre-existing backlog), accept a baseline,
+then enable ratchet mode:
 
 ```bash
 uv run codescent ci --repo "$repo" --update-baseline
 uv run codescent ci --repo "$repo" --ratchet
+uv run codescent ci --repo "$repo" --ratchet --base origin/main
 ```
 
-The baseline records each indexed file's current finding count. Ratchet mode
-fails when a file exceeds its stored count; omitting `--ratchet` keeps the
-default threshold behavior.
+`--update-baseline` snapshots the current findings as the accepted baseline (by
+stable finding key). In ratchet mode a finding is **new** when its stable key is
+absent from the baseline; CI fails only when a new finding is at least
+`fail_on_new_severity` severe (default `warning`), so resolving one finding and
+introducing a different one is caught even when the per-file count is unchanged.
+The pre-existing backlog never fails the build. `--base <ref>` scopes the check
+to files changed since that git ref (merge-base). With no accepted baseline the
+ratchet is a no-op that recommends accepting one rather than failing. Defaults
+live in the `[ratchet]` config section; omitting `--ratchet` keeps the absolute
+threshold behavior.
 
 ### `review-diff`
 

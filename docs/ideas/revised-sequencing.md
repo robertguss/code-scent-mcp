@@ -103,6 +103,17 @@ remainder _actionable_. This is top-3 leverage, not an honorable mention.
 
 ### P3 — CI ratchet (#6, kept; ~S/M)
 
+**Status: core shipped 2026-06-19.** `codescent ci --ratchet` now fails only on
+_new_ findings versus an accepted baseline (`--update-baseline`), keyed by
+stable finding key (migration 8 `finding_baseline`), never on the pre-existing
+backlog. New findings are severity-gated (`fail_on_new_severity`, default
+`warning`), and `--base <ref>` scopes the check to files changed since a git ref
+(merge-base). This catches the resolve-one-add-one swap that the old count-based
+ratchet missed. New `[ratchet]` config section; the transient
+`changed_source_without_related_test` rule is excluded. _Deferred:_ the
+coverage-delta / changed-line-coverage gate (axis c) and the net-health gate —
+both need changed-line coverage diffing.
+
 Keep the plan's design (stable-key baseline, diff scoping, coverage gate). One
 change: it comes **after** P1, because "fail only on _new_ findings" is only
 meaningful once "finding" means something. Ratcheting on mis-tuned detectors
