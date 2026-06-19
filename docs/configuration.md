@@ -59,6 +59,10 @@ deep_nesting = 4
 todo_cluster_size = 3
 duplicate_literal_min_count = 4
 duplicate_literal_min_length = 8
+# Relative ("large for this repository") thresholds
+relative_thresholds_enabled = true
+relative_outlier_iqr_multiplier = 1.5
+relative_min_sample_size = 12
 # TypeScript / React / Next
 ts_large_component_lines = 150
 ts_too_many_hooks = 8
@@ -73,6 +77,26 @@ repositories. Every finding records the threshold it was measured against in its
 evidence, so `explain_score` and `get_finding` always show why something was
 flagged. Thresholds are a pure input to the deterministic scan — the same repo
 and the same thresholds always produce the same findings.
+
+### Relative thresholds
+
+The absolute thresholds above are a fixed floor. The relative thresholds add an
+_outlier-for-this-repo_ flavor on top: a file, function, or class that is well
+under the absolute floor but unusually large **for this repository** is flagged
+as `python.relative_large_file` / `python.relative_large_function` /
+`python.relative_large_class` (severity `info`). The cutoff is the standard IQR
+outlier rule over the repo's own size distribution
+(`Q3 + relative_outlier_iqr_multiplier * IQR`), so it fires only on genuine
+outliers — not a fixed fraction of the codebase — and stays silent when the
+absolute floor is already the binding constraint. Each finding's evidence
+carries `repo_median`, `repo_q3`, `outlier_cutoff`, and `sample_size` for
+explainability, and the metrics never enter the finding's stable id (adding an
+unrelated file does not re-key existing outliers).
+
+Tuning knobs: `relative_outlier_iqr_multiplier` raises/lowers the cutoff (higher
+= fewer, more extreme outliers); `relative_min_sample_size` skips the rule on
+metrics with too few samples to be meaningful;
+`relative_thresholds_enabled = false` turns the flavor off entirely.
 
 ## Coverage Report
 

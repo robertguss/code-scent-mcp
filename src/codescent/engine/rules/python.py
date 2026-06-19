@@ -15,6 +15,7 @@ from codescent.engine.rules.model import (
     build_finding,
 )
 from codescent.engine.rules.python_patterns import secondary_findings
+from codescent.engine.rules.relative_size import SizeSample, relative_outlier_findings
 from codescent.engine.rules.structural_duplicates import structural_duplicate_findings
 from codescent.engine.source_read import read_source_text
 
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from codescent.engine.parsers.python import ParsedPythonFile
+
+_FUNCTION_KINDS = frozenset({"function", "async_function", "method"})
 
 
 def scan_python_health(
@@ -33,6 +36,9 @@ def scan_python_health(
     project_config = config or ProjectConfig()
     thresholds = project_config.thresholds
     findings: list[CodeHealthFinding] = []
+    file_samples: list[SizeSample] = []
+    function_samples: list[SizeSample] = []
+    class_samples: list[SizeSample] = []
     for item in build_file_inventory(repo_root, config=project_config):
         if item.language != "python":
             continue
@@ -47,9 +53,43 @@ def scan_python_health(
         findings.extend(_todo_cluster(parsed, lines, thresholds))
         findings.extend(_duplicate_literals(parsed, source.text, thresholds))
         findings.extend(secondary_findings(parsed, source.text, lines, thresholds))
+        _collect_size_samples(
+            parsed,
+            len(lines),
+            file_samples=file_samples,
+            function_samples=function_samples,
+            class_samples=class_samples,
+        )
     findings.extend(structural_duplicate_findings(repo_root, config=project_config))
     findings.extend(scan_dead_code(repo_root, config=project_config))
+    findings.extend(
+        relative_outlier_findings(
+            file_samples=file_samples,
+            function_samples=function_samples,
+            class_samples=class_samples,
+            thresholds=thresholds,
+        ),
+    )
     return tuple(findings)
+
+
+def _collect_size_samples(
+    parsed: ParsedPythonFile,
+    line_count: int,
+    *,
+    file_samples: list[SizeSample],
+    function_samples: list[SizeSample],
+    class_samples: list[SizeSample],
+) -> None:
+    file_samples.append(SizeSample(parsed.path, None, line_count))
+    for symbol in parsed.symbols:
+        span = symbol.end_line - symbol.start_line + 1
+        if symbol.kind == "class":
+            class_samples.append(SizeSample(parsed.path, symbol.qualified_name, span))
+        elif symbol.kind in _FUNCTION_KINDS:
+            function_samples.append(
+                SizeSample(parsed.path, symbol.qualified_name, span),
+            )
 
 
 def _large_file(

@@ -3,12 +3,13 @@ from __future__ import annotations
 import shutil
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Final, cast
+from typing import TYPE_CHECKING, ClassVar, Final
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from codescent.core.models import MaintainabilityThresholds
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.services.code_health import CodeHealthService
+from codescent.services.config import ConfigService
 from codescent.services.context import ContextService
 from codescent.services.refactor_planning import RefactorPlanningService
 from codescent.services.search import SearchService
@@ -210,14 +211,9 @@ def _workflow_score(
 
 
 def _write_strict_thresholds(repo: Path) -> None:
-    config_dir = repo / ".codescent"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    thresholds = cast(
-        "dict[str, int]",
-        MaintainabilityThresholds.strict().model_dump(mode="python"),
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
     )
-    lines = ["[thresholds]", *(f"{key} = {value}" for key, value in thresholds.items())]
-    _ = (config_dir / "config.toml").write_text("\n".join(lines) + "\n")
 
 
 def _source_snapshot(repo: Path) -> dict[str, str]:

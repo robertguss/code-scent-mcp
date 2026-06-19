@@ -52,13 +52,20 @@ ships. Full spec in [`boundedness-bug-fix.md`](./boundedness-bug-fix.md).
 
 ### P1 — Threshold sanity first, then relative thresholds (split from #1; ~S/M)
 
-**Status: part 1 (absolute re-tune) shipped 2026-06-19.** Thresholds are now a
-configurable `[thresholds]` section (`MaintainabilityThresholds`) with sane
-production defaults; the historical aggressive values live behind a `strict()`
-profile used by the tiny fixtures/evals. On the CodeScent repo this dropped the
-scan from **1,208 → 470 findings** (duplicate_literal −73%, large_function −78%,
-large_file −83%). Part 2 (relative "large-for-this-repo" thresholds) is still
-pending. See [configuration.md](../configuration.md#maintainability-thresholds).
+**Status: shipped 2026-06-19 (both parts).**
+
+- _Part 1 (absolute re-tune)._ Thresholds are now a configurable `[thresholds]`
+  section (`MaintainabilityThresholds`) with sane production defaults; the
+  historical aggressive values live behind a `strict()` profile used by the tiny
+  fixtures/evals. On the CodeScent repo this dropped the scan from **1,208 → 470
+  findings** (duplicate_literal −73%, large_function −78%, large_file −83%).
+- _Part 2 (relative thresholds)._ Adds an IQR-based outlier-for-this-repo flavor
+  (`python.relative_large_file` / `_function` / `_class`) over the repo's own
+  size distribution, on top of the absolute floor. Conservative by construction
+  (fires only on genuine outliers under the absolute threshold; silent when the
+  floor already binds). On the CodeScent repo it adds 27 `relative_large_class`
+  findings and nothing for files/functions (the absolute floor already binds
+  there). See [configuration.md](../configuration.md#relative-thresholds).
 
 The plan bundles relative thresholds inside the adaptive feature (#1c) and keeps
 the absolute constants. Reverse the emphasis:

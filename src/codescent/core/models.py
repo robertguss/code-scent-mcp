@@ -107,6 +107,14 @@ class MaintainabilityThresholds(BaseModel):
     todo_cluster_size: int = Field(default=3, ge=1)
     duplicate_literal_min_count: int = Field(default=4, ge=2)
     duplicate_literal_min_length: int = Field(default=8, ge=1)
+    # Relative ("large for this repository") thresholds. These add an
+    # outlier-for-this-repo finding flavor on top of the absolute thresholds,
+    # catching files/functions/classes that are unusually large for the repo
+    # even when under the absolute floor. Uses a robust IQR outlier rule so it
+    # fires only on genuine outliers, not a fixed fraction of the codebase.
+    relative_thresholds_enabled: bool = True
+    relative_outlier_iqr_multiplier: float = Field(default=1.5, ge=0)
+    relative_min_sample_size: int = Field(default=12, ge=2)
     # TypeScript / React / Next
     ts_large_component_lines: int = Field(default=150, ge=1)
     ts_too_many_hooks: int = Field(default=8, ge=1)
@@ -131,6 +139,7 @@ class MaintainabilityThresholds(BaseModel):
             todo_cluster_size=3,
             duplicate_literal_min_count=3,
             duplicate_literal_min_length=4,
+            relative_thresholds_enabled=False,
             ts_large_component_lines=12,
             ts_too_many_hooks=1,
             ts_too_many_props=3,
