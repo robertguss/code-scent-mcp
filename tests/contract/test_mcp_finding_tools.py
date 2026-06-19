@@ -27,6 +27,30 @@ class ScanToolPayload(BaseModel):
     finding_ids: tuple[str, ...]
 
 
+class ImprovementClusterModel(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
+
+    theme: str
+    rule_id: str
+    scope: str
+    size: int
+    effort: str
+    roi: float
+    health_gain: float
+
+
+class ImprovementPlanPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    kind: str
+    total_clusters: int
+    total_findings: int
+    clusters: tuple[ImprovementClusterModel, ...]
+    returned_count: int
+    omitted_count: int
+
+
 class BoundedScanPayload(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
@@ -389,6 +413,38 @@ async def test_list_tools_bound_output_and_offer_retrieval(tmp_path: Path) -> No
     inline_ids = {item["finding_id"] for item in report.items}
     retrieved_ids = {item["finding_id"] for item in exact.items}
     assert len(retrieved_ids - inline_ids) > 0
+
+
+@pytest.mark.anyio
+async def test_get_improvement_plan_returns_roi_ordered_clusters(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_many_findings(tmp_path, 6)
+
+    async with Client(mcp) as client:
+        tools = await client.list_tools()
+        _ = await client.call_tool("scan_code_health", {"repo": str(repo)})
+        plan_result = await client.call_tool(
+            "get_improvement_plan",
+            {"repo": str(repo)},
+        )
+
+    assert "get_improvement_plan" in {tool.name for tool in tools}
+    plan = ImprovementPlanPayload.model_validate_json(
+        _text_content(plan_result.content),
+    )
+
+    assert plan.ok is True
+    assert plan.kind == "improvement_plan"
+    assert plan.total_clusters >= 1
+    assert plan.total_findings > 0
+    assert len(plan.clusters) <= INLINE_ITEM_LIMIT
+    assert plan.returned_count == len(plan.clusters)
+    # Clusters are ROI-ordered and each carries effort/gain estimates.
+    rois = [cluster.roi for cluster in plan.clusters]
+    assert rois == sorted(rois, reverse=True)
+    assert all(cluster.effort in {"S", "M", "L"} for cluster in plan.clusters)
+    assert all(cluster.size >= 1 for cluster in plan.clusters)
 
 
 async def _scan_repo(repo: Path) -> ScanToolPayload:

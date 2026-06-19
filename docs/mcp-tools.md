@@ -42,6 +42,7 @@ by the service and contract tests.
 - `get_finding`
 - `explain_score`
 - `get_backlog`
+- `get_improvement_plan`
 - `get_progress`
 - `get_regressions`
 - `review_diff_risk`
@@ -97,7 +98,7 @@ Code health and finding lifecycle tools:
 
 `scan_code_health`, `get_smell_report`, `get_next_improvement`, `mark_finding`,
 `record_verification`, `rescan`, `get_finding`, `explain_score`, `get_backlog`,
-`get_progress`, `get_regressions`, `context_stats`
+`get_improvement_plan`, `get_progress`, `get_regressions`, `context_stats`
 
 Planning tools:
 
@@ -557,6 +558,31 @@ events, and telemetry.
   `retrieve_result`.
 - Example shape:
   `{"ok": true, "kind": "backlog", "open_count": 1245, "items": [...], "omitted_count": 1220, "result_id": "ctx_…", "retrieval_available": true}`
+
+### `get_improvement_plan`
+
+- Group: `health`
+- Purpose: Turn the flat finding backlog into a deterministic, ROI-ordered
+  improvement campaign. Findings are clustered by theme (rule + directory) — for
+  example "39 duplicate literals in tests/integration" instead of 39 separate
+  to-dos — and each cluster carries an effort estimate (`S`/`M`/`L` and
+  `effort_points`), a `health_gain` estimate, an `roi` (health-gain ÷ effort),
+  the affected `files`, and a capped list of member `finding_ids`. Clusters are
+  ordered by ROI so the cheapest, highest-impact work comes first.
+- Inputs: repository root.
+- Outputs: a bounded plan envelope: `total_clusters`, `total_findings`, and a
+  capped `clusters` preview with `returned_count`/`omitted_count`. Each cluster
+  has `theme`, `rule_id`, `scope`, `size`, `severity`, `effort`,
+  `effort_points`, `health_gain`, `roi`, `files`, `finding_ids`, and
+  `suggested_action`.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network. A pure transform over open findings — no new indexing. The
+  inline preview holds at most `INLINE_ITEM_LIMIT` (default 25) clusters; when
+  clusters are omitted the envelope carries a `result_id` with
+  `retrieval_available` and `retrieval_hints` for `retrieve_result`. Effort and
+  ROI are deterministic functions of the finding set.
+- Example shape:
+  `{"ok": true, "kind": "improvement_plan", "total_clusters": 97, "total_findings": 503, "clusters": [{"theme": "Consolidate 39 duplicate literal(s) in tests/integration", "effort": "M", "roi": 3.86, ...}], "omitted_count": 72, "result_id": "ctx_…", "retrieval_available": true}`
 
 ### `get_progress`
 

@@ -6,6 +6,7 @@ from codescent.core.models import FindingStatus
 from codescent.mcp.finding_payloads import (
     BacklogToolPayload,
     FindingDetailToolPayload,
+    ImprovementPlanToolPayload,
     MarkFindingToolPayload,
     NextImprovementToolPayload,
     ProgressToolPayload,
@@ -20,12 +21,14 @@ from codescent.mcp.finding_payloads import (
     build_scan_envelope,
     detail_payload,
     finding_payload,
+    improvement_plan_payload,
     score_explanation_payload,
     severity_rank,
     status_from_string,
 )
 from codescent.services.code_health import CodeHealthService
 from codescent.services.findings import FindingsService
+from codescent.services.improvement_plan import ImprovementPlanService
 from codescent.services.reports import ReportService
 
 _BACKLOG_STATUSES = frozenset(
@@ -75,6 +78,13 @@ def register_finding_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description="Use CodeScent to read the deterministic finding backlog.",
     )(get_backlog)
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to turn the finding backlog into a deterministic, "
+            "ROI-ordered improvement plan: findings clustered by theme with "
+            "effort and health-gain estimates. Bounded output."
+        ),
+    )(get_improvement_plan)
     _ = mcp.tool(
         description="Use CodeScent to read deterministic finding progress counts.",
     )(get_progress)
@@ -196,6 +206,12 @@ def get_backlog(repo: str = ".") -> BacklogToolPayload:
         next_tools=("get_next_improvement", "retrieve_result"),
     )
     return cast("BacklogToolPayload", cast("object", envelope))
+
+
+def get_improvement_plan(repo: str = ".") -> ImprovementPlanToolPayload:
+    plan = ImprovementPlanService(repo).get_improvement_plan()
+    envelope = improvement_plan_payload(plan, repo=repo)
+    return cast("ImprovementPlanToolPayload", cast("object", envelope))
 
 
 def get_progress(repo: str = ".") -> ProgressToolPayload:

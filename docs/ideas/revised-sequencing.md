@@ -83,6 +83,17 @@ by an order of magnitude before any learning machinery exists.
 
 ### P2 — Clustering / ROI / fix-order (promoted #4; ~Medium)
 
+**Status: shipped 2026-06-19.** New `get_improvement_plan` MCP tool
+(`ImprovementPlanService`) clusters open findings by theme (rule + directory),
+estimates effort (`S`/`M`/`L` with a cluster-economy model), health gain
+(severity × confidence), and ROI (gain ÷ effort), then returns the clusters
+ROI-ordered through the P0 bounded envelope. On the CodeScent repo it collapses
+503 findings into 97 clusters with the cheapest high-impact work first — e.g.
+"Consolidate 39 duplicate literal(s) in tests/integration" (ROI 3.86) ahead of
+the structural refactors. Effort/ROI are deterministic functions of the finding
+set. _Note:_ ordering is ROI-based; true dependency-graph topological ordering
+(untangle cycles before extract-function) remains a follow-up.
+
 The plan lists #4 in "honorable mentions," but it is precisely the experience an
 agent hits: 510 `duplicate_literal` findings are really a handful of missing
 constants modules. Clustering is a pure transform over existing findings plus

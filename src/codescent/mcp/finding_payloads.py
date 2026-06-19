@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
     from codescent.engine.rules.model import CodeHealthFinding
     from codescent.services.code_health import CodeHealthScanResult
+    from codescent.services.improvement_plan import ImprovementCluster, ImprovementPlan
     from codescent.services.reports import FindingDetail, ScoreExplanation
     from codescent.storage.repositories import FindingRow
 
@@ -74,6 +75,36 @@ class BacklogToolPayload(BoundedListBase):
 class RegressionsToolPayload(BoundedListBase):
     count: int
     status_counts: dict[str, int]
+
+
+class ImprovementClusterItem(TypedDict):
+    theme: str
+    rule_id: str
+    scope: str
+    size: int
+    severity: str
+    effort: str
+    effort_points: float
+    health_gain: float
+    roi: float
+    files: tuple[str, ...]
+    finding_ids: tuple[str, ...]
+    suggested_action: str
+
+
+class ImprovementPlanToolPayload(TypedDict):
+    ok: bool
+    kind: str
+    total_clusters: int
+    total_findings: int
+    clusters: tuple[ImprovementClusterItem, ...]
+    returned_count: int
+    omitted_count: int
+    result_id: str | None
+    retrieval_available: bool
+    retrieval_hints: tuple[str, ...]
+    warnings: tuple[str, ...]
+    next_tools: tuple[str, ...]
 
 
 class FindingDetailToolPayload(TypedDict):
@@ -244,6 +275,80 @@ def bounded_finding_list(  # noqa: PLR0913
     if extra is not None:
         envelope.update(extra)
     return envelope
+
+
+def cluster_item(cluster: ImprovementCluster) -> ImprovementClusterItem:
+    return {
+        "theme": cluster.theme,
+        "rule_id": cluster.rule_id,
+        "scope": cluster.scope,
+        "size": cluster.size,
+        "severity": cluster.severity,
+        "effort": cluster.effort,
+        "effort_points": cluster.effort_points,
+        "health_gain": cluster.health_gain,
+        "roi": cluster.roi,
+        "files": cluster.files,
+        "finding_ids": cluster.finding_ids,
+        "suggested_action": cluster.suggested_action,
+    }
+
+
+def improvement_plan_payload(
+    plan: ImprovementPlan,
+    *,
+    repo: str,
+    limit: int = INLINE_ITEM_LIMIT,
+) -> dict[str, object]:
+    items = tuple(cluster_item(cluster) for cluster in plan.clusters)
+    visible = items[:limit]
+    omitted = max(0, len(items) - limit)
+    result_id: str | None = None
+    retrieval_hints: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()
+    if omitted > 0:
+        raw_result = cast(
+            "JsonValue",
+            {
+                "kind": "improvement_plan",
+                "items": [dict(item) for item in items],
+                "total_clusters": plan.total_clusters,
+                "total_findings": plan.total_findings,
+            },
+        )
+        stored = ResultStoreService(repo).store_result(
+            project_id=_store_project_id(repo),
+            tool_name="get_improvement_plan",
+            input_payload={"repo": repo},
+            raw_result=raw_result,
+        )
+        result_id = stored.id
+        retrieval_hints = (
+            f"retrieve_result(result_id='{result_id}', mode='exact', limit=100)",
+            f"retrieve_result(result_id='{result_id}', mode='summary')",
+        )
+        warnings = (
+            "".join(
+                (
+                    f"{omitted} of {len(items)} clusters omitted from inline output; ",
+                    "call retrieve_result with the result_id to page the full plan.",
+                ),
+            ),
+        )
+    return {
+        "ok": True,
+        "kind": "improvement_plan",
+        "total_clusters": plan.total_clusters,
+        "total_findings": plan.total_findings,
+        "clusters": visible,
+        "returned_count": len(visible),
+        "omitted_count": omitted,
+        "result_id": result_id,
+        "retrieval_available": result_id is not None,
+        "retrieval_hints": retrieval_hints,
+        "warnings": warnings,
+        "next_tools": ("get_finding_context", "plan_refactor", "get_next_improvement"),
+    }
 
 
 def build_scan_envelope(
