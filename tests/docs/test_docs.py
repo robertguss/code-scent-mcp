@@ -214,7 +214,9 @@ def test_changelog_has_unreleased_and_initial_release() -> None:
 
 
 def test_cli_reference_covers_registered_commands() -> None:
-    text = CLI_REFERENCE.read_text()
+    # Collapse whitespace so prose-wrap (prettier proseWrap: "always") cannot
+    # split an asserted guidance phrase across a line break.
+    text = _collapse_whitespace(CLI_REFERENCE.read_text())
     registered_commands = {
         command.name for command in PUBLIC_SURFACE.cli_commands if command.registered
     }
@@ -292,13 +294,19 @@ def test_mcp_docs_do_not_name_post_mvp_excluded_tools() -> None:
 
 
 def test_dashboard_docs_do_not_invent_public_command() -> None:
-    text = DASHBOARD.read_text()
+    # Collapse whitespace so prose-wrap cannot split an asserted phrase
+    # (e.g. "no remote dashboard") across a line break.
+    text = _collapse_whitespace(DASHBOARD.read_text())
 
     assert "127.0.0.1" in text
     assert "loopback" in text
     assert "no auth" in text
     assert "no remote dashboard" in text
     assert "codescent dashboard" not in text
+
+
+def _collapse_whitespace(text: str) -> str:
+    return re.sub(r"\s+", " ", text)
 
 
 def _linked_markdown_targets(text: str) -> set[Path]:
