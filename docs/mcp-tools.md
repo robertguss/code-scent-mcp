@@ -54,7 +54,8 @@ by the service and contract tests.
 
 ## Locked Post-MVP MCP Tools
 
-No MCP tools are locked in the current local PRD-remainder stage. Task 14 remains the final docs/public lockstep check for Headroom MCP tools.
+No MCP tools are locked in the current local PRD-remainder stage. Task 14
+remains the final docs/public lockstep check for Headroom MCP tools.
 
 ## Current Registered CLI Commands
 
@@ -188,8 +189,8 @@ events, and telemetry.
 - Group: `context`
 - Purpose: Find indexed symbols by name and return a bounded symbol-search
   envelope.
-- Inputs: repository root, query, and limit. Large responses may include
-  `mode`, `original_result_id`, `omitted_count`, `retrieval_available`,
+- Inputs: repository root, query, and limit. Large responses may include `mode`,
+  `original_result_id`, `omitted_count`, `retrieval_available`,
   `retrieval_hints`, `warnings`, and `stats`.
 - Outputs: JSON-compatible structured payload with local evidence and no
   unbounded source dump. The payload also includes `index_fresh`,
@@ -199,8 +200,8 @@ events, and telemetry.
   `find_symbol` envelopes large results instead of returning unbounded symbol
   lists; runtime no-network. If the index is stale, `find_symbol` refreshes
   `.codescent` state before answering.
-- Example shape: `{"ok": true, "kind": "symbol_search", "mode": "exact",
-  "items": []}`
+- Example shape:
+  `{"ok": true, "kind": "symbol_search", "mode": "exact", "items": []}`
 
 ### `get_file_context`
 
@@ -319,7 +320,8 @@ events, and telemetry.
 ### `select_tests`
 
 - Group: `planning`
-- Purpose: Recommend the minimal pytest test set for current changes or given paths.
+- Purpose: Recommend the minimal pytest test set for current changes or given
+  paths.
 - Inputs: repository root plus optional changed paths.
 - Outputs: `changed_files`, `test_files`, a single `command`, and
   `executes_in_v1: false`.
@@ -354,8 +356,7 @@ events, and telemetry.
   status code, bounded summary, and truncation signal.
 - Bounds: source-read-only for analyzed files; writes only `.codescent` ledger
   state; bounded output by default; runtime no-network; no command execution.
-- Example shape:
-  `{"tool": "record_verification", "ok": true, "data": {...}}`
+- Example shape: `{"tool": "record_verification", "ok": true, "data": {...}}`
 
 ### `rescan`
 
@@ -614,8 +615,7 @@ events, and telemetry.
   warnings; no raw source, raw results, or full query payloads.
 - Bounds: reads sanitized `.codescent` session events only; bounded output by
   default; runtime no-network.
-- Example shape:
-  `{"session_id": "sess_123", "tool_calls": 0, "warnings": []}`
+- Example shape: `{"session_id": "sess_123", "tool_calls": 0, "warnings": []}`
 
 ## Reference Pattern
 

@@ -1,12 +1,11 @@
 # Implementation Plan: CodeScent v2 Feature Roadmap
 
-**Status:** Locked v1 (2026-06-15)
-**Scope:** Engineer-ready, multi-quarter plan for the ten v2 features selected
-in the v2 brainstorm. Supersedes nothing; extends `docs/prd.md`,
-`docs/architecture.md`, and `docs/mcp-tools.md`. Five sign-off decisions
-locked on 2026-06-15 — see section "Locked Decisions" at the bottom.
-**Constitution:** Local-first, source-read-only for analyzed source,
-no runtime network for core paths, deterministic-first, bounded outputs,
+**Status:** Locked v1 (2026-06-15) **Scope:** Engineer-ready, multi-quarter plan
+for the ten v2 features selected in the v2 brainstorm. Supersedes nothing;
+extends `docs/prd.md`, `docs/architecture.md`, and `docs/mcp-tools.md`. Five
+sign-off decisions locked on 2026-06-15 — see section "Locked Decisions" at the
+bottom. **Constitution:** Local-first, source-read-only for analyzed source, no
+runtime network for core paths, deterministic-first, bounded outputs,
 service-thin-adapter pattern. Every section in this plan must respect those
 invariants and the policies in `src/codescent/AGENTS.md`,
 `src/codescent/services/AGENTS.md`, and `src/codescent/mcp/AGENTS.md`.
@@ -52,19 +51,19 @@ Hard dependencies:
   D2 read from. Build before B/D.
 - **A3 Co-Change Hotspots** is independent but feeds ranking in B1, C2, D2.
 - **C2 Public API Ledger** consumes A1 anchors to keep contracts stable.
-- **D2 Oracle** consumes A1 (anchored impact set), A2 (budget/telemetry),
-  A3 (risk scoring), C2 (API diff classification), and D1 (impact + mutation).
+- **D2 Oracle** consumes A1 (anchored impact set), A2 (budget/telemetry), A3
+  (risk scoring), C2 (API diff classification), and D1 (impact + mutation).
 
 Soft dependencies are noted per feature.
 
 ## 2. Milestone Table
 
-| Quarter | Phase | Features | Headline outcome |
-| --- | --- | --- | --- |
-| Q1 | A | A1, A2, A3 | Stable finding identity, measurable token savings, hotspot signal. |
-| Q2 | B | B1, B2, B3 | Agents do fewer tool roundtrips, recall prior knowledge, catch AI slop. |
-| Q3 | C | C1, C2 | Architecture is enforceable as findings; public API breakage is detectable. |
-| Q4 | D | D1, D2 | Agents get real verification evidence before edits land. |
+| Quarter | Phase | Features   | Headline outcome                                                            |
+| ------- | ----- | ---------- | --------------------------------------------------------------------------- |
+| Q1      | A     | A1, A2, A3 | Stable finding identity, measurable token savings, hotspot signal.          |
+| Q2      | B     | B1, B2, B3 | Agents do fewer tool roundtrips, recall prior knowledge, catch AI slop.     |
+| Q3      | C     | C1, C2     | Architecture is enforceable as findings; public API breakage is detectable. |
+| Q4      | D     | D1, D2     | Agents get real verification evidence before edits land.                    |
 
 Each feature ships when its **exit criteria** pass: contract test suite green,
 schema migration green on a real `.codescent/` from the previous version,
@@ -112,16 +111,15 @@ expands the safety boundary, a runtime-safety assertion in
 
 Each feature lands with a one-shot script under `scripts/` that writes a
 deterministic JSON evidence artifact to `.omo/evidence/<task-id>.json`. The
-script must work against `tests/fixtures/python-basic` with no network and
-exit 0 on success. Mirrors the pattern of
-`scripts/prove_source_read_only.py`.
+script must work against `tests/fixtures/python-basic` with no network and exit
+0 on success. Mirrors the pattern of `scripts/prove_source_read_only.py`.
 
 ### 3.6 Docs lockstep
 
-Each feature updates: `docs/mcp-tools.md` (tool reference), `docs/architecture.md`
-(if new service/engine module), `docs/cli-reference.md` (if new command), and
-adds a workflow snippet to `docs/workflows.md` showing the new tool in agent
-use.
+Each feature updates: `docs/mcp-tools.md` (tool reference),
+`docs/architecture.md` (if new service/engine module), `docs/cli-reference.md`
+(if new command), and adds a workflow snippet to `docs/workflows.md` showing the
+new tool in agent use.
 
 ---
 
@@ -134,8 +132,8 @@ use.
 Solves architecture risk 16.3 in `docs/architecture.md` ("Poor Finding
 Stability"). Today, a finding's identity is derived from path + line numbers
 inside `stable_key`. A trivial reformat shifts every finding ID, breaking
-`mark_finding`, breaking `retrieve_result` citations, and confusing rescan
-diff. Semantic anchors fix this once for every downstream feature.
+`mark_finding`, breaking `retrieve_result` citations, and confusing rescan diff.
+Semantic anchors fix this once for every downstream feature.
 
 ### A1.2 Anchor schema
 
@@ -165,9 +163,9 @@ Canonical string form for storage and citation:
 
 ### A1.3 Engine module
 
-New: `src/codescent/engine/anchors/__init__.py`
-New: `src/codescent/engine/anchors/python.py`
-New: `src/codescent/engine/anchors/resolver.py`
+New: `src/codescent/engine/anchors/__init__.py` New:
+`src/codescent/engine/anchors/python.py` New:
+`src/codescent/engine/anchors/resolver.py`
 
 Public functions:
 
@@ -188,10 +186,11 @@ def serialize(anchor: SemanticAnchor) -> str: ...
 def deserialize(text: str) -> SemanticAnchor: ...
 ```
 
-`ResolvedLocation` returns current `start_line`, `end_line`, and a
-`drift_kind` of `exact | moved | structurally_changed | missing`.
+`ResolvedLocation` returns current `start_line`, `end_line`, and a `drift_kind`
+of `exact | moved | structurally_changed | missing`.
 
 Resolution algorithm (in order):
+
 1. Exact match by `node_path + structural_hash + name_hash` -> `exact`.
 2. Same `node_path` + matching `structural_hash` -> `moved`.
 3. Same `node_path` + matching `name_hash` only -> `structurally_changed`.
@@ -230,7 +229,8 @@ post-migration.
 
 ### A1.5 MCP surface changes
 
-- New: `resolve_anchor(anchor_text: str, repo: str = ".") -> ResolveAnchorPayload`
+- New:
+  `resolve_anchor(anchor_text: str, repo: str = ".") -> ResolveAnchorPayload`
   returns `{ok, file_path, start_line, end_line, drift_kind, anchor_text_now}`.
 - Augment: `get_finding`, `get_finding_context`, `mark_finding`,
   `retrieve_result` payloads gain an `anchor` field (string form) where
@@ -245,8 +245,8 @@ Register in `src/codescent/mcp/context_tools.py`. Add `resolve_anchor` to
   whitespace edit -> `exact`; rename function -> `moved`; flip operator ->
   `structurally_changed`; delete -> `missing`.
 - `tests/integration/test_anchor_repository.py`: SQLite round-trip; backfill
-  preserves existing finding IDs (old keys mapped to new anchors via
-  migration helper).
+  preserves existing finding IDs (old keys mapped to new anchors via migration
+  helper).
 - `tests/contract/test_mcp_resolve_anchor.py`: payload shape, bounded output,
   error envelope when input is malformed.
 - `tests/contract/migrations/test_v5_to_v6.py`: applies migration to a
@@ -266,9 +266,9 @@ re-resolved correctly, `drift_kind` distribution matches expectations.
 - Effort: **M** (2 engineers, ~3 weeks).
 - Risks: (a) ast nodes that lack stable ordering (e.g. `if/elif` collapse) ->
   add a sibling-index suffix to `node_path`; (b) backfill on huge repos may be
-  slow -> stream by file with progress reporting; (c) TS adapter parity is
-  out of scope for v1 of this feature -> Python-only, register adapter
-  interface so TS can land later.
+  slow -> stream by file with progress reporting; (c) TS adapter parity is out
+  of scope for v1 of this feature -> Python-only, register adapter interface so
+  TS can land later.
 
 ---
 
@@ -278,8 +278,8 @@ re-resolved correctly, `drift_kind` distribution matches expectations.
 
 `services/session_stats.py` already records summarization events. The ledger
 extends it from "what happened" to "what was it worth" and uses the data to
-self-tune default limits so the system gets cheaper over time. Makes the
-PRD's central value proposition (token efficiency) provable to users.
+self-tune default limits so the system gets cheaper over time. Makes the PRD's
+central value proposition (token efficiency) provable to users.
 
 ### A2.2 Schema migration (v7)
 
@@ -344,11 +344,10 @@ class TokenLedgerService:
                          parameter_name: str) -> BudgetRecommendation: ...
 ```
 
-Naive-baseline computation lives in
-`src/codescent/engine/token/baseline.py`:
+Naive-baseline computation lives in `src/codescent/engine/token/baseline.py`:
 
-- `search_*`: `estimate_naive_grep_tokens(query, repo_root)` (size of files
-  that would match a recursive grep).
+- `search_*`: `estimate_naive_grep_tokens(query, repo_root)` (size of files that
+  would match a recursive grep).
 - `get_file_context`, `get_symbol_context`: file token estimate from byte size.
 - `find_*` / context graph tools: 0 baseline (no naive equivalent).
 
@@ -365,16 +364,16 @@ over the last N calls.
 - Augment: `context_stats` payload gains `naive_baseline_tokens_sum`,
   `referenced_ratio`, `outcome_correlation` block.
 
-**Locked: `recommend_budget` is advisory-only forever.** Adaptive recommendations
-are surfaced but never auto-applied. The CLI command
-`codescent budgets apply --dry-run|--yes` is the *only* path that writes
+**Locked: `recommend_budget` is advisory-only forever.** Adaptive
+recommendations are surfaced but never auto-applied. The CLI command
+`codescent budgets apply --dry-run|--yes` is the _only_ path that writes
 `tool_budget_overrides`. There will be no `auto_apply_recommendations`
 project-config flag, ever. CI users can pipe `--yes` after review. Rationale:
-determinism is the product's identity, and silent default-shrinking would
-make the same bounded tool call return different results across runs.
+determinism is the product's identity, and silent default-shrinking would make
+the same bounded tool call return different results across runs.
 
-MCP tools never change agent-visible parameter behavior except by reading
-the explicit `tool_budget_overrides` table written by the CLI.
+MCP tools never change agent-visible parameter behavior except by reading the
+explicit `tool_budget_overrides` table written by the CLI.
 
 ### A2.5 Tests
 
@@ -387,18 +386,18 @@ the explicit `tool_budget_overrides` table written by the CLI.
 
 ### A2.6 Evidence
 
-`scripts/measure_token_savings.py` -> `.omo/evidence/a2-token-savings.json`
-Runs the smoke MCP flow against `tests/fixtures/python-basic`, records every
-call's input/output tokens and naive baseline, prints `tokens_avoided_total`
-and per-tool ROI. The smoke script in `scripts/smoke_mcp.py` is the model;
-this script reuses it as a callable.
+`scripts/measure_token_savings.py` -> `.omo/evidence/a2-token-savings.json` Runs
+the smoke MCP flow against `tests/fixtures/python-basic`, records every call's
+input/output tokens and naive baseline, prints `tokens_avoided_total` and
+per-tool ROI. The smoke script in `scripts/smoke_mcp.py` is the model; this
+script reuses it as a callable.
 
 ### A2.7 Effort and risks
 
 - Effort: **S-M** (1 engineer, ~2 weeks).
-- Risks: token-estimation drift between providers — keep estimator
-  pluggable; outcome correlation (`preceded_finding_status_change`) is best
-  effort and clearly labeled as such in payloads.
+- Risks: token-estimation drift between providers — keep estimator pluggable;
+  outcome correlation (`preceded_finding_status_change`) is best effort and
+  clearly labeled as such in payloads.
 
 ---
 
@@ -459,35 +458,33 @@ def rebuild_cochange_edges(repo_root: Path, *,
 def compute_hotspots(repo_root: Path) -> tuple[HotspotRow, ...]: ...
 ```
 
-`hotspot_score = log1p(churn_count) * avg_cognitive_complexity * (1 +
-log1p(open_finding_count))`. Bounded to `[0, 100]` for stable ranking.
+`hotspot_score = log1p(churn_count) * avg_cognitive_complexity * (1 + log1p(open_finding_count))`.
+Bounded to `[0, 100]` for stable ranking.
 
 `max_files_per_commit` excludes mega-merge commits that would create
-combinatorial pair explosions. Cap reads stdin from `git log --name-only`
-once, in a single pass, no network.
+combinatorial pair explosions. Cap reads stdin from `git log --name-only` once,
+in a single pass, no network.
 
 ### A3.4 Service and MCP surface
 
 New: `src/codescent/services/hotspots.py` with `HotspotService(repo_root)`.
 
 - New MCP tool: `get_hotspots(limit: int = 20, repo: str = ".")` ->
-  `{ok, hotspots: [{path, hotspot_score, churn_count, open_finding_count,
-  reasons: ["high churn", "high complexity", "open findings"]}],
-  head_sha, computed_at}`
+  `{ok, hotspots: [{path, hotspot_score, churn_count, open_finding_count, reasons: ["high churn", "high complexity", "open findings"]}], head_sha, computed_at}`
 - New MCP tool: `get_cochanges(path: str, limit: int = 20, repo: str = ".")`
 - Hook into existing services: `services/findings.py::get_next_improvement`
   multiplies finding rank by `1 + hotspot_score/100` for the finding's file;
-  `services/context.py::get_related_files` adds co-change neighbors with
-  reason `"co-changed in N commits"`; `services/risk.py` adds hotspot as a
-  diff-risk factor.
+  `services/context.py::get_related_files` adds co-change neighbors with reason
+  `"co-changed in N commits"`; `services/risk.py` adds hotspot as a diff-risk
+  factor.
 
 Register in `src/codescent/mcp/repo_tools.py` (orientation-style).
 
 ### A3.5 Refresh policy
 
-Co-change tables refresh on `codescent index --git` (new flag) or
-automatically when `HEAD` differs from `hotspot_scores.head_sha`. Single
-write transaction. Bounded reads.
+Co-change tables refresh on `codescent index --git` (new flag) or automatically
+when `HEAD` differs from `hotspot_scores.head_sha`. Single write transaction.
+Bounded reads.
 
 ### A3.6 Tests
 
@@ -501,9 +498,9 @@ write transaction. Bounded reads.
 ### A3.7 Evidence
 
 `scripts/prove_hotspot_ranking_lift.py` ->
-`.omo/evidence/a3-hotspot-ranking.json`
-Compares `get_next_improvement` order before and after enabling co-change
-scoring on a fixture; asserts that hotspot-flagged files rise.
+`.omo/evidence/a3-hotspot-ranking.json` Compares `get_next_improvement` order
+before and after enabling co-change scoring on a fixture; asserts that
+hotspot-flagged files rise.
 
 ### A3.8 Effort and risks
 
@@ -524,8 +521,8 @@ Today an agent investigating one symbol calls `find_symbol`, then
 `get_symbol_context`, then `find_callers`, then `find_references`, then
 `search_tests`, then `get_impact`. That is six roundtrips, six envelopes, six
 chances to overflow. Server-side macros collapse them to one call, encode
-investigative *doctrine* (the right order), and reuse already-shipped
-services. Highest leverage-per-LOC feature in this plan.
+investigative _doctrine_ (the right order), and reuse already-shipped services.
+Highest leverage-per-LOC feature in this plan.
 
 ### B1.2 Macro definitions
 
@@ -593,9 +590,9 @@ class MacroRunner:
     def run(self, target: MacroTarget) -> MacroReport: ...
 ```
 
-`MacroReport` is a bounded structured payload containing per-step results
-plus a `summary` block and a `next_tools` field. Each step result is itself a
-small envelope with `{step, ok, items, omitted_count}`.
+`MacroReport` is a bounded structured payload containing per-step results plus a
+`summary` block and a `next_tools` field. Each step result is itself a small
+envelope with `{step, ok, items, omitted_count}`.
 
 Step execution is sequential (deterministic order matters), but each step's
 fan-out runs concurrently bounded to N=4 with `asyncio` since all underlying
@@ -613,13 +610,13 @@ MCP wrappers (one per built-in macro, plus a generic):
 - `pre_pr_review(repo: str = ".") -> MacroReportPayload`
 - `run_playbook(playbook: str, target: dict, repo: str = ".")`
 
-Register in `src/codescent/mcp/macros_tools.py`. Add all four to public
-surface registry under group `macros`.
+Register in `src/codescent/mcp/macros_tools.py`. Add all four to public surface
+registry under group `macros`.
 
 ### B1.5 Tests
 
-- Unit: playbook parser; fan-out join semantics; budget enforcement
-  (oversized step result is summarized, not truncated silently).
+- Unit: playbook parser; fan-out join semantics; budget enforcement (oversized
+  step result is summarized, not truncated silently).
 - Integration: each built-in macro runs against `tests/fixtures/python-basic`
   and returns deterministic bounded payload.
 - Contract: payload shape; playbook validation errors return structured
@@ -628,19 +625,18 @@ surface registry under group `macros`.
 ### B1.6 Evidence
 
 `scripts/measure_macro_token_savings.py` ->
-`.omo/evidence/b1-macro-savings.json`
-Runs the equivalent sequence of low-level tool calls, then runs the macro,
-compares total input + output tokens. Asserts macro reduces tokens by >=40%
-on the fixture.
+`.omo/evidence/b1-macro-savings.json` Runs the equivalent sequence of low-level
+tool calls, then runs the macro, compares total input + output tokens. Asserts
+macro reduces tokens by >=40% on the fixture.
 
 ### B1.7 Effort and risks
 
 - Effort: **S-M** (1 engineer, ~2 weeks).
-- Risks: prompt/tool name collisions if too many macros are registered ->
-  cap built-ins at 3-5, custom playbooks expose only `run_playbook`; macros
-  can hide non-determinism behind a thick API — mitigation: every macro
-  payload includes a `steps_executed` block that lists each underlying tool
-  call and its envelope so audits are still possible.
+- Risks: prompt/tool name collisions if too many macros are registered -> cap
+  built-ins at 3-5, custom playbooks expose only `run_playbook`; macros can hide
+  non-determinism behind a thick API — mitigation: every macro payload includes
+  a `steps_executed` block that lists each underlying tool call and its envelope
+  so audits are still possible.
 
 ---
 
@@ -650,9 +646,8 @@ on the fixture.
 
 Agents re-derive the same understanding of a subsystem every session because
 chat context gets compacted. Cards give the agent code-grounded persistent
-memory that self-invalidates when the underlying code changes (via A1
-anchors). Solves cross-session continuity without leaving the deterministic
-substrate.
+memory that self-invalidates when the underlying code changes (via A1 anchors).
+Solves cross-session continuity without leaving the deterministic substrate.
 
 ### B2.2 Schema migration (v9)
 
@@ -678,9 +673,9 @@ create index if not exists knowledge_cards_freshness_idx
     on knowledge_cards(freshness);
 ```
 
-Bounds: each card body <= 4 KB; evidence JSON <= 8 KB; max 500 cards per
-project (oldest stale cards evicted first). All limits configurable via
-`[cards]` section in project config.
+Bounds: each card body <= 4 KB; evidence JSON <= 8 KB; max 500 cards per project
+(oldest stale cards evicted first). All limits configurable via `[cards]`
+section in project config.
 
 ### B2.3 Service
 
@@ -720,26 +715,26 @@ invalidated.
 Register in `src/codescent/mcp/cards_tools.py`. Add to public surface group
 `memory`.
 
-**Locked: `codescent cards reset` CLI ships with B2.** CLI-only (no MCP
-surface for destructive ops, matching the existing `codescent reset` pattern).
-Gated `--dry-run|--yes`. Subcommands:
+**Locked: `codescent cards reset` CLI ships with B2.** CLI-only (no MCP surface
+for destructive ops, matching the existing `codescent reset` pattern). Gated
+`--dry-run|--yes`. Subcommands:
 
 - `codescent cards reset --dry-run|--yes` — drop all cards for the project.
 - `codescent cards reset --freshness=stale,invalidated --yes` — purge only
   non-fresh cards.
 - `codescent cards reset --older-than=30d --yes` — purge by age.
 
-Rationale: a brand-new persistent store needs a recovery path. Keeping reset
-out of MCP and behind explicit human consent matches `codescent reset` and
-keeps agents from accidentally nuking memory. Add `cards` to
+Rationale: a brand-new persistent store needs a recovery path. Keeping reset out
+of MCP and behind explicit human consent matches `codescent reset` and keeps
+agents from accidentally nuking memory. Add `cards` to
 `POST_MVP_CLI_COMMAND_NAMES` in `core/public_surface.py`.
 
 ### B2.5 Search integration
 
-`services/search.py::search_content` gets an additional ranking signal:
-matching card bodies appear in a separate `cards` block in the envelope,
-clearly labeled, with their own freshness annotation. Cards never replace
-source results — they augment them.
+`services/search.py::search_content` gets an additional ranking signal: matching
+card bodies appear in a separate `cards` block in the envelope, clearly labeled,
+with their own freshness annotation. Cards never replace source results — they
+augment them.
 
 ### B2.6 Tests
 
@@ -752,16 +747,16 @@ source results — they augment them.
 ### B2.7 Evidence
 
 `scripts/prove_card_lifecycle.py` -> `.omo/evidence/b2-card-lifecycle.json`
-Writes a card, edits the underlying file, re-runs `refresh_freshness`,
-asserts the card transitioned `fresh -> stale` and that `recall_cards`
-filters correctly.
+Writes a card, edits the underlying file, re-runs `refresh_freshness`, asserts
+the card transitioned `fresh -> stale` and that `recall_cards` filters
+correctly.
 
 ### B2.8 Effort and risks
 
 - Effort: **M** (1 engineer, ~2.5 weeks).
 - Risks: cards drift into ungrounded chat memory — mitigation: every card
-  *requires* `evidence` (anchors, file paths, or finding IDs), and tools
-  refuse to store cards without evidence; cards become a janky note system —
+  _requires_ `evidence` (anchors, file paths, or finding IDs), and tools refuse
+  to store cards without evidence; cards become a janky note system —
   mitigation: hard caps on count and size, evidence-driven freshness, no
   search-quality dependency on cards.
 
@@ -771,26 +766,26 @@ filters correctly.
 
 ### B3.1 Why
 
-Catches duplication that text-based detectors miss (variable-renamed
-copy-paste) and ships the PRD's "suspicious AI slop pattern" promise as
-deterministic, evidence-backed findings. Pure compute over the existing AST
-extractor; no new dependencies.
+Catches duplication that text-based detectors miss (variable-renamed copy-paste)
+and ships the PRD's "suspicious AI slop pattern" promise as deterministic,
+evidence-backed findings. Pure compute over the existing AST extractor; no new
+dependencies.
 
 ### B3.2 Algorithm
 
 For each function, method, and class:
 
 1. Normalize the AST: rename identifiers to type+ordinal (`name_0`,
-   `name_1`...), bucket literals (`STR`, `INT(>0)`, `INT(0)`, `FLOAT`,
-   `NONE`, `TRUE`, `FALSE`).
+   `name_1`...), bucket literals (`STR`, `INT(>0)`, `INT(0)`, `FLOAT`, `NONE`,
+   `TRUE`, `FALSE`).
 2. Compute a structural hash over the normalized AST.
 3. Group symbols by structural hash, filter to clusters with `count >= 2` and
    `min_lines >= 5`.
 4. Compute a similarity score within near-clusters using normalized-AST
    tree-edit distance bounded to depth 3.
 
-Output: `duplication_clusters` with `{cluster_id, structural_hash, members:
-[anchor], total_lines, suggested_action}`.
+Output: `duplication_clusters` with
+`{cluster_id, structural_hash, members: [anchor], total_lines, suggested_action}`.
 
 ### B3.3 Slop signature pack
 
@@ -798,18 +793,18 @@ New rule pack: `src/codescent/engine/rules/slop_signatures.py`
 
 Initial deterministic signatures (each is an AST predicate, not a regex):
 
-| Rule ID | Pattern |
-| --- | --- |
-| `slop.empty_try_except` | `try: ... except: pass` or `except Exception: pass`. |
-| `slop.noop_facade_class` | class with no methods and a single `__init__` that only assigns parameters. |
-| `slop.factory_of_factory` | function whose body is exactly `return <Class>()` and `<Class>` is itself defined in same file with no behavior. |
-| `slop.single_method_class` | class with a single non-dunder method that takes no captured state. |
-| `slop.dead_default_optional` | `Optional[X] = None` parameter never compared to `None` and never re-assigned in body. |
-| `slop.redundant_alias_import` | `from x import y as y` style. |
-| `slop.suppressed_noqa_cluster` | >=3 lines in a function with `# noqa` ignoring same rule. |
-| `slop.over_abstracted_interface` | abstract method with a single concrete implementation in same package. |
-| `slop.echo_logging` | `logging.X("X")` where the string equals the call site function name. |
-| `slop.placeholder_implementation` | function body is `pass`, `...`, `raise NotImplementedError` only, and the function is referenced elsewhere. |
+| Rule ID                           | Pattern                                                                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `slop.empty_try_except`           | `try: ... except: pass` or `except Exception: pass`.                                                             |
+| `slop.noop_facade_class`          | class with no methods and a single `__init__` that only assigns parameters.                                      |
+| `slop.factory_of_factory`         | function whose body is exactly `return <Class>()` and `<Class>` is itself defined in same file with no behavior. |
+| `slop.single_method_class`        | class with a single non-dunder method that takes no captured state.                                              |
+| `slop.dead_default_optional`      | `Optional[X] = None` parameter never compared to `None` and never re-assigned in body.                           |
+| `slop.redundant_alias_import`     | `from x import y as y` style.                                                                                    |
+| `slop.suppressed_noqa_cluster`    | >=3 lines in a function with `# noqa` ignoring same rule.                                                        |
+| `slop.over_abstracted_interface`  | abstract method with a single concrete implementation in same package.                                           |
+| `slop.echo_logging`               | `logging.X("X")` where the string equals the call site function name.                                            |
+| `slop.placeholder_implementation` | function body is `pass`, `...`, `raise NotImplementedError` only, and the function is referenced elsewhere.      |
 
 Each rule emits a `CodeHealthFinding` with `severity=info|warning`,
 `confidence=0.7-0.95`, anchored via A1.
@@ -831,18 +826,17 @@ producing `python.duplicate_ast_cluster` findings with cluster evidence.
 ### B3.5 Tests
 
 - Unit: each signature with positive and negative fixtures; normalization
-  invariants (`a = 1` vs `b = 2` produce same hash but `a = 1` vs `a = []`
-  do not).
-- Integration: scan a fixture with seeded duplicates and slop, assert
-  expected rule fires.
+  invariants (`a = 1` vs `b = 2` produce same hash but `a = 1` vs `a = []` do
+  not).
+- Integration: scan a fixture with seeded duplicates and slop, assert expected
+  rule fires.
 - Contract: bounded output; cluster member count caps.
 
 ### B3.6 Evidence
 
-`scripts/prove_slop_detection.py` -> `.omo/evidence/b3-slop-detection.json`
-Runs the new rules over a curated fixture
-`tests/fixtures/python-slop/` (new) that demonstrates each signature, asserts
-1:1 finding-to-fixture coverage.
+`scripts/prove_slop_detection.py` -> `.omo/evidence/b3-slop-detection.json` Runs
+the new rules over a curated fixture `tests/fixtures/python-slop/` (new) that
+demonstrates each signature, asserts 1:1 finding-to-fixture coverage.
 
 ### B3.7 Effort and risks
 
@@ -860,8 +854,8 @@ Runs the new rules over a curated fixture
 ### C1.1 Why
 
 Agents are notoriously bad at respecting unwritten architecture. Make the
-architecture writable, queryable through `scan_code_health`, and enforceable
-in CI. The NL->rule compiler lets developers describe a constraint in English
+architecture writable, queryable through `scan_code_health`, and enforceable in
+CI. The NL->rule compiler lets developers describe a constraint in English
 without learning a DSL.
 
 ### C1.2 Architecture config
@@ -903,33 +897,33 @@ exports_must_include = ["User", "Order", "Cart"]
 ```
 
 Schema is validated by a new Pydantic model in
-`src/codescent/core/architecture_config.py`. Missing file is not an error —
-the rule pack is simply skipped.
+`src/codescent/core/architecture_config.py`. Missing file is not an error — the
+rule pack is simply skipped.
 
 ### C1.3 Rule pack
 
 New: `src/codescent/engine/rules/architecture.py`
 
-Reads `architecture.toml`, evaluates each rule against the indexed import
-graph and symbol table, emits findings:
+Reads `architecture.toml`, evaluates each rule against the indexed import graph
+and symbol table, emits findings:
 
 - `architecture.layer_violation`
 - `architecture.naming_violation`
 - `architecture.complexity_violation`
 - `architecture.public_api_violation`
 
-Each finding's evidence cites the source file path, target file path, and
-the relevant rule name from the config.
+Each finding's evidence cites the source file path, target file path, and the
+relevant rule name from the config.
 
 ### C1.4 NL->rule compiler
 
-**Locked: ships in Q3 with C1.** Without the compiler, C1 forces every user
-to learn the architecture TOML schema before they can author a single rule,
-which kills adoption. The compiler is the lowest-cost piece of C1 (no LLM,
-no network, ~15 regex-style sentence templates) and it is the most natural
-agent-authored-rules surface — exactly on-brand for an MCP-first product.
-Safety is contained because the compiler returns *candidates only*; it never
-writes `architecture.toml` itself.
+**Locked: ships in Q3 with C1.** Without the compiler, C1 forces every user to
+learn the architecture TOML schema before they can author a single rule, which
+kills adoption. The compiler is the lowest-cost piece of C1 (no LLM, no network,
+~15 regex-style sentence templates) and it is the most natural
+agent-authored-rules surface — exactly on-brand for an MCP-first product. Safety
+is contained because the compiler returns _candidates only_; it never writes
+`architecture.toml` itself.
 
 New: `src/codescent/services/architecture_compiler.py`
 
@@ -941,26 +935,25 @@ Template-driven (no LLM). Recognizes ~15 sentence patterns:
 - "<file> must export <names>" -> `public_api_rule`
 
 Returns a previewed TOML snippet plus a dry-run match count
-(`would_match: N files`). Never writes the TOML directly — agent or human
-copies the snippet. When multiple templates match a single sentence, all
-candidates are returned and the caller picks one — no implicit
-disambiguation.
+(`would_match: N files`). Never writes the TOML directly — agent or human copies
+the snippet. When multiple templates match a single sentence, all candidates are
+returned and the caller picks one — no implicit disambiguation.
 
 ### C1.5 Surface
 
-- New CLI: `codescent architecture compile "<sentence>"` ->
-  prints the candidate TOML rule and dry-run match count.
-- New CLI: `codescent architecture check` ->
-  runs only the architecture rule pack and prints a human-readable report.
-- New MCP tool: `architecture_compile(sentence: str, repo: str = ".")`
-  for agent-driven rule authoring.
+- New CLI: `codescent architecture compile "<sentence>"` -> prints the candidate
+  TOML rule and dry-run match count.
+- New CLI: `codescent architecture check` -> runs only the architecture rule
+  pack and prints a human-readable report.
+- New MCP tool: `architecture_compile(sentence: str, repo: str = ".")` for
+  agent-driven rule authoring.
 - New MCP tool: `architecture_violations(limit: int = 50, repo: str = ".")`
   returns architecture-only findings.
 
 ### C1.6 Tests
 
-- Unit: each rule type with positive/negative cases; config schema
-  validation; NL compiler covers each pattern with at least three phrasings.
+- Unit: each rule type with positive/negative cases; config schema validation;
+  NL compiler covers each pattern with at least three phrasings.
 - Integration: fixture repo with intentional layer violations.
 - Contract: MCP payload shapes; CLI exit codes (non-zero on
   `--fail-on-violation`).
@@ -968,16 +961,15 @@ disambiguation.
 ### C1.7 Evidence
 
 `scripts/prove_architecture_enforcement.py` ->
-`.omo/evidence/c1-architecture.json`
-Loads a fixture with seeded violations and a hand-written
-`architecture.toml`, asserts each expected finding appears.
+`.omo/evidence/c1-architecture.json` Loads a fixture with seeded violations and
+a hand-written `architecture.toml`, asserts each expected finding appears.
 
 ### C1.8 Effort and risks
 
 - Effort: **M** (1 engineer, ~3 weeks).
 - Risks: TOML schema bloat — keep additive; NL compiler ambiguity — when
-  multiple templates match, return all candidates and require user choice;
-  glob expansion on huge repos — reuse existing inventory walker.
+  multiple templates match, return all candidates and require user choice; glob
+  expansion on huge repos — reuse existing inventory walker.
 
 ---
 
@@ -985,10 +977,10 @@ Loads a fixture with seeded violations and a hand-written
 
 ### C2.1 Why
 
-Agents reflexively break public APIs because they only see the function
-they're editing. A snapshot-and-diff of every module's exported surface
-catches signature, exception, and return-type breakage *before* the change
-lands. Pairs with A1 anchors for stability across formatting.
+Agents reflexively break public APIs because they only see the function they're
+editing. A snapshot-and-diff of every module's exported surface catches
+signature, exception, and return-type breakage _before_ the change lands. Pairs
+with A1 anchors for stability across formatting.
 
 ### C2.2 Schema migration (v10)
 
@@ -1027,9 +1019,9 @@ def diff_api(before: tuple[ApiSymbol, ...],
              after: tuple[ApiSymbol, ...]) -> ApiDiff: ...
 ```
 
-Visibility: leading underscore -> `private`; dunder -> `dunder`; else
-`public`. `from x import y` re-exports counted as public surface of the
-re-exporting module.
+Visibility: leading underscore -> `private`; dunder -> `dunder`; else `public`.
+`from x import y` re-exports counted as public surface of the re-exporting
+module.
 
 `ApiDiff` categorizes each change as one of:
 
@@ -1061,8 +1053,8 @@ class ApiLedgerService:
 
 - New MCP tool: `get_api_changes(since: str = "HEAD~1", repo: str = ".")`
 - New MCP tool: `get_breaking_callers(since: str = "HEAD~1", repo: str = ".")`
-  -> for each removed/signature-changed export, returns the in-repo call
-  sites that would break.
+  -> for each removed/signature-changed export, returns the in-repo call sites
+  that would break.
 - Hook: `services/risk.py::review_diff_risk` includes a `breaking_api_changes`
   block in its payload.
 
@@ -1079,16 +1071,14 @@ def get_breaking_callers(
 ```
 
 If `transitive=True` is passed in v1, return a structured warning envelope
-(`warning_code = "transitive_not_implemented_in_v1"`). Rationale: direct
-callers are bounded `O(call_edges lookup)` and easy to explain in evidence;
-transitive expansion is unbounded on hub modules and would routinely blow
-the envelope's token budget. Agents needing transitive breakage today can
-iterate one hop at a time by calling `get_breaking_callers` on each direct
-caller.
+(`warning_code = "transitive_not_implemented_in_v1"`). Rationale: direct callers
+are bounded `O(call_edges lookup)` and easy to explain in evidence; transitive
+expansion is unbounded on hub modules and would routinely blow the envelope's
+token budget. Agents needing transitive breakage today can iterate one hop at a
+time by calling `get_breaking_callers` on each direct caller.
 
-New deterministic finding rules in
-`src/codescent/engine/rules/api_breakage.py`, fired during scan when a fresh
-diff against `HEAD~1` shows breakage:
+New deterministic finding rules in `src/codescent/engine/rules/api_breakage.py`,
+fired during scan when a fresh diff against `HEAD~1` shows breakage:
 
 - `api.removed_public_symbol`
 - `api.breaking_signature_change`
@@ -1104,16 +1094,16 @@ diff against `HEAD~1` shows breakage:
 
 ### C2.6 Evidence
 
-`scripts/prove_api_diff.py` -> `.omo/evidence/c2-api-diff.json`
-Scenario: snapshot a fixture, apply a curated breaking change, diff, assert
-expected categories and breaking caller list.
+`scripts/prove_api_diff.py` -> `.omo/evidence/c2-api-diff.json` Scenario:
+snapshot a fixture, apply a curated breaking change, diff, assert expected
+categories and breaking caller list.
 
 ### C2.7 Effort and risks
 
 - Effort: **M** (1 engineer, ~3 weeks).
 - Risks: dynamic Python (decorators that change signatures) — record raw
-  signature and a `dynamic: true` flag; reads `git show HEAD~1` for the
-  previous state — gated behind a "git available" check, no network.
+  signature and a `dynamic: true` flag; reads `git show HEAD~1` for the previous
+  state — gated behind a "git available" check, no network.
 
 ---
 
@@ -1124,9 +1114,9 @@ expected categories and breaking caller list.
 ### D1.1 Why
 
 "Which tests should I run?" answered by call-graph traversal in milliseconds.
-"Do those tests actually have teeth?" answered by a handful of fast
-mutations. Pairs directly with D2 to give agents a real verification answer
-before changes land.
+"Do those tests actually have teeth?" answered by a handful of fast mutations.
+Pairs directly with D2 to give agents a real verification answer before changes
+land.
 
 ### D1.2 Test impact
 
@@ -1146,8 +1136,8 @@ class TestImpactService:
     ) -> TestImpactReport: ...
 ```
 
-`TestImpactReport` contains `relevant_tests: tuple[TestRef, ...]` with each
-test annotated by a confidence (`exact_call`, `references_module`, `colocated`).
+`TestImpactReport` contains `relevant_tests: tuple[TestRef, ...]` with each test
+annotated by a confidence (`exact_call`, `references_module`, `colocated`).
 Traverses the existing `call_edges` and `symbol_references` tables — no new
 storage needed.
 
@@ -1157,15 +1147,15 @@ New: `src/codescent/engine/mutation/mini_mutators.py`
 
 Mutators (each is an AST transformation, applied to one node at a time):
 
-| Mutator | Transform |
-| --- | --- |
-| `bool_flip` | `True` <-> `False` |
-| `compare_op_swap` | `<` <-> `<=`, `>` <-> `>=`, `==` <-> `!=` |
-| `arith_swap` | `+` <-> `-`, `*` <-> `/` |
-| `bound_off_by_one` | `range(n)` -> `range(n - 1)` |
-| `return_constant` | replace function body with `return 0` (last resort) |
-| `drop_early_return` | remove guard-style `if cond: return` |
-| `negate_condition` | `if cond` -> `if not cond` |
+| Mutator             | Transform                                           |
+| ------------------- | --------------------------------------------------- |
+| `bool_flip`         | `True` <-> `False`                                  |
+| `compare_op_swap`   | `<` <-> `<=`, `>` <-> `>=`, `==` <-> `!=`           |
+| `arith_swap`        | `+` <-> `-`, `*` <-> `/`                            |
+| `bound_off_by_one`  | `range(n)` -> `range(n - 1)`                        |
+| `return_constant`   | replace function body with `return 0` (last resort) |
+| `drop_early_return` | remove guard-style `if cond: return`                |
+| `negate_condition`  | `if cond` -> `if not cond`                          |
 
 Each mutator emits at most one mutation per AST node per run.
 
@@ -1183,20 +1173,20 @@ class MutationLightService:
     ) -> MutationScore: ...
 ```
 
-`MutationScore`: `{mutations_run, killed, survived,
-survival_rate, survivor_examples: tuple[MutationDetail, ...]}`.
+`MutationScore`:
+`{mutations_run, killed, survived, survival_rate, survivor_examples: tuple[MutationDetail, ...]}`.
 
-Mutations run inside an ephemeral worktree (shared sandbox harness with D2,
-see D2.3). Only the tests returned by `TestImpactService.impact_for_symbols`
-are executed. Wall-clock and mutation count caps are hard.
+Mutations run inside an ephemeral worktree (shared sandbox harness with D2, see
+D2.3). Only the tests returned by `TestImpactService.impact_for_symbols` are
+executed. Wall-clock and mutation count caps are hard.
 
 ### D1.4 MCP surface
 
 - New: `get_test_impact(symbols: list[str] = [], since: str = "", repo)`
 - New: `score_test_strength(symbol: str, repo: str = ".")` (opt-in heavy)
 
-`score_test_strength` is gated behind `[verification].mutation_light_enabled
-= true` in project config. Default off.
+`score_test_strength` is gated behind
+`[verification].mutation_light_enabled = true` in project config. Default off.
 
 ### D1.5 Tests
 
@@ -1209,17 +1199,16 @@ are executed. Wall-clock and mutation count caps are hard.
 ### D1.6 Evidence
 
 `scripts/prove_mutation_detection.py` ->
-`.omo/evidence/d1-mutation-detection.json`
-Runs against a fixture symbol with two test suites (weak vs. strong),
-asserts strong suite kills >=90% of mutations and weak suite kills <=30%.
+`.omo/evidence/d1-mutation-detection.json` Runs against a fixture symbol with
+two test suites (weak vs. strong), asserts strong suite kills >=90% of mutations
+and weak suite kills <=30%.
 
 ### D1.7 Effort and risks
 
 - Effort: **M** (2 engineers, ~3 weeks; can parallel with D2 sandbox work).
 - Risks: mutation runs longer than budget — hard cap and progress reporting;
-  flaky tests inflate survival rate — flag any test that fails on the
-  unchanged baseline and exclude it from scoring with a `flaky_test_excluded`
-  warning.
+  flaky tests inflate survival rate — flag any test that fails on the unchanged
+  baseline and exclude it from scoring with a `flaky_test_excluded` warning.
 
 ---
 
@@ -1227,12 +1216,11 @@ asserts strong suite kills >=90% of mutations and weak suite kills <=30%.
 
 ### D2.1 Why
 
-The single biggest missing primitive in agentic coding: `verify_change`
-today returns *recommendations*, not evidence. The Oracle takes a proposed
-change, applies it to an ephemeral git worktree (analyzed repo stays
-read-only), runs the right tests, and returns structured pass/fail evidence.
-Combined with D1, this is the safety harness CodeScent has been building
-toward.
+The single biggest missing primitive in agentic coding: `verify_change` today
+returns _recommendations_, not evidence. The Oracle takes a proposed change,
+applies it to an ephemeral git worktree (analyzed repo stays read-only), runs
+the right tests, and returns structured pass/fail evidence. Combined with D1,
+this is the safety harness CodeScent has been building toward.
 
 ### D2.2 Opt-in only
 
@@ -1249,23 +1237,23 @@ wall_clock_seconds = 180
 max_diff_lines = 2000
 ```
 
-`allowed_commands` is an exact-prefix allow-list. Any other command is
-refused with a structured error. No shell metacharacters allowed.
-Environment variables sanitized (`PATH` only).
+`allowed_commands` is an exact-prefix allow-list. Any other command is refused
+with a structured error. No shell metacharacters allowed. Environment variables
+sanitized (`PATH` only).
 
-**Locked: Python-only in v1. No TS/React parity.** Rationale: D2 is already
-the single highest-risk capability in CodeScent's history (subprocess
-execution); adding TS parity in v1 would double the safety surface by
-forcing decisions about npm/pnpm/yarn variance, jest/vitest fragmentation,
-tsconfig discovery, node version pinning, and the security implications of
-node's broader native-module ecosystem — all before the Python path has
-proven itself. The `engine/sandbox/worktree.py` harness is intentionally
-language-agnostic (git worktree + allow-listed commands + sanitized env),
-so TS support lands cleanly in v3 by extending `allowed_commands` defaults
-and adding a TS-aware impact-set resolver. v1 refuses to run when the
-project's `language_packs` contains `typescript` and `sandbox_enabled =
-true` without an explicit `verification.python_only_acknowledged = true`
-flag in the project config — this prevents silent partial coverage.
+**Locked: Python-only in v1. No TS/React parity.** Rationale: D2 is already the
+single highest-risk capability in CodeScent's history (subprocess execution);
+adding TS parity in v1 would double the safety surface by forcing decisions
+about npm/pnpm/yarn variance, jest/vitest fragmentation, tsconfig discovery,
+node version pinning, and the security implications of node's broader
+native-module ecosystem — all before the Python path has proven itself. The
+`engine/sandbox/worktree.py` harness is intentionally language-agnostic (git
+worktree + allow-listed commands + sanitized env), so TS support lands cleanly
+in v3 by extending `allowed_commands` defaults and adding a TS-aware impact-set
+resolver. v1 refuses to run when the project's `language_packs` contains
+`typescript` and `sandbox_enabled = true` without an explicit
+`verification.python_only_acknowledged = true` flag in the project config — this
+prevents silent partial coverage.
 
 ### D2.3 Sandbox harness
 
@@ -1332,7 +1320,7 @@ class OracleService:
 Flow:
 
 1. Refuse if `sandbox_enabled = false` or diff exceeds `max_diff_lines`.
-2. Compute the impact set via D1 `TestImpactService` (over the *applied*
+2. Compute the impact set via D1 `TestImpactService` (over the _applied_
    worktree's symbols).
 3. Open `SandboxWorktree`, apply diff, run scoped test command from
    `commands.test`, then typecheck, then lint, each under wall-clock budget.
@@ -1343,10 +1331,10 @@ Flow:
 
 ### D2.5 MCP surface
 
-- New MCP tool: `try_change(diff_text: str = "", finding_id: str = "",
-  repo: str = ".") -> TryChangeToolPayload`
-- New MCP tool: `try_codemod(codemod_json: str, repo: str = ".")` (codemod
-  spec deferred to v2 of this feature; v1 is unified-diff input).
+- New MCP tool:
+  `try_change(diff_text: str = "", finding_id: str = "", repo: str = ".") -> TryChangeToolPayload`
+- New MCP tool: `try_codemod(codemod_json: str, repo: str = ".")` (codemod spec
+  deferred to v2 of this feature; v1 is unified-diff input).
 - Augment: `verify_change` (existing) gains a `sandbox_report` field when
   sandbox is enabled. When sandbox is disabled, behavior is unchanged.
 
@@ -1356,45 +1344,43 @@ Register in `src/codescent/mcp/oracle_tools.py`. Add to public surface group
 ### D2.6 Tests
 
 - Unit: command allow-list parser (must reject path traversal, env mutation,
-  shell metacharacters, unknown binaries); diff applier; impact set
-  computation.
-- Integration: apply a green diff, expect `tests.failed = 0`; apply a
-  red diff, expect `tests.failed > 0`; apply a diff that exceeds
-  `max_diff_lines` and assert refusal envelope; apply a diff that introduces
-  a new finding and assert `new_findings` is populated.
+  shell metacharacters, unknown binaries); diff applier; impact set computation.
+- Integration: apply a green diff, expect `tests.failed = 0`; apply a red diff,
+  expect `tests.failed > 0`; apply a diff that exceeds `max_diff_lines` and
+  assert refusal envelope; apply a diff that introduces a new finding and assert
+  `new_findings` is populated.
 - Contract: payload shapes; sandbox cleanup verified after every test (no
   leftover `.codescent/sandbox/*` directories).
 - Security: extensive runtime safety tests in
-  `tests/security/test_runtime_safety.py`: command allow-list enforcement,
-  no network access during command execution, sandbox path cannot escape
-  `.codescent/sandbox`, original worktree files are byte-identical before
-  and after.
+  `tests/security/test_runtime_safety.py`: command allow-list enforcement, no
+  network access during command execution, sandbox path cannot escape
+  `.codescent/sandbox`, original worktree files are byte-identical before and
+  after.
 
 ### D2.7 Evidence
 
-`scripts/prove_oracle_behavior.py` -> `.omo/evidence/d2-oracle.json`
-Three scenarios:
+`scripts/prove_oracle_behavior.py` -> `.omo/evidence/d2-oracle.json` Three
+scenarios:
 
 1. **Green path**: apply a refactor that preserves behavior, assert
    `tests.failed == 0`, `new_findings = ()`.
-2. **Red path**: apply a behavior-changing edit, assert `tests.failed > 0`
-   and `BehaviorReport.applied is True`.
-3. **Containment proof**: verify byte-identity of every file in the repo
-   root (excluding `.codescent/`) before and after the run.
+2. **Red path**: apply a behavior-changing edit, assert `tests.failed > 0` and
+   `BehaviorReport.applied is True`.
+3. **Containment proof**: verify byte-identity of every file in the repo root
+   (excluding `.codescent/`) before and after the run.
 
 All three are written to a single JSON artifact for audit.
 
 ### D2.8 Effort and risks
 
 - Effort: **L** (2 engineers, ~5 weeks).
-- Risks: subprocess execution is the highest-risk new capability in
-  CodeScent's history — mitigated by opt-in config, exact-prefix allow-list,
-  sanitized env, hard wall-clock, security test suite, and updated
-  `prove_source_read_only.py` that verifies repo bytes unchanged even when
-  sandbox runs; flaky tests cause noisy reports — re-run failed tests once
-  with a flake annotation; sandbox creation is slow on big repos — keep a
-  warm pool of pre-created worktrees behind a feature flag (`sandbox_pool_size
-  = 0` by default).
+- Risks: subprocess execution is the highest-risk new capability in CodeScent's
+  history — mitigated by opt-in config, exact-prefix allow-list, sanitized env,
+  hard wall-clock, security test suite, and updated `prove_source_read_only.py`
+  that verifies repo bytes unchanged even when sandbox runs; flaky tests cause
+  noisy reports — re-run failed tests once with a flake annotation; sandbox
+  creation is slow on big repos — keep a warm pool of pre-created worktrees
+  behind a feature flag (`sandbox_pool_size = 0` by default).
 
 ---
 
@@ -1404,23 +1390,23 @@ All three are written to a single JSON artifact for audit.
 
 For each feature, the same PR that lands the code must update:
 
-| Doc | What to add |
-| --- | --- |
-| `docs/mcp-tools.md` | One reference entry per new tool with shape and bounds. |
-| `docs/architecture.md` | Service and engine module additions in section 7/8. |
-| `docs/cli-reference.md` | New CLI commands. |
-| `docs/workflows.md` | One snippet showing the new tool in agent use. |
-| `docs/prd.md` | Add feature to "Phased Roadmap" with explicit phase mapping. |
+| Doc                     | What to add                                                  |
+| ----------------------- | ------------------------------------------------------------ |
+| `docs/mcp-tools.md`     | One reference entry per new tool with shape and bounds.      |
+| `docs/architecture.md`  | Service and engine module additions in section 7/8.          |
+| `docs/cli-reference.md` | New CLI commands.                                            |
+| `docs/workflows.md`     | One snippet showing the new tool in agent use.               |
+| `docs/prd.md`           | Add feature to "Phased Roadmap" with explicit phase mapping. |
 
 ## CC2. Contract test updates
 
 Each feature must extend:
 
-- `tests/contract/test_public_surface_registry.py` — assert new tool/CLI
-  appears with correct stage/group.
-- `tests/contract/test_mcp_tool_surface.py` — assert tool descriptions
-  contain the required safety wording ("Writes only local .codescent state",
-  "Read-only for source files", etc.).
+- `tests/contract/test_public_surface_registry.py` — assert new tool/CLI appears
+  with correct stage/group.
+- `tests/contract/test_mcp_tool_surface.py` — assert tool descriptions contain
+  the required safety wording ("Writes only local .codescent state", "Read-only
+  for source files", etc.).
 - `tests/contract/test_mcp_<group>_tools.py` — payload shape contract.
 
 ## CC3. AGENTS.md updates
@@ -1433,58 +1419,57 @@ When a feature adds a new top-level module (e.g. `services/cards.py`,
 - One migration per feature. Never combine.
 - Migration adds new tables or new columns only. No destructive changes.
 - Every migration ships with a test under
-  `tests/contract/migrations/test_v<N>_to_v<N+1>.py` that loads a
-  pre-migration snapshot and asserts post-migration invariants.
+  `tests/contract/migrations/test_v<N>_to_v<N+1>.py` that loads a pre-migration
+  snapshot and asserts post-migration invariants.
 
 ## CC5. Public surface stage transitions
 
-All new MCP tools enter as `POST_MVP_MCP_TOOL_NAMES` registered entries.
-None are added to `MVP_MCP_TOOL_NAMES`. CLI commands follow the same
-pattern.
+All new MCP tools enter as `POST_MVP_MCP_TOOL_NAMES` registered entries. None
+are added to `MVP_MCP_TOOL_NAMES`. CLI commands follow the same pattern.
 
 ## CC6. Read-only proof must keep passing
 
-`scripts/prove_source_read_only.py` is extended whenever the public MCP
-surface changes. After D2 lands, the script also asserts that the Oracle
-sandbox leaves analyzed source bytes unchanged.
+`scripts/prove_source_read_only.py` is extended whenever the public MCP surface
+changes. After D2 lands, the script also asserts that the Oracle sandbox leaves
+analyzed source bytes unchanged.
 
 ## CC7. Telemetry
 
-All new services that produce findings or measurable agent value must emit
-a structured event to `session_events` via existing
-`SessionEventRepository`. This is what makes A2's ROI numbers meaningful.
+All new services that produce findings or measurable agent value must emit a
+structured event to `session_events` via existing `SessionEventRepository`. This
+is what makes A2's ROI numbers meaningful.
 
 ---
 
 # Risk Summary
 
-| Risk | Severity | Mitigation |
-| --- | --- | --- |
-| Sandbox subprocess broadens attack surface (D2) | High | Opt-in, exact-prefix allow-list, sanitized env, security test suite, byte-identity proof. |
-| Anchor migration produces unstable IDs on real repos (A1) | High | Backfill behind a feature flag, before/after stable_key comparison test on real fixtures. |
-| Macros hide tool calls and undermine determinism (B1) | Med | Every macro payload includes `steps_executed` audit block. |
-| Mutation runs blow time budget (D1) | Med | Hard caps, gated opt-in, flaky test exclusion. |
-| Architecture rules become a bikeshed (C1) | Med | Ship with three sensible defaults; rules are additive, not enforced unless declared. |
-| API ledger noisy on dynamic Python (C2) | Med | `dynamic: true` flag; lower severity for dynamic-flagged diffs. |
-| Card store rots into ungrounded notes (B2) | Low | Evidence required; freshness state machine; eviction caps. |
-| Co-change skew from mega-merges (A3) | Low | `max_files_per_commit` cap on edge creation. |
-| Token ledger estimates are wrong by provider (A2) | Low | Pluggable estimator, clearly labeled estimate, never billed as truth. |
-| Slop signatures false-positive on legitimate facades (B3) | Low | Lower confidence on subjective rules; per-rule disable in config. |
+| Risk                                                      | Severity | Mitigation                                                                                |
+| --------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------- |
+| Sandbox subprocess broadens attack surface (D2)           | High     | Opt-in, exact-prefix allow-list, sanitized env, security test suite, byte-identity proof. |
+| Anchor migration produces unstable IDs on real repos (A1) | High     | Backfill behind a feature flag, before/after stable_key comparison test on real fixtures. |
+| Macros hide tool calls and undermine determinism (B1)     | Med      | Every macro payload includes `steps_executed` audit block.                                |
+| Mutation runs blow time budget (D1)                       | Med      | Hard caps, gated opt-in, flaky test exclusion.                                            |
+| Architecture rules become a bikeshed (C1)                 | Med      | Ship with three sensible defaults; rules are additive, not enforced unless declared.      |
+| API ledger noisy on dynamic Python (C2)                   | Med      | `dynamic: true` flag; lower severity for dynamic-flagged diffs.                           |
+| Card store rots into ungrounded notes (B2)                | Low      | Evidence required; freshness state machine; eviction caps.                                |
+| Co-change skew from mega-merges (A3)                      | Low      | `max_files_per_commit` cap on edge creation.                                              |
+| Token ledger estimates are wrong by provider (A2)         | Low      | Pluggable estimator, clearly labeled estimate, never billed as truth.                     |
+| Slop signatures false-positive on legitimate facades (B3) | Low      | Lower confidence on subjective rules; per-rule disable in config.                         |
 
 ---
 
 # Locked Decisions
 
-Locked 2026-06-15. Each decision is folded into the relevant feature
-section above; this is the canonical short-form record.
+Locked 2026-06-15. Each decision is folded into the relevant feature section
+above; this is the canonical short-form record.
 
-| ID | Question | Decision | Rationale |
-| --- | --- | --- | --- |
-| LD-1 | D2 sandbox: TS/React parity in v1? | **No — Python-only in v1.** TS follows in v3. | D2 is the highest-risk new capability; doubling the safety surface before Python is proven is unjustified. The harness is language-agnostic so TS is a clean additive follow-up. Guarded by `verification.python_only_acknowledged` to prevent silent partial coverage. |
-| LD-2 | C1: ship NL->rule compiler with C1 or defer? | **Ship with C1.** | Without the compiler, C1 forces every user to learn the TOML schema before authoring a single rule, killing adoption. Compiler is the cheapest piece (no LLM, no network, ~15 templates) and returns *candidates only* — no auto-apply, so the risk is bounded. |
-| LD-3 | B2: admin reset path in v1? | **Yes — `codescent cards reset` CLI ships with B2.** CLI-only, gated `--dry-run\|--yes`. | A new persistent store without a recovery path is a bad failure mode. Mirrors the existing `codescent reset` pattern. CLI-only (not MCP) keeps destructive ops out of agent reach. |
-| LD-4 | A2: can `recommend_budget` auto-apply via project-config flag? | **No — strictly CLI-gated forever.** No `auto_apply` flag will ever exist. | Determinism is the product's identity. Silent default-shrinking would make the same bounded tool call return different results across runs and create an un-debuggable test surface. CI users can pipe `--yes` after review. |
-| LD-5 | C2: `get_breaking_callers` transitive or direct in v1? | **Direct only.** `transitive` parameter slot reserved for v2; passing `transitive=True` in v1 returns a structured warning envelope. | Direct callers are bounded `O(call_edges)` and explainable in evidence. Transitive is unbounded on hub modules and would routinely blow the envelope's token budget. Agents needing more can iterate one hop at a time. |
+| ID   | Question                                                       | Decision                                                                                                                             | Rationale                                                                                                                                                                                                                                                               |
+| ---- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LD-1 | D2 sandbox: TS/React parity in v1?                             | **No — Python-only in v1.** TS follows in v3.                                                                                        | D2 is the highest-risk new capability; doubling the safety surface before Python is proven is unjustified. The harness is language-agnostic so TS is a clean additive follow-up. Guarded by `verification.python_only_acknowledged` to prevent silent partial coverage. |
+| LD-2 | C1: ship NL->rule compiler with C1 or defer?                   | **Ship with C1.**                                                                                                                    | Without the compiler, C1 forces every user to learn the TOML schema before authoring a single rule, killing adoption. Compiler is the cheapest piece (no LLM, no network, ~15 templates) and returns _candidates only_ — no auto-apply, so the risk is bounded.         |
+| LD-3 | B2: admin reset path in v1?                                    | **Yes — `codescent cards reset` CLI ships with B2.** CLI-only, gated `--dry-run\|--yes`.                                             | A new persistent store without a recovery path is a bad failure mode. Mirrors the existing `codescent reset` pattern. CLI-only (not MCP) keeps destructive ops out of agent reach.                                                                                      |
+| LD-4 | A2: can `recommend_budget` auto-apply via project-config flag? | **No — strictly CLI-gated forever.** No `auto_apply` flag will ever exist.                                                           | Determinism is the product's identity. Silent default-shrinking would make the same bounded tool call return different results across runs and create an un-debuggable test surface. CI users can pipe `--yes` after review.                                            |
+| LD-5 | C2: `get_breaking_callers` transitive or direct in v1?         | **Direct only.** `transitive` parameter slot reserved for v2; passing `transitive=True` in v1 returns a structured warning envelope. | Direct callers are bounded `O(call_edges)` and explainable in evidence. Transitive is unbounded on hub modules and would routinely blow the envelope's token budget. Agents needing more can iterate one hop at a time.                                                 |
 
 ## What changes downstream of these decisions
 
@@ -1493,26 +1478,26 @@ section above; this is the canonical short-form record.
 - **C1 Q3 scope**: includes `architecture_compile` MCP tool, the
   `codescent architecture compile` CLI subcommand, and the
   `services/architecture_compiler.py` service module.
-- **B2 Q2 scope**: includes `codescent cards reset` CLI subcommand plus
-  `cards` entry in `POST_MVP_CLI_COMMAND_NAMES`.
-- **A2 Q1 scope**: ships `codescent budgets apply --dry-run|--yes` as the
-  sole write path; no project-config auto-apply flag is added to
-  `ProjectConfig` in `core/models.py`.
-- **C2 Q3 scope**: `get_breaking_callers` signature includes `transitive:
-  bool = False` parameter; v1 unconditionally refuses `transitive=True`
-  with `warning_code = "transitive_not_implemented_in_v1"`.
+- **B2 Q2 scope**: includes `codescent cards reset` CLI subcommand plus `cards`
+  entry in `POST_MVP_CLI_COMMAND_NAMES`.
+- **A2 Q1 scope**: ships `codescent budgets apply --dry-run|--yes` as the sole
+  write path; no project-config auto-apply flag is added to `ProjectConfig` in
+  `core/models.py`.
+- **C2 Q3 scope**: `get_breaking_callers` signature includes
+  `transitive: bool = False` parameter; v1 unconditionally refuses
+  `transitive=True` with `warning_code = "transitive_not_implemented_in_v1"`.
 
 ## v3 backlog (deferred by these decisions)
 
-These items are explicitly out of scope for this plan and queued for a
-future v3 roadmap:
+These items are explicitly out of scope for this plan and queued for a future v3
+roadmap:
 
 - TS/React sandbox parity for D2 (new `engine/sandbox/typescript.py` impact
   resolver, TS-aware `allowed_commands` defaults, pnpm/yarn/bun support).
 - Transitive `get_breaking_callers` with bounded BFS depth and an envelope
   truncation strategy.
-- LLM-assisted NL->rule expansion for ambiguous sentences not covered by
-  the C1 template set.
+- LLM-assisted NL->rule expansion for ambiguous sentences not covered by the C1
+  template set.
 
-Nothing else in this plan is gated on these v3 items. Everything in
-sections 1 through D2.8 is buildable as written.
+Nothing else in this plan is gated on these v3 items. Everything in sections 1
+through D2.8 is buildable as written.
