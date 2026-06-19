@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "codescent": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Users/robertguss/Projects/startups/code-scent-mcp",
+        "codescent",
+        "serve"
+      ],
+      "env": {}
+    }
+  }
+}
