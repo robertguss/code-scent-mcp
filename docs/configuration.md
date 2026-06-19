@@ -122,6 +122,31 @@ files changed since that ref. The transient
 comparison. CodeScent never runs tests; the ratchet reads only its own scan
 output and the local git diff.
 
+## Adaptive Findings
+
+CodeScent can learn from how its findings are actually resolved. The
+`[adaptive]` section turns the stored lifecycle verdicts into empirical per-rule
+confidence and learned-suppression candidates:
+
+```toml
+[adaptive]
+confidence_recalibration = true   # nudge confidence toward the empirical accept rate
+learned_suppression = false       # opt-in; flag heavily-dismissed rule+scope pairs
+min_sample_size = 8               # verdicts required before recalibrating (cold start below)
+max_confidence_delta = 0.2        # most a rule's confidence can move
+confidence_floor = 0.3            # recalibrated confidence never drops below this
+suppression_threshold = 5         # dismissals in a rule+directory scope to flag suppression
+```
+
+For each rule, CodeScent counts `resolved` (accepted) versus `wontfix`/`ignored`
+(rejected) findings; once at least `min_sample_size` verdicts exist it pulls the
+rule's confidence toward that accept rate, bounded by `max_confidence_delta` and
+never below `confidence_floor`. Below the sample size the base confidence is
+used unchanged, so new repositories see no change. Inspect it with the
+`get_calibration` MCP tool; `explain_score` carries the same block for a single
+finding. The adjustment is a pure, deterministic function of `.codescent` state
+— same verdicts in, same calibration out.
+
 ## Coverage Report
 
 Coverage ingestion reads an existing Cobertura XML report when present. By

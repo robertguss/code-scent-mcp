@@ -80,6 +80,10 @@ def _render_config(config: ProjectConfig) -> str:
                 "dict[str, TomlValue]",
                 config.ratchet.model_dump(mode="python"),
             ),
+            "adaptive": cast(
+                "dict[str, TomlValue]",
+                config.adaptive.model_dump(mode="python"),
+            ),
         },
     )
 

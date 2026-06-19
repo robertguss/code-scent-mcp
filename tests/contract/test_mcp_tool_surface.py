@@ -39,6 +39,7 @@ MVP_TOOL_NAMES = {
     "explain_score",
     "get_backlog",
     "get_improvement_plan",
+    "get_calibration",
     "get_progress",
     "get_regressions",
     "get_impact",

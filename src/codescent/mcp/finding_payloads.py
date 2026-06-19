@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from codescent.engine.rules.model import CodeHealthFinding
+    from codescent.services.calibration import CalibrationReport
     from codescent.services.code_health import CodeHealthScanResult
     from codescent.services.improvement_plan import ImprovementCluster, ImprovementPlan
     from codescent.services.reports import FindingDetail, ScoreExplanation
@@ -107,6 +108,32 @@ class ImprovementPlanToolPayload(TypedDict):
     next_tools: tuple[str, ...]
 
 
+class RuleCalibrationItem(TypedDict):
+    rule_id: str
+    base_confidence: float
+    adjusted_confidence: float
+    accepted: int
+    rejected: int
+    sample_size: int
+    accept_rate: float | None
+    calibrated: bool
+
+
+class SuppressionCandidateItem(TypedDict):
+    rule_id: str
+    scope: str
+    dismissals: int
+
+
+class CalibrationToolPayload(TypedDict):
+    ok: bool
+    confidence_recalibration: bool
+    learned_suppression: bool
+    min_sample_size: int
+    rules: tuple[RuleCalibrationItem, ...]
+    suppression_candidates: tuple[SuppressionCandidateItem, ...]
+
+
 class FindingDetailToolPayload(TypedDict):
     ok: bool
     finding_id: str
@@ -130,6 +157,7 @@ class ScoreExplanationToolPayload(TypedDict):
     reasons: tuple[str, ...]
     next_steps: tuple[str, ...]
     subjective: bool
+    calibration: JsonObject
 
 
 class NextImprovementToolPayload(TypedDict):
@@ -275,6 +303,36 @@ def bounded_finding_list(  # noqa: PLR0913
     if extra is not None:
         envelope.update(extra)
     return envelope
+
+
+def calibration_payload(report: CalibrationReport) -> CalibrationToolPayload:
+    return {
+        "ok": True,
+        "confidence_recalibration": report.confidence_recalibration,
+        "learned_suppression": report.learned_suppression,
+        "min_sample_size": report.min_sample_size,
+        "rules": tuple(
+            {
+                "rule_id": rule.rule_id,
+                "base_confidence": rule.base_confidence,
+                "adjusted_confidence": rule.adjusted_confidence,
+                "accepted": rule.accepted,
+                "rejected": rule.rejected,
+                "sample_size": rule.sample_size,
+                "accept_rate": rule.accept_rate,
+                "calibrated": rule.calibrated,
+            }
+            for rule in report.rules
+        ),
+        "suppression_candidates": tuple(
+            {
+                "rule_id": candidate.rule_id,
+                "scope": candidate.scope,
+                "dismissals": candidate.dismissals,
+            }
+            for candidate in report.suppression_candidates
+        ),
+    }
 
 
 def cluster_item(cluster: ImprovementCluster) -> ImprovementClusterItem:
@@ -430,6 +488,7 @@ def score_explanation_payload(
         "reasons": explanation.reasons,
         "next_steps": explanation.next_steps,
         "subjective": explanation.subjective,
+        "calibration": explanation.calibration,
     }
 
 

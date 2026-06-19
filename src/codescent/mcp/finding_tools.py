@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, cast
 from codescent.core.models import FindingStatus
 from codescent.mcp.finding_payloads import (
     BacklogToolPayload,
+    CalibrationToolPayload,
     FindingDetailToolPayload,
     ImprovementPlanToolPayload,
     MarkFindingToolPayload,
@@ -19,6 +20,7 @@ from codescent.mcp.finding_payloads import (
     aggregate_counts,
     bounded_finding_list,
     build_scan_envelope,
+    calibration_payload,
     detail_payload,
     finding_payload,
     improvement_plan_payload,
@@ -26,6 +28,7 @@ from codescent.mcp.finding_payloads import (
     severity_rank,
     status_from_string,
 )
+from codescent.services.calibration import CalibrationService
 from codescent.services.code_health import CodeHealthService
 from codescent.services.findings import FindingsService
 from codescent.services.improvement_plan import ImprovementPlanService
@@ -85,6 +88,13 @@ def register_finding_tools(mcp: FastMCP) -> None:
             "effort and health-gain estimates. Bounded output."
         ),
     )(get_improvement_plan)
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to read adaptive per-rule confidence calibration "
+            "derived from this repo's own resolve/wontfix verdicts, plus learned "
+            "suppression candidates. Deterministic; read-only."
+        ),
+    )(get_calibration)
     _ = mcp.tool(
         description="Use CodeScent to read deterministic finding progress counts.",
     )(get_progress)
@@ -212,6 +222,10 @@ def get_improvement_plan(repo: str = ".") -> ImprovementPlanToolPayload:
     plan = ImprovementPlanService(repo).get_improvement_plan()
     envelope = improvement_plan_payload(plan, repo=repo)
     return cast("ImprovementPlanToolPayload", cast("object", envelope))
+
+
+def get_calibration(repo: str = ".") -> CalibrationToolPayload:
+    return calibration_payload(CalibrationService(repo).get_calibration())
 
 
 def get_progress(repo: str = ".") -> ProgressToolPayload:

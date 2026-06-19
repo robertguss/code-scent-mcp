@@ -27,6 +27,36 @@ class ScanToolPayload(BaseModel):
     finding_ids: tuple[str, ...]
 
 
+class CalibrationRuleModel(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
+
+    rule_id: str
+    base_confidence: float
+    adjusted_confidence: float
+    calibrated: bool
+
+
+class CalibrationToolModel(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
+
+    ok: bool
+    confidence_recalibration: bool
+    rules: tuple[CalibrationRuleModel, ...]
+
+
+class CalibrationBlockModel(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
+
+    calibrated: bool
+
+
+class ScoreExplanationModel(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
+
+    finding_id: str
+    calibration: CalibrationBlockModel
+
+
 class ImprovementClusterModel(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
 
@@ -413,6 +443,45 @@ async def test_list_tools_bound_output_and_offer_retrieval(tmp_path: Path) -> No
     inline_ids = {item["finding_id"] for item in report.items}
     retrieved_ids = {item["finding_id"] for item in exact.items}
     assert len(retrieved_ids - inline_ids) > 0
+
+
+@pytest.mark.anyio
+async def test_get_calibration_reports_per_rule_signal(tmp_path: Path) -> None:
+    repo = _repo_with_many_findings(tmp_path, 4)
+
+    async with Client(mcp) as client:
+        tools = await client.list_tools()
+        _ = await client.call_tool("scan_code_health", {"repo": str(repo)})
+        result = await client.call_tool("get_calibration", {"repo": str(repo)})
+
+    assert "get_calibration" in {tool.name for tool in tools}
+    payload = CalibrationToolModel.model_validate_json(_text_content(result.content))
+    assert payload.ok is True
+    assert payload.confidence_recalibration is True
+    # Fresh repo: verdicts are below the sample size, so nothing is calibrated yet
+    # and confidence is unchanged (cold start).
+    for rule in payload.rules:
+        assert rule.calibrated is False
+        assert rule.adjusted_confidence == rule.base_confidence
+
+
+@pytest.mark.anyio
+async def test_explain_score_carries_a_calibration_block(tmp_path: Path) -> None:
+    repo = _repo_with_many_findings(tmp_path, 4)
+
+    async with Client(mcp) as client:
+        scan = await client.call_tool("scan_code_health", {"repo": str(repo)})
+        scan_payload = BoundedScanPayload.model_validate_json(
+            _text_content(scan.content),
+        )
+        finding_id = scan_payload.finding_ids[0]
+        result = await client.call_tool(
+            "explain_score",
+            {"repo": str(repo), "finding_id": finding_id},
+        )
+
+    payload = ScoreExplanationModel.model_validate_json(_text_content(result.content))
+    assert payload.calibration.calibrated is False
 
 
 @pytest.mark.anyio

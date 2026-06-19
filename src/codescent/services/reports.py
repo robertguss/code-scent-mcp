@@ -4,11 +4,14 @@ import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeGuard, cast
 
+from codescent.services.calibration import CalibrationService
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import FindingRepository, FindingRow
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from codescent.services.calibration import RuleCalibration
 
 JsonScalar = str | int | float | bool | None
 JsonObject = dict[str, JsonScalar]
@@ -37,6 +40,7 @@ class ScoreExplanation:
     reasons: tuple[str, ...]
     next_steps: tuple[str, ...]
     subjective: bool
+    calibration: JsonObject
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,15 +67,19 @@ class ReportService:
 
     def explain_score(self, finding_id: str) -> ScoreExplanation:
         finding = _repository(self.repo_root).get_finding(finding_id)
+        calibration = CalibrationService(self.repo_root).adjusted_confidence(
+            finding.rule_id,
+        )
         return ScoreExplanation(
             finding_id=finding.id,
             score_inputs=_score_inputs(finding),
-            reasons=_score_reasons(finding),
+            reasons=_score_reasons(finding) + _calibration_reasons(calibration),
             next_steps=(
                 finding.suggested_action,
                 "Use get_finding for evidence before editing source.",
             ),
             subjective=False,
+            calibration=_calibration_block(calibration),
         )
 
 
@@ -106,6 +114,33 @@ def _score_reasons(finding: FindingRow) -> tuple[str, ...]:
         f"confidence={finding.confidence:.2f} comes from the rule result",
         f"status={finding.status.value} controls backlog ordering",
     )
+
+
+def _calibration_block(calibration: RuleCalibration | None) -> JsonObject:
+    if calibration is None:
+        return {"calibrated": False, "sample_size": 0}
+    return {
+        "calibrated": calibration.calibrated,
+        "base_confidence": calibration.base_confidence,
+        "adjusted_confidence": calibration.adjusted_confidence,
+        "accepted": calibration.accepted,
+        "rejected": calibration.rejected,
+        "sample_size": calibration.sample_size,
+        "accept_rate": calibration.accept_rate,
+    }
+
+
+def _calibration_reasons(calibration: RuleCalibration | None) -> tuple[str, ...]:
+    if calibration is None or not calibration.calibrated:
+        return ()
+    reason = "".join(
+        (
+            f"adjusted_confidence={calibration.adjusted_confidence:.2f} ",
+            f"from this repo's {calibration.accepted}/{calibration.sample_size} ",
+            "accept rate",
+        ),
+    )
+    return (reason,)
 
 
 def _json_object(raw: str) -> JsonObject:

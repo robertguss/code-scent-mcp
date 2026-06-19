@@ -166,6 +166,27 @@ class RatchetSettings(BaseModel):
     require_non_negative_net_health: bool = False
 
 
+class AdaptiveSettings(BaseModel):
+    """Adaptive, self-calibrating findings driven by the repo's own verdicts.
+
+    Confidence recalibration nudges a rule's confidence toward its empirical
+    accept rate (resolved vs wontfix/ignored) once enough verdicts exist; below
+    ``min_sample_size`` the base confidence is used unchanged (cold start). The
+    adjustment is bounded by ``max_confidence_delta`` and never falls below
+    ``confidence_floor``. Learned suppression flags rule+directory scopes that
+    have been dismissed at least ``suppression_threshold`` times.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    confidence_recalibration: bool = True
+    learned_suppression: bool = False
+    min_sample_size: int = Field(default=8, ge=1)
+    max_confidence_delta: float = Field(default=0.2, ge=0, le=1)
+    confidence_floor: float = Field(default=0.3, ge=0, le=1)
+    suppression_threshold: int = Field(default=5, ge=1)
+
+
 class ProjectConfig(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
@@ -186,6 +207,7 @@ class ProjectConfig(BaseModel):
         default_factory=MaintainabilityThresholds,
     )
     ratchet: RatchetSettings = Field(default_factory=RatchetSettings)
+    adaptive: AdaptiveSettings = Field(default_factory=AdaptiveSettings)
     llm: LlmSettings | None = None
 
     def with_overrides(

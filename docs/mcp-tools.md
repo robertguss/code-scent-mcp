@@ -43,6 +43,7 @@ by the service and contract tests.
 - `explain_score`
 - `get_backlog`
 - `get_improvement_plan`
+- `get_calibration`
 - `get_progress`
 - `get_regressions`
 - `review_diff_risk`
@@ -98,7 +99,8 @@ Code health and finding lifecycle tools:
 
 `scan_code_health`, `get_smell_report`, `get_next_improvement`, `mark_finding`,
 `record_verification`, `rescan`, `get_finding`, `explain_score`, `get_backlog`,
-`get_improvement_plan`, `get_progress`, `get_regressions`, `context_stats`
+`get_improvement_plan`, `get_calibration`, `get_progress`, `get_regressions`,
+`context_stats`
 
 Planning tools:
 
@@ -583,6 +585,29 @@ events, and telemetry.
   ROI are deterministic functions of the finding set.
 - Example shape:
   `{"ok": true, "kind": "improvement_plan", "total_clusters": 97, "total_findings": 503, "clusters": [{"theme": "Consolidate 39 duplicate literal(s) in tests/integration", "effort": "M", "roi": 3.86, ...}], "omitted_count": 72, "result_id": "ctx_…", "retrieval_available": true}`
+
+### `get_calibration`
+
+- Group: `health`
+- Purpose: Report adaptive, self-calibrating signal derived from this repo's own
+  lifecycle verdicts. For each rule it returns the empirical accept rate
+  (resolved vs wontfix/ignored), the base confidence, and an
+  `adjusted_confidence` nudged toward that accept rate once enough verdicts
+  exist — plus learned `suppression_candidates` (rule + directory scopes
+  dismissed often enough to be auto-deferred, when learned suppression is
+  enabled).
+- Inputs: repository root.
+- Outputs: `confidence_recalibration`, `learned_suppression`, `min_sample_size`,
+  a `rules` list (each with `rule_id`, `base_confidence`, `adjusted_confidence`,
+  `accepted`, `rejected`, `sample_size`, `accept_rate`, `calibrated`), and
+  `suppression_candidates`.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network. A pure, deterministic function of the stored findings —
+  below `min_sample_size` verdicts the base confidence is used unchanged (cold
+  start), so new repos see no change. `explain_score` carries the same
+  calibration block for a single finding.
+- Example shape:
+  `{"ok": true, "confidence_recalibration": true, "min_sample_size": 8, "rules": [{"rule_id": "python.dead_code_candidate", "base_confidence": 0.6, "adjusted_confidence": 0.8, "accepted": 13, "rejected": 0, "sample_size": 13, "calibrated": true}], "suppression_candidates": []}`
 
 ### `get_progress`
 

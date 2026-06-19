@@ -121,6 +121,19 @@ just gates PRs on new noise.
 
 ### P4 — Adaptive (#1, kept but lower; ~Medium)
 
+**Status: core shipped 2026-06-19.** New `get_calibration` MCP tool
+(`CalibrationService`) turns the repo's stored verdicts (resolved vs
+wontfix/ignored) into empirical per-rule confidence: once `min_sample_size`
+verdicts exist it nudges a rule's confidence toward its accept rate, bounded by
+`max_confidence_delta` and floored at `confidence_floor` (below the sample size
+the base confidence is used unchanged — cold start). `explain_score` carries the
+same calibration block. Learned-suppression candidates (heavily-dismissed
+rule+directory scopes) are reported when enabled. New `[adaptive]` config. On
+the CodeScent repo, `dead_code_candidate` at a 16/16 accept rate is boosted
+0.6→0.8. _Deferred:_ feeding adjusted confidence into prioritization tiebreaks
+and applying learned suppression at scan time (auto-defer); part (c) relative
+thresholds already shipped in P1.
+
 Confidence recalibration and learned suppression remain valuable, but their
 marginal value drops sharply once P1 makes defaults sane and P2 clusters the
 rest. Learned suppression is, in effect, a runtime band-aid over bad thresholds;
