@@ -131,7 +131,7 @@ def test_verification_commands_are_recommended_not_executed(
     report = get_smell_report(repo)
     selected = next(
         finding["finding_id"]
-        for finding in report["findings"]
+        for finding in report["items"]
         if finding["file_path"] == "src/acme_tasks/workflow.py"
     )
     assert isinstance(selected, str)

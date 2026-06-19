@@ -239,11 +239,16 @@ events, and telemetry.
 - Purpose: Run deterministic code-health scanning.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
-- Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+- Outputs: a bounded scan envelope with aggregate counts (`total_count`,
+  `severity_counts`, `rule_counts`, `rule_ids`), a capped `finding_ids`/`items`
+  preview, and `returned_count`/`omitted_count`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
-- Example shape: `{"tool": "scan_code_health", "ok": true, "data": {...}}`
+  runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
+  (default 25) items; when findings are omitted the envelope carries a
+  `result_id` with `retrieval_available` and `retrieval_hints` so the full set
+  is reachable via `retrieve_result`. It never dumps every finding id inline.
+- Example shape:
+  `{"ok": true, "kind": "scan", "total_count": 1270, "rule_counts": {...}, "items": [...], "omitted_count": 1245, "result_id": "ctx_…", "retrieval_available": true}`
 
 ### `get_smell_report`
 
@@ -251,14 +256,17 @@ events, and telemetry.
 - Purpose: Return summarized open finding report data.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
-- Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump. Index-backed graph tools include `index_fresh`,
-  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
-  `warnings`, `confidence`, and `next_tools`.
+- Outputs: a bounded list envelope: `open_count`, `total_count`,
+  `status_counts`, `severity_counts`, `rule_counts`, and a capped `items`
+  preview with `returned_count`/`omitted_count`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network. If the index is stale, the tool refreshes `.codescent`
-  state before answering.
-- Example shape: `{"tool": "get_smell_report", "ok": true, "data": {...}}`
+  runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
+  (default 25) findings; when findings are omitted the envelope carries a
+  `result_id` with `retrieval_available` and `retrieval_hints` so the full
+  report is reachable via `retrieve_result`. It does not return every finding
+  inline.
+- Example shape:
+  `{"ok": true, "kind": "smell_report", "open_count": 1270, "total_count": 1270, "items": [...], "omitted_count": 1245, "result_id": "ctx_…", "retrieval_available": true}`
 
 ### `get_finding_context`
 
@@ -364,11 +372,15 @@ events, and telemetry.
 - Purpose: Run scan again and report resolved or regressed findings.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
-- Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+- Outputs: a bounded scan envelope (same shape as `scan_code_health`) plus
+  `regressed_finding_ids` (capped) and `regressed_count`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
-- Example shape: `{"tool": "rescan", "ok": true, "data": {...}}`
+  runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
+  (default 25) items; when findings are omitted the envelope carries a
+  `result_id` with `retrieval_available` and `retrieval_hints` for
+  `retrieve_result`.
+- Example shape:
+  `{"ok": true, "kind": "rescan", "total_count": 1270, "items": [...], "omitted_count": 1245, "regressed_count": 2, "result_id": "ctx_…", "retrieval_available": true}`
 
 ### `multi_search_content`
 
@@ -535,11 +547,16 @@ events, and telemetry.
 - Purpose: Return backlog-style finding summary.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
-- Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+- Outputs: a bounded list envelope: `open_count`, `total_count`,
+  `status_counts`, `severity_counts`, `rule_counts`, and a capped `items`
+  preview with `returned_count`/`omitted_count`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
-- Example shape: `{"tool": "get_backlog", "ok": true, "data": {...}}`
+  runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
+  (default 25) findings; when findings are omitted the envelope carries a
+  `result_id` with `retrieval_available` and `retrieval_hints` for
+  `retrieve_result`.
+- Example shape:
+  `{"ok": true, "kind": "backlog", "open_count": 1245, "items": [...], "omitted_count": 1220, "result_id": "ctx_…", "retrieval_available": true}`
 
 ### `get_progress`
 
@@ -559,11 +576,16 @@ events, and telemetry.
 - Purpose: Return findings that regressed across scans.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
-- Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+- Outputs: a bounded list envelope: `count`, `total_count`, `status_counts`,
+  `severity_counts`, `rule_counts`, and a capped `items` preview with
+  `returned_count`/`omitted_count`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
-- Example shape: `{"tool": "get_regressions", "ok": true, "data": {...}}`
+  runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
+  (default 25) findings; when findings are omitted the envelope carries a
+  `result_id` with `retrieval_available` and `retrieval_hints` for
+  `retrieve_result`.
+- Example shape:
+  `{"ok": true, "kind": "regressions", "count": 3, "items": [...], "omitted_count": 0, "result_id": null, "retrieval_available": false}`
 
 ### `review_diff_risk`
 

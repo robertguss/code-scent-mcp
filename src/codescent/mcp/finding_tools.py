@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
+from codescent.core.models import FindingStatus
 from codescent.mcp.finding_payloads import (
     BacklogToolPayload,
     FindingDetailToolPayload,
@@ -14,15 +15,27 @@ from codescent.mcp.finding_payloads import (
     ScanHealthToolPayload,
     ScoreExplanationToolPayload,
     SmellReportToolPayload,
+    aggregate_counts,
+    bounded_finding_list,
+    build_scan_envelope,
     detail_payload,
     finding_payload,
-    scan_payload,
     score_explanation_payload,
+    severity_rank,
     status_from_string,
 )
 from codescent.services.code_health import CodeHealthService
 from codescent.services.findings import FindingsService
 from codescent.services.reports import ReportService
+
+_BACKLOG_STATUSES = frozenset(
+    {
+        FindingStatus.OPEN,
+        FindingStatus.IN_PROGRESS,
+        FindingStatus.NEEDS_REVIEW,
+        FindingStatus.REGRESSED,
+    },
+)
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -90,17 +103,41 @@ def register_finding_tools(mcp: FastMCP) -> None:
 
 
 def scan_code_health(repo: str = ".") -> ScanHealthToolPayload:
-    return scan_payload(CodeHealthService(repo).scan())
+    scan = CodeHealthService(repo).scan()
+    envelope = build_scan_envelope(
+        scan,
+        repo=repo,
+        next_tools=("get_next_improvement", "get_smell_report"),
+    )
+    return cast("ScanHealthToolPayload", cast("object", envelope))
 
 
 def get_smell_report(repo: str = ".") -> SmellReportToolPayload:
     report = FindingsService(repo).get_smell_report()
-    return {
-        "ok": True,
+    ordered = sorted(
+        report.findings,
+        key=lambda finding: (severity_rank(finding.severity), finding.id),
+    )
+    records = tuple(finding_payload(finding) for finding in ordered)
+    severity_counts, rule_counts = aggregate_counts(
+        (finding.severity, finding.rule_id) for finding in report.findings
+    )
+    aggregates: dict[str, object] = {
         "open_count": report.open_count,
+        "total_count": len(report.findings),
         "status_counts": report.status_counts,
-        "findings": tuple(finding_payload(finding) for finding in report.findings),
+        "severity_counts": severity_counts,
+        "rule_counts": rule_counts,
     }
+    envelope = bounded_finding_list(
+        kind="smell_report",
+        repo=repo,
+        tool_name="get_smell_report",
+        records=records,
+        aggregates=aggregates,
+        next_tools=("get_next_improvement", "plan_refactor", "retrieve_result"),
+    )
+    return cast("SmellReportToolPayload", cast("object", envelope))
 
 
 def get_finding(finding_id: str, repo: str = ".") -> FindingDetailToolPayload:
@@ -134,13 +171,31 @@ def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
 
 
 def get_backlog(repo: str = ".") -> BacklogToolPayload:
-    backlog = FindingsService(repo).get_backlog()
-    return {
-        "ok": True,
-        "open_count": backlog.open_count,
-        "status_counts": backlog.status_counts,
-        "finding_ids": backlog.finding_ids,
+    report = FindingsService(repo).get_smell_report()
+    rows = sorted(
+        (finding for finding in report.findings if finding.status in _BACKLOG_STATUSES),
+        key=lambda finding: (severity_rank(finding.severity), finding.id),
+    )
+    records = tuple(finding_payload(finding) for finding in rows)
+    severity_counts, rule_counts = aggregate_counts(
+        (finding.severity, finding.rule_id) for finding in rows
+    )
+    aggregates: dict[str, object] = {
+        "open_count": len(rows),
+        "total_count": len(rows),
+        "status_counts": report.status_counts,
+        "severity_counts": severity_counts,
+        "rule_counts": rule_counts,
     }
+    envelope = bounded_finding_list(
+        kind="backlog",
+        repo=repo,
+        tool_name="get_backlog",
+        records=records,
+        aggregates=aggregates,
+        next_tools=("get_next_improvement", "retrieve_result"),
+    )
+    return cast("BacklogToolPayload", cast("object", envelope))
 
 
 def get_progress(repo: str = ".") -> ProgressToolPayload:
@@ -156,12 +211,35 @@ def get_progress(repo: str = ".") -> ProgressToolPayload:
 
 
 def get_regressions(repo: str = ".") -> RegressionsToolPayload:
-    regressions = FindingsService(repo).get_regressions()
-    return {
-        "ok": True,
-        "count": regressions.count,
-        "finding_ids": regressions.finding_ids,
+    report = FindingsService(repo).get_smell_report()
+    rows = sorted(
+        (
+            finding
+            for finding in report.findings
+            if finding.status is FindingStatus.REGRESSED
+        ),
+        key=lambda finding: (severity_rank(finding.severity), finding.id),
+    )
+    records = tuple(finding_payload(finding) for finding in rows)
+    severity_counts, rule_counts = aggregate_counts(
+        (finding.severity, finding.rule_id) for finding in rows
+    )
+    aggregates: dict[str, object] = {
+        "count": len(rows),
+        "total_count": len(rows),
+        "status_counts": report.status_counts,
+        "severity_counts": severity_counts,
+        "rule_counts": rule_counts,
     }
+    envelope = bounded_finding_list(
+        kind="regressions",
+        repo=repo,
+        tool_name="get_regressions",
+        records=records,
+        aggregates=aggregates,
+        next_tools=("get_next_improvement", "retrieve_result"),
+    )
+    return cast("RegressionsToolPayload", cast("object", envelope))
 
 
 def mark_finding(
@@ -211,8 +289,10 @@ def record_verification(
 
 def rescan(repo: str = ".") -> RescanToolPayload:
     result = FindingsService(repo).rescan()
-    payload = scan_payload(result.scan)
-    return {
-        **payload,
-        "regressed_finding_ids": result.regressed_finding_ids,
-    }
+    envelope = build_scan_envelope(
+        result.scan,
+        repo=repo,
+        next_tools=("get_next_improvement", "get_smell_report"),
+        regressed_finding_ids=result.regressed_finding_ids,
+    )
+    return cast("RescanToolPayload", cast("object", envelope))

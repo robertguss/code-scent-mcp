@@ -6,7 +6,11 @@ from fastmcp import Client
 from mcp.types import ContentBlock, TextContent
 from pydantic import BaseModel, ConfigDict, Field
 
+from codescent.mcp.finding_payloads import INLINE_ITEM_LIMIT
 from codescent.mcp.server import mcp
+from codescent.services.result_store import MAX_RETRIEVE_LIMIT
+
+MAX_BOUNDED_PAYLOAD_CHARS = 8192
 
 
 class ScanToolPayload(BaseModel):
@@ -17,6 +21,34 @@ class ScanToolPayload(BaseModel):
     findings_created: int = Field(ge=0)
     rule_ids: tuple[str, ...]
     finding_ids: tuple[str, ...]
+
+
+class BoundedScanPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    total_count: int
+    finding_ids: tuple[str, ...]
+    items: tuple[dict[str, str | float], ...]
+
+
+class BoundedReportPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    total_count: int
+    items: tuple[dict[str, str | float], ...]
+    returned_count: int
+    omitted_count: int
+    result_id: str | None
+    retrieval_available: bool
+    retrieval_hints: tuple[str, ...]
+
+
+class RetrievedItemsPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    items: tuple[dict[str, str | float], ...]
 
 
 class MarkToolPayload(BaseModel):
@@ -297,6 +329,64 @@ async def test_diff_risk_tools_report_changed_file_health_locally(
     assert before["src/pkg/config.py"] in source_snapshot(repo)["src/pkg/config.py"]
 
 
+@pytest.mark.anyio
+async def test_list_tools_bound_output_and_offer_retrieval(tmp_path: Path) -> None:
+    # Regression for docs/ideas/boundedness-bug-fix.md: get_smell_report once
+    # returned every finding inline (338 KB on the CodeScent repo) and was
+    # rejected by the client. With many findings, the list/aggregate tools must
+    # cap inline output and hand back a retrieval handle for the rest.
+    file_count = 40
+    repo = _repo_with_many_findings(tmp_path, file_count)
+
+    async with Client(mcp) as client:
+        scan_raw = await client.call_tool("scan_code_health", {"repo": str(repo)})
+        report_raw = await client.call_tool("get_smell_report", {"repo": str(repo)})
+
+    scan_text = _text_content(scan_raw.content)
+    report_text = _text_content(report_raw.content)
+    scan = BoundedScanPayload.model_validate_json(scan_text)
+    report = BoundedReportPayload.model_validate_json(report_text)
+
+    # Inline output is bounded for both the scan and the report.
+    assert scan.total_count >= file_count
+    assert len(scan.finding_ids) <= INLINE_ITEM_LIMIT
+    assert len(scan.items) <= INLINE_ITEM_LIMIT
+    assert report.total_count >= file_count
+    assert len(report.items) == INLINE_ITEM_LIMIT
+    assert report.returned_count == INLINE_ITEM_LIMIT
+    assert report.omitted_count == report.total_count - INLINE_ITEM_LIMIT
+
+    # The serialized payloads stay small — the whole point of the fix.
+    assert len(scan_text) < MAX_BOUNDED_PAYLOAD_CHARS
+    assert len(report_text) < MAX_BOUNDED_PAYLOAD_CHARS
+
+    # Omission must come with a usable retrieval handle.
+    assert report.retrieval_available is True
+    result_id = report.result_id
+    assert result_id is not None
+    assert result_id.startswith("ctx_")
+    assert report.retrieval_hints
+
+    # Round-trip: the omitted findings are recoverable, not lost. A single
+    # retrieve call is itself bounded (MAX_RETRIEVE_LIMIT), so it returns the
+    # capped slice but must surface findings beyond the inline preview.
+    async with Client(mcp) as client:
+        exact_raw = await client.call_tool(
+            "retrieve_result",
+            {
+                "repo": str(repo),
+                "result_id": result_id,
+                "mode": "exact",
+                "limit": MAX_RETRIEVE_LIMIT,
+            },
+        )
+    exact = RetrievedItemsPayload.model_validate_json(_text_content(exact_raw.content))
+    assert len(exact.items) == min(report.total_count, MAX_RETRIEVE_LIMIT)
+    inline_ids = {item["finding_id"] for item in report.items}
+    retrieved_ids = {item["finding_id"] for item in exact.items}
+    assert len(retrieved_ids - inline_ids) > 0
+
+
 async def _scan_repo(repo: Path) -> ScanToolPayload:
     async with Client(mcp) as client:
         scan_result = await client.call_tool(
@@ -341,6 +431,17 @@ def test_load_config() -> None:
     assert load_config() == "pending-review"
 """,
     )
+    return repo
+
+
+def _repo_with_many_findings(tmp_path: Path, file_count: int) -> Path:
+    repo = tmp_path / "repo"
+    package = repo / "src" / "pkg"
+    package.mkdir(parents=True)
+    body = "\n".join(f"    value_{line} = {line}" for line in range(80))
+    for index in range(file_count):
+        module = package / f"module_{index}.py"
+        _ = module.write_text(f"def build_{index}() -> int:\n{body}\n    return 0\n")
     return repo
 
 

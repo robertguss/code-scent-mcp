@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Final, TypedDict, cast
 
 from codescent.core.models import FindingStatus
+from codescent.core.paths import resolve_repo_root
+from codescent.services.result_store import JsonValue, ResultStoreService
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from codescent.engine.rules.model import CodeHealthFinding
     from codescent.services.code_health import CodeHealthScanResult
     from codescent.services.reports import FindingDetail, ScoreExplanation
     from codescent.storage.repositories import FindingRow
@@ -12,21 +17,63 @@ if TYPE_CHECKING:
 JsonScalar = str | int | float | bool | None
 JsonObject = dict[str, JsonScalar]
 
+# A single finding preview row, as returned inline by the list/aggregate tools.
+FindingItem = dict[str, str | float]
 
-class ScanHealthToolPayload(TypedDict):
+# Boundedness controls (see docs/ideas/boundedness-bug-fix.md). List/aggregate
+# tools never return more than INLINE_ITEM_LIMIT items inline; the remainder is
+# stored and reachable via retrieve_result. RULE_COUNT_LIMIT caps the rule
+# histogram so the aggregate block itself stays small.
+INLINE_ITEM_LIMIT: Final = 25
+RULE_COUNT_LIMIT: Final = 20
+
+_SEVERITY_RANK: Final[dict[str, int]] = {"error": 0, "warning": 1, "info": 2}
+
+
+class BoundedListBase(TypedDict):
     ok: bool
+    kind: str
+    total_count: int
+    severity_counts: dict[str, int]
+    rule_counts: dict[str, int]
+    items: tuple[FindingItem, ...]
+    returned_count: int
+    omitted_count: int
+    result_id: str | None
+    retrieval_available: bool
+    retrieval_hints: tuple[str, ...]
+    warnings: tuple[str, ...]
+    next_tools: tuple[str, ...]
+
+
+class ScanHealthToolPayload(BoundedListBase):
     status: str
     scan_id: str
     findings_created: int
-    finding_ids: tuple[str, ...]
+    files_scanned: int
+    findings_resolved: int
     rule_ids: tuple[str, ...]
+    finding_ids: tuple[str, ...]
 
 
-class SmellReportToolPayload(TypedDict):
-    ok: bool
+class RescanToolPayload(ScanHealthToolPayload):
+    regressed_finding_ids: tuple[str, ...]
+    regressed_count: int
+
+
+class SmellReportToolPayload(BoundedListBase):
     open_count: int
     status_counts: dict[str, int]
-    findings: tuple[dict[str, str | float], ...]
+
+
+class BacklogToolPayload(BoundedListBase):
+    open_count: int
+    status_counts: dict[str, int]
+
+
+class RegressionsToolPayload(BoundedListBase):
+    count: int
+    status_counts: dict[str, int]
 
 
 class FindingDetailToolPayload(TypedDict):
@@ -62,13 +109,6 @@ class NextImprovementToolPayload(TypedDict):
     suggested_action: str | None
 
 
-class BacklogToolPayload(TypedDict):
-    ok: bool
-    open_count: int
-    status_counts: dict[str, int]
-    finding_ids: tuple[str, ...]
-
-
 class ProgressToolPayload(TypedDict):
     ok: bool
     total_findings: int
@@ -76,12 +116,6 @@ class ProgressToolPayload(TypedDict):
     resolved_count: int
     regressed_count: int
     status_counts: dict[str, int]
-
-
-class RegressionsToolPayload(TypedDict):
-    ok: bool
-    count: int
-    finding_ids: tuple[str, ...]
 
 
 class MarkFindingToolPayload(TypedDict):
@@ -103,28 +137,24 @@ class RecordVerificationToolPayload(TypedDict):
     output_truncated: bool
 
 
-class RescanToolPayload(TypedDict):
-    ok: bool
-    status: str
-    scan_id: str
-    findings_created: int
-    finding_ids: tuple[str, ...]
-    rule_ids: tuple[str, ...]
-    regressed_finding_ids: tuple[str, ...]
+def severity_rank(severity: str) -> int:
+    return _SEVERITY_RANK.get(severity, len(_SEVERITY_RANK))
 
 
-def scan_payload(scan: CodeHealthScanResult) -> ScanHealthToolPayload:
-    return {
-        "ok": True,
-        "status": "complete",
-        "scan_id": scan.scan_id,
-        "findings_created": scan.findings_created,
-        "finding_ids": scan.finding_ids,
-        "rule_ids": scan.rule_ids,
-    }
+def aggregate_counts(
+    pairs: Iterable[tuple[str, str]],
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Tally (severity, rule_id) pairs, returning severity and capped rule counts."""
+    severity_counts: dict[str, int] = {}
+    rule_counts: dict[str, int] = {}
+    for severity, rule_id in pairs:
+        severity_counts[severity] = severity_counts.get(severity, 0) + 1
+        rule_counts[rule_id] = rule_counts.get(rule_id, 0) + 1
+    ranked = sorted(rule_counts.items(), key=lambda item: (-item[1], item[0]))
+    return severity_counts, dict(ranked[:RULE_COUNT_LIMIT])
 
 
-def finding_payload(finding: FindingRow) -> dict[str, str | float]:
+def finding_payload(finding: FindingRow) -> FindingItem:
     return {
         "finding_id": finding.id,
         "rule_id": finding.rule_id,
@@ -134,6 +164,137 @@ def finding_payload(finding: FindingRow) -> dict[str, str | float]:
         "status": finding.status.value,
         "suggested_action": finding.suggested_action,
     }
+
+
+def scan_finding_item(finding: CodeHealthFinding) -> FindingItem:
+    return {
+        "finding_id": finding.id,
+        "rule_id": finding.rule_id,
+        "file_path": finding.file_path,
+        "severity": finding.severity,
+        "confidence": finding.confidence,
+        "suggested_action": finding.suggested_action,
+    }
+
+
+def bounded_finding_list(  # noqa: PLR0913
+    *,
+    kind: str,
+    repo: str,
+    tool_name: str,
+    records: tuple[FindingItem, ...],
+    aggregates: dict[str, object],
+    next_tools: tuple[str, ...],
+    extra: dict[str, object] | None = None,
+    limit: int = INLINE_ITEM_LIMIT,
+) -> dict[str, object]:
+    """Build a bounded envelope: <= limit items inline, the rest behind a result_id.
+
+    Reuses the same ResultStoreService / retrieve_result machinery that
+    find_symbol uses, so the full collection is never dropped — only paged.
+    """
+    total = len(records)
+    items = records[:limit]
+    omitted = max(0, total - limit)
+    result_id: str | None = None
+    retrieval_hints: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()
+    if omitted > 0:
+        raw_result = cast(
+            "JsonValue",
+            {
+                "kind": kind,
+                "items": [dict(record) for record in records],
+                **aggregates,
+            },
+        )
+        stored = ResultStoreService(repo).store_result(
+            project_id=_store_project_id(repo),
+            tool_name=tool_name,
+            input_payload={"repo": repo},
+            raw_result=raw_result,
+        )
+        result_id = stored.id
+        retrieval_hints = (
+            f"retrieve_result(result_id='{result_id}', mode='exact', limit=100)",
+            f"retrieve_result(result_id='{result_id}', mode='filtered', file='<path>')",
+            f"retrieve_result(result_id='{result_id}', mode='summary')",
+        )
+        warnings = (
+            "".join(
+                (
+                    f"{omitted} of {total} {kind} items omitted from inline output; ",
+                    "call retrieve_result with the result_id to page the full set.",
+                ),
+            ),
+        )
+    envelope: dict[str, object] = {
+        "ok": True,
+        "kind": kind,
+        **aggregates,
+        "items": items,
+        "returned_count": len(items),
+        "omitted_count": omitted,
+        "result_id": result_id,
+        "retrieval_available": result_id is not None,
+        "retrieval_hints": retrieval_hints,
+        "warnings": warnings,
+        "next_tools": next_tools,
+    }
+    if extra is not None:
+        envelope.update(extra)
+    return envelope
+
+
+def build_scan_envelope(
+    scan: CodeHealthScanResult,
+    *,
+    repo: str,
+    next_tools: tuple[str, ...],
+    regressed_finding_ids: tuple[str, ...] | None = None,
+) -> dict[str, object]:
+    is_rescan = regressed_finding_ids is not None
+    kind = "rescan" if is_rescan else "scan"
+    tool_name = "rescan" if is_rescan else "scan_code_health"
+    ordered = sorted(
+        scan.findings,
+        key=lambda finding: (severity_rank(finding.severity), finding.id),
+    )
+    records = tuple(scan_finding_item(finding) for finding in ordered)
+    severity_counts, rule_counts = aggregate_counts(
+        (finding.severity, finding.rule_id) for finding in scan.findings
+    )
+    aggregates: dict[str, object] = {
+        "status": "complete",
+        "scan_id": scan.scan_id,
+        "findings_created": scan.findings_created,
+        "files_scanned": scan.files_scanned,
+        "findings_resolved": scan.findings_resolved,
+        "total_count": len(scan.findings),
+        "severity_counts": severity_counts,
+        "rule_counts": rule_counts,
+        "rule_ids": scan.rule_ids,
+        "finding_ids": tuple(finding.id for finding in ordered[:INLINE_ITEM_LIMIT]),
+    }
+    extra: dict[str, object] | None = None
+    if regressed_finding_ids is not None:
+        extra = {
+            "regressed_finding_ids": regressed_finding_ids[:INLINE_ITEM_LIMIT],
+            "regressed_count": len(regressed_finding_ids),
+        }
+    return bounded_finding_list(
+        kind=kind,
+        repo=repo,
+        tool_name=tool_name,
+        records=records,
+        aggregates=aggregates,
+        next_tools=next_tools,
+        extra=extra,
+    )
+
+
+def _store_project_id(repo: str) -> str:
+    return f"repo:{resolve_repo_root(repo).as_posix()}"
 
 
 def detail_payload(detail: FindingDetail) -> FindingDetailToolPayload:
