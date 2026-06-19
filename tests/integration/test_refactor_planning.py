@@ -1,6 +1,8 @@
 from pathlib import Path
 
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.services.code_health import CodeHealthService
+from codescent.services.config import ConfigService
 from codescent.services.refactor_planning import RefactorPlanningService
 
 
@@ -84,5 +86,8 @@ def load_config() -> str:
 def test_load_config() -> None:
     assert load_config() == "pending-review"
 """,
+    )
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
     )
     return repo

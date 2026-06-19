@@ -1,8 +1,9 @@
 from pathlib import Path
 
-from codescent.core.models import ProjectConfig
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.engine.packs import build_pack_registry
 from codescent.services.code_health import CodeHealthService
+from codescent.services.config import ConfigService
 from codescent.services.repo_index import RepoIndexService
 
 
@@ -42,7 +43,9 @@ def test_python_pack_registers_parser_rules_and_context_without_behavior_regress
 """,
     )
 
-    registry = build_pack_registry(ProjectConfig())
+    registry = build_pack_registry(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
+    )
 
     assert tuple(pack.name for pack in registry.language_packs) == (
         "python",
@@ -56,6 +59,9 @@ def test_python_pack_registers_parser_rules_and_context_without_behavior_regress
     assert registry.parser_for_language("python") is not None
     assert registry.parser_for_language("typescript") is not None
 
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
+    )
     index_result = RepoIndexService(repo).index_repo()
     scan_result = CodeHealthService(repo).scan()
 

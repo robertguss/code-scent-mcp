@@ -41,6 +41,39 @@ rules = [
 Python import prefixes, so `codescent.cli` also matches `codescent.cli.main`.
 When no architecture rules are configured, the scanner returns no findings.
 
+## Maintainability Thresholds
+
+The deterministic maintainability rules use size/count thresholds that you can
+tune per repo. Defaults are calibrated for real codebases — they flag genuinely
+large or repetitive code, not the median file. Override any subset in
+`.codescent/config.toml`:
+
+```toml
+[thresholds]
+# Python
+large_file_lines = 300
+large_function_lines = 50
+large_class_lines = 200
+too_many_imports = 20
+deep_nesting = 4
+todo_cluster_size = 3
+duplicate_literal_min_count = 4
+duplicate_literal_min_length = 8
+# TypeScript / React / Next
+ts_large_component_lines = 150
+ts_too_many_hooks = 8
+ts_too_many_props = 8
+ts_too_many_exports = 10
+ts_route_handler_lines = 40
+```
+
+The values above are the defaults. Lower them to surface more findings (useful
+on small or strict codebases); raise them to reduce noise on large legacy
+repositories. Every finding records the threshold it was measured against in its
+evidence, so `explain_score` and `get_finding` always show why something was
+flagged. Thresholds are a pure input to the deterministic scan — the same repo
+and the same thresholds always produce the same findings.
+
 ## Coverage Report
 
 Coverage ingestion reads an existing Cobertura XML report when present. By

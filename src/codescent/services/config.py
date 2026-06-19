@@ -27,6 +27,12 @@ class ConfigService:
             return ProjectConfig()
         return ProjectConfig.model_validate(_parse_config(config_path))
 
+    def save(self, config: ProjectConfig) -> None:
+        repo_root = resolve_repo_root(self.repo_root)
+        config_path = repo_root / ".codescent" / "config.toml"
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        _ = config_path.write_text(_render_config(config))
+
     def save_rule_packs(self, rule_packs: tuple[str, ...]) -> ProjectConfig:
         repo_root = resolve_repo_root(self.repo_root)
         config = self.load().model_copy(update={"rule_packs": rule_packs})
@@ -66,6 +72,10 @@ def _render_config(config: ProjectConfig) -> str:
             "framework_packs": list(config.framework_packs),
             "rule_packs": list(config.rule_packs),
             "coverage_path": config.coverage_path,
+            "thresholds": cast(
+                "dict[str, TomlValue]",
+                config.thresholds.model_dump(mode="python"),
+            ),
         },
     )
 

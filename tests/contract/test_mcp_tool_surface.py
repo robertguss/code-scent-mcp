@@ -138,7 +138,8 @@ async def test_tool_outputs_match_bounded_schema_snapshots() -> None:
     assert scan.ok is True
     assert scan.status == "complete"
     assert scan.finding_ids
-    assert "python.large_function" in scan.rule_ids
+    # A size-independent rule so this stays stable regardless of threshold config.
+    assert "python.dead_code_candidate" in scan.rule_ids
     # Boundedness: inline ids/items never exceed the cap, even if total is larger.
     assert len(scan.finding_ids) <= INLINE_ITEM_LIMIT
     assert len(scan.items) <= INLINE_ITEM_LIMIT

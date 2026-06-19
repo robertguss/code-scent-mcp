@@ -3,9 +3,11 @@ from pathlib import Path
 
 import pytest
 
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.engine.context import source_range
 from codescent.engine.inventory import build_file_inventory
 from codescent.services.code_health import CodeHealthService
+from codescent.services.config import ConfigService
 from codescent.services.repo_index import RepoIndexService
 from codescent.services.search import SearchService
 
@@ -124,6 +126,9 @@ def test_code_health_scans_skip_oversized_python_and_typescript_files(
     _write_oversized_typescript(ts_huge)
     _guard_oversized_reads(monkeypatch, python_huge, ts_huge)
 
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
+    )
     result = CodeHealthService(repo).scan()
     by_rule = {finding.rule_id: finding for finding in result.findings}
     finding_paths = {finding.file_path for finding in result.findings}

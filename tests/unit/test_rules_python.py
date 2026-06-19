@@ -1,11 +1,19 @@
 from pathlib import Path
 from textwrap import dedent
 
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.engine.rules.python import scan_python_health
+
+# The fixtures here are deliberately tiny; exercise rule logic at the strict
+# (historical) thresholds rather than the laxer production defaults.
+STRICT_CONFIG = ProjectConfig(thresholds=MaintainabilityThresholds.strict())
 
 
 def test_fixture_rules_find_expected_findings() -> None:
-    findings = scan_python_health(Path("tests/fixtures/python-basic"))
+    findings = scan_python_health(
+        Path("tests/fixtures/python-basic"),
+        config=STRICT_CONFIG,
+    )
     by_rule = {finding.rule_id: finding for finding in findings}
 
     assert set(by_rule) >= {
@@ -33,10 +41,10 @@ def test_finding_stable_key_survives_line_shift(tmp_path: Path) -> None:
     source.parent.mkdir(parents=True)
     body = "\n".join(f"    step_{index} = {index}" for index in range(25))
     _ = source.write_text(f"def process() -> None:\n{body}\n")
-    first = scan_python_health(repo)
+    first = scan_python_health(repo, config=STRICT_CONFIG)
 
     _ = source.write_text(f"\n\n\ndef process() -> None:\n{body}\n")
-    second = scan_python_health(repo)
+    second = scan_python_health(repo, config=STRICT_CONFIG)
 
     first_large = next(
         finding for finding in first if finding.rule_id == "python.large_function"

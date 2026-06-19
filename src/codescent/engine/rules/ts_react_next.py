@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 from codescent.core.models import ProjectConfig
 from codescent.core.paths import resolve_repo_root
@@ -13,13 +13,8 @@ from codescent.engine.source_read import read_source_lines
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from codescent.core.models import MaintainabilityThresholds
     from codescent.engine.parsers.python import ParsedPythonFile, ParsedSymbol
-
-LARGE_COMPONENT_LINES: Final = 12
-TOO_MANY_HOOKS: Final = 1
-TOO_MANY_PROPS: Final = 3
-TOO_MANY_EXPORTS: Final = 3
-ROUTE_HANDLER_LINES: Final = 3
 
 
 def scan_ts_react_next_health(
@@ -29,6 +24,7 @@ def scan_ts_react_next_health(
 ) -> tuple[CodeHealthFinding, ...]:
     repo_root = resolve_repo_root(root)
     project_config = config or ProjectConfig()
+    thresholds = project_config.thresholds
     findings: list[CodeHealthFinding] = []
     inventory = build_file_inventory(repo_root, config=project_config)
     indexed_paths = {item.path for item in inventory}
@@ -40,16 +36,19 @@ def scan_ts_react_next_health(
         if source.lines is None:
             continue
         lines = list(source.lines)
-        findings.extend(_large_components(parsed))
-        findings.extend(_too_many_hooks(parsed, lines))
-        findings.extend(_too_many_props(parsed, lines))
-        findings.extend(_too_many_exports(parsed, lines))
-        findings.extend(_route_handler_too_much(parsed))
+        findings.extend(_large_components(parsed, thresholds))
+        findings.extend(_too_many_hooks(parsed, lines, thresholds))
+        findings.extend(_too_many_props(parsed, lines, thresholds))
+        findings.extend(_too_many_exports(parsed, lines, thresholds))
+        findings.extend(_route_handler_too_much(parsed, thresholds))
         findings.extend(secondary_findings(parsed, lines, indexed_paths))
     return tuple(findings)
 
 
-def _large_components(parsed: ParsedPythonFile) -> tuple[CodeHealthFinding, ...]:
+def _large_components(
+    parsed: ParsedPythonFile,
+    thresholds: MaintainabilityThresholds,
+) -> tuple[CodeHealthFinding, ...]:
     return tuple(
         build_finding(
             FindingSpec(
@@ -60,23 +59,27 @@ def _large_components(parsed: ParsedPythonFile) -> tuple[CodeHealthFinding, ...]
                 symbol=symbol.qualified_name,
                 severity="warning",
                 confidence=0.8,
-                evidence={"line_count": span, "threshold": LARGE_COMPONENT_LINES},
+                evidence={
+                    "line_count": span,
+                    "threshold": thresholds.ts_large_component_lines,
+                },
                 suggested_action="Extract smaller presentational components or hooks.",
             ),
         )
         for symbol in parsed.symbols
         if symbol.kind == "component"
         for span in (_symbol_span(symbol),)
-        if span >= LARGE_COMPONENT_LINES
+        if span >= thresholds.ts_large_component_lines
     )
 
 
 def _too_many_hooks(
     parsed: ParsedPythonFile,
     lines: list[str],
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
     hook_count = sum(_hook_call_count(line) for line in lines)
-    if hook_count <= TOO_MANY_HOOKS:
+    if hook_count <= thresholds.ts_too_many_hooks:
         return ()
     hook_symbol = _first_symbol(parsed, "hook")
     return (
@@ -89,7 +92,10 @@ def _too_many_hooks(
                 symbol=hook_symbol.qualified_name if hook_symbol is not None else None,
                 severity="info",
                 confidence=0.7,
-                evidence={"hook_count": hook_count, "threshold": TOO_MANY_HOOKS},
+                evidence={
+                    "hook_count": hook_count,
+                    "threshold": thresholds.ts_too_many_hooks,
+                },
                 suggested_action="Split independent state/effects into smaller hooks.",
             ),
         ),
@@ -99,9 +105,10 @@ def _too_many_hooks(
 def _too_many_props(
     parsed: ParsedPythonFile,
     lines: list[str],
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
     prop_count = _type_field_count(lines, "Props")
-    if prop_count <= TOO_MANY_PROPS:
+    if prop_count <= thresholds.ts_too_many_props:
         return ()
     return (
         build_finding(
@@ -113,7 +120,10 @@ def _too_many_props(
                 symbol=_first_symbol_name(parsed, "component"),
                 severity="info",
                 confidence=0.65,
-                evidence={"prop_count": prop_count, "threshold": TOO_MANY_PROPS},
+                evidence={
+                    "prop_count": prop_count,
+                    "threshold": thresholds.ts_too_many_props,
+                },
                 suggested_action="Group related props into named view models.",
             ),
         ),
@@ -123,9 +133,10 @@ def _too_many_props(
 def _too_many_exports(
     parsed: ParsedPythonFile,
     lines: list[str],
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
     export_count = sum(1 for line in lines if line.lstrip().startswith("export "))
-    if export_count <= TOO_MANY_EXPORTS:
+    if export_count <= thresholds.ts_too_many_exports:
         return ()
     return (
         build_finding(
@@ -137,7 +148,10 @@ def _too_many_exports(
                 symbol=None,
                 severity="info",
                 confidence=0.65,
-                evidence={"export_count": export_count, "threshold": TOO_MANY_EXPORTS},
+                evidence={
+                    "export_count": export_count,
+                    "threshold": thresholds.ts_too_many_exports,
+                },
                 suggested_action="Split unrelated exports into focused modules.",
             ),
         ),
@@ -146,6 +160,7 @@ def _too_many_exports(
 
 def _route_handler_too_much(
     parsed: ParsedPythonFile,
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
     return tuple(
         build_finding(
@@ -157,7 +172,10 @@ def _route_handler_too_much(
                 symbol=symbol.qualified_name,
                 severity="warning",
                 confidence=0.75,
-                evidence={"line_count": span, "threshold": ROUTE_HANDLER_LINES},
+                evidence={
+                    "line_count": span,
+                    "threshold": thresholds.ts_route_handler_lines,
+                },
                 suggested_action=(
                     "Move route work into a service and keep the handler thin."
                 ),
@@ -166,7 +184,7 @@ def _route_handler_too_much(
         for symbol in parsed.symbols
         if symbol.kind == "route"
         for span in (_symbol_span(symbol),)
-        if span >= ROUTE_HANDLER_LINES
+        if span >= thresholds.ts_route_handler_lines
     )
 
 

@@ -8,8 +8,13 @@ from typing import cast
 import pytest
 
 import codescent.services.findings as findings_module
-from codescent.core.models import FindingStatus
+from codescent.core.models import (
+    FindingStatus,
+    MaintainabilityThresholds,
+    ProjectConfig,
+)
 from codescent.services.code_health import CodeHealthService
+from codescent.services.config import ConfigService
 from codescent.services.findings import (
     MAX_VERIFICATION_OUTPUT_SUMMARY_CHARS,
     FindingsService,
@@ -404,6 +409,9 @@ def load_config() -> str:
 
 CONFIG = load_config()
 """,
+    )
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
     )
     return repo
 

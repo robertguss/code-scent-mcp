@@ -6,11 +6,15 @@ from fastmcp import Client
 from mcp.types import ContentBlock, TextContent
 from pydantic import BaseModel, ConfigDict, Field
 
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.mcp.finding_payloads import INLINE_ITEM_LIMIT
 from codescent.mcp.server import mcp
+from codescent.services.config import ConfigService
 from codescent.services.result_store import MAX_RETRIEVE_LIMIT
 
 MAX_BOUNDED_PAYLOAD_CHARS = 8192
+# Tiny fixtures need the strict (historical) thresholds to produce findings.
+STRICT_CONFIG = ProjectConfig(thresholds=MaintainabilityThresholds.strict())
 
 
 class ScanToolPayload(BaseModel):
@@ -431,6 +435,7 @@ def test_load_config() -> None:
     assert load_config() == "pending-review"
 """,
     )
+    ConfigService(repo).save(STRICT_CONFIG)
     return repo
 
 

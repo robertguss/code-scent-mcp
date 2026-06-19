@@ -3,10 +3,11 @@ from __future__ import annotations
 import shutil
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Final
+from typing import TYPE_CHECKING, ClassVar, Final, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from codescent.core.models import MaintainabilityThresholds
 from codescent.services.code_health import CodeHealthService
 from codescent.services.context import ContextService
 from codescent.services.refactor_planning import RefactorPlanningService
@@ -102,6 +103,10 @@ def run_deterministic_eval(
         message = "fixture_root does not match repo"
         raise ValueError(message)
     shutil.rmtree(repo / ".codescent", ignore_errors=True)
+    # The eval fixtures are deliberately tiny. Pin the strict (historical)
+    # thresholds so they keep producing a rich finding set; production defaults
+    # are intentionally laxer and would leave these small files under threshold.
+    _write_strict_thresholds(repo)
     start = time.perf_counter()
     before = _source_snapshot(repo)
     scan = CodeHealthService(repo).scan()
@@ -202,6 +207,17 @@ def _workflow_score(
         return 0.0
     plan = RefactorPlanningService(repo).plan_refactor(finding_id)
     return 1.0 if plan.verification_recommendations else 0.0
+
+
+def _write_strict_thresholds(repo: Path) -> None:
+    config_dir = repo / ".codescent"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    thresholds = cast(
+        "dict[str, int]",
+        MaintainabilityThresholds.strict().model_dump(mode="python"),
+    )
+    lines = ["[thresholds]", *(f"{key} = {value}" for key, value in thresholds.items())]
+    _ = (config_dir / "config.toml").write_text("\n".join(lines) + "\n")
 
 
 def _source_snapshot(repo: Path) -> dict[str, str]:

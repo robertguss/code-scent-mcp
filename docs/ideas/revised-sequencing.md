@@ -52,6 +52,14 @@ ships. Full spec in [`boundedness-bug-fix.md`](./boundedness-bug-fix.md).
 
 ### P1 — Threshold sanity first, then relative thresholds (split from #1; ~S/M)
 
+**Status: part 1 (absolute re-tune) shipped 2026-06-19.** Thresholds are now a
+configurable `[thresholds]` section (`MaintainabilityThresholds`) with sane
+production defaults; the historical aggressive values live behind a `strict()`
+profile used by the tiny fixtures/evals. On the CodeScent repo this dropped the
+scan from **1,208 → 470 findings** (duplicate_literal −73%, large_function −78%,
+large_file −83%). Part 2 (relative "large-for-this-repo" thresholds) is still
+pending. See [configuration.md](../configuration.md#maintainability-thresholds).
+
 The plan bundles relative thresholds inside the adaptive feature (#1c) and keeps
 the absolute constants. Reverse the emphasis:
 

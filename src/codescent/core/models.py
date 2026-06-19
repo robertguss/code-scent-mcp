@@ -88,6 +88,57 @@ class ArchitectureRules(BaseModel):
     rules: tuple[ArchitectureRule, ...] = ()
 
 
+class MaintainabilityThresholds(BaseModel):
+    """Tunable size/count thresholds for the deterministic maintainability rules.
+
+    Defaults are calibrated for real codebases — they flag genuinely large or
+    repetitive code, not the median file. Lower them per-repo (or use
+    ``strict()``) to surface more findings on small inputs.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    # Python
+    large_file_lines: int = Field(default=300, ge=1)
+    large_function_lines: int = Field(default=50, ge=1)
+    large_class_lines: int = Field(default=200, ge=1)
+    too_many_imports: int = Field(default=20, ge=1)
+    deep_nesting: int = Field(default=4, ge=1)
+    todo_cluster_size: int = Field(default=3, ge=1)
+    duplicate_literal_min_count: int = Field(default=4, ge=2)
+    duplicate_literal_min_length: int = Field(default=8, ge=1)
+    # TypeScript / React / Next
+    ts_large_component_lines: int = Field(default=150, ge=1)
+    ts_too_many_hooks: int = Field(default=8, ge=1)
+    ts_too_many_props: int = Field(default=8, ge=1)
+    ts_too_many_exports: int = Field(default=10, ge=1)
+    ts_route_handler_lines: int = Field(default=40, ge=1)
+
+    @classmethod
+    def strict(cls) -> Self:
+        """The historical aggressive thresholds.
+
+        Retained for the tiny test fixtures and deterministic evals, which need a
+        rich finding set on small inputs. Not recommended for real repositories —
+        these flag most files and were the cause of the signal-to-noise problem.
+        """
+        return cls(
+            large_file_lines=70,
+            large_function_lines=25,
+            large_class_lines=60,
+            too_many_imports=12,
+            deep_nesting=4,
+            todo_cluster_size=3,
+            duplicate_literal_min_count=3,
+            duplicate_literal_min_length=4,
+            ts_large_component_lines=12,
+            ts_too_many_hooks=1,
+            ts_too_many_props=3,
+            ts_too_many_exports=3,
+            ts_route_handler_lines=3,
+        )
+
+
 class ProjectConfig(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
@@ -104,6 +155,9 @@ class ProjectConfig(BaseModel):
     token_budgets: TokenBudgets = Field(default_factory=TokenBudgets)
     privacy: PrivacySettings = Field(default_factory=PrivacySettings)
     architecture: ArchitectureRules = Field(default_factory=ArchitectureRules)
+    thresholds: MaintainabilityThresholds = Field(
+        default_factory=MaintainabilityThresholds,
+    )
     llm: LlmSettings | None = None
 
     def with_overrides(
