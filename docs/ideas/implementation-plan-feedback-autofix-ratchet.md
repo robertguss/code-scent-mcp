@@ -1,7 +1,7 @@
 # Implementation Plan: Adaptive Findings, Safe-Refactor Loop, and CI Ratchet
 
 A combined, decision-complete design and implementation plan for three of the
-ten ideas in [`docs/ideas.md`](./ideas.md):
+ten ideas in [`./ideas.md`](./ideas.md):
 
 - **Idea #6 — CI ratchet baseline** (built first; adoption unlock, mostly
   hardening existing scaffolding).

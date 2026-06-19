@@ -19,7 +19,7 @@ mechanism (tools and data sources), why CodeScent specifically wins, and a
 feasibility note grounded in the current code.
 
 A companion implementation plan for the top three (#1, #3, #6) lives at
-[`docs/implementation-plan-feedback-autofix-ratchet.md`](./implementation-plan-feedback-autofix-ratchet.md).
+[`./implementation-plan-feedback-autofix-ratchet.md`](./implementation-plan-feedback-autofix-ratchet.md).
 
 ---
 
