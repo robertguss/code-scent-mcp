@@ -86,6 +86,7 @@ class ImpactToolPayload(TypedDict):
 
 class VerifyRefactorToolPayload(TypedDict):
     ok: bool
+    verifiable: bool
     preserved: bool
     path: str
     base_ref: str
@@ -296,6 +297,7 @@ def _verify_change_payload(
 def _verify_refactor_payload(result: VerifyResult) -> VerifyRefactorToolPayload:
     return {
         "ok": True,
+        "verifiable": result.verifiable,
         "preserved": result.preserved,
         "path": result.path,
         "base_ref": result.base_ref,

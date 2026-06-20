@@ -53,6 +53,11 @@ class VerifyViolation:
 
 @dataclass(frozen=True, slots=True)
 class VerifyResult:
+    # `preserved` is only meaningful when `verifiable` is true. When the tool
+    # could not analyze the file (unsupported language, unreadable/unparseable
+    # state) it returns verifiable=False, and callers must not treat
+    # preserved=False as "behavior broke".
+    verifiable: bool
     preserved: bool
     path: str
     base_ref: str
@@ -81,19 +86,25 @@ class VerifyRefactorService:
         if not path.endswith((".py", ".pyi")):
             return _unsupported(path, base_ref, transform_kind)
         after_path = normalize_repo_path(repo_root, path)
+        # Use the normalized repo-relative path for *both* states so an absolute
+        # or `..` path cannot read the working tree while silently failing the
+        # `git show` and degrading to a false "preserved".
+        relative_path = after_path.relative_to(repo_root).as_posix()
         after = read_source_text(after_path)
         if after.text is None:
             return _failed(
-                path,
+                relative_path,
                 base_ref,
                 transform_kind,
                 "after state could not be read",
             )
-        before = git_file_at_ref(repo_root, base_ref, path) if base_ref else None
+        before = (
+            git_file_at_ref(repo_root, base_ref, relative_path) if base_ref else None
+        )
         return verify_python_sources(
             before,
             after.text,
-            path=path,
+            path=relative_path,
             base_ref=base_ref,
             transform_kind=transform_kind,
         )
@@ -156,6 +167,7 @@ def verify_python_sources(
             f"{branch_delta} net-new control-flow branch(es) — verify added logic",
         )
     return VerifyResult(
+        verifiable=True,
         preserved=not violations,
         path=path,
         base_ref=base_ref,
@@ -208,19 +220,33 @@ def _is_public(name: str) -> bool:
 
 def _signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     args = node.args
-    parts: list[str] = [arg.arg for arg in args.posonlyargs]
+    positional = [*args.posonlyargs, *args.args]
+    # Defaults bind to the tail of the positional parameters.
+    first_default = len(positional) - len(args.defaults)
+    parts: list[str] = []
+    for index, arg in enumerate(args.posonlyargs):
+        parts.append(_param(arg.arg, has_default=index >= first_default))
     if args.posonlyargs:
         parts.append("/")
-    parts.extend(arg.arg for arg in args.args)
+    for offset, arg in enumerate(args.args):
+        index = len(args.posonlyargs) + offset
+        parts.append(_param(arg.arg, has_default=index >= first_default))
     if args.vararg is not None:
         parts.append(f"*{args.vararg.arg}")
     elif args.kwonlyargs:
         parts.append("*")
-    parts.extend(arg.arg for arg in args.kwonlyargs)
+    for index, arg in enumerate(args.kwonlyargs):
+        parts.append(_param(arg.arg, has_default=args.kw_defaults[index] is not None))
     if args.kwarg is not None:
         parts.append(f"**{args.kwarg.arg}")
     returns = f" -> {ast.unparse(node.returns)}" if node.returns is not None else ""
     return f"({', '.join(parts)}){returns}"
+
+
+def _param(name: str, *, has_default: bool) -> str:
+    # Mark default presence (removing a default breaks callers that relied on it)
+    # without baking the default's literal value into the signature identity.
+    return f"{name}=" if has_default else name
 
 
 def _branch_count(source: str) -> int:
@@ -233,6 +259,7 @@ def _branch_count(source: str) -> int:
 
 def _unsupported(path: str, base_ref: str, transform_kind: str) -> VerifyResult:
     return VerifyResult(
+        verifiable=False,
         preserved=False,
         path=path,
         base_ref=base_ref,
@@ -254,6 +281,7 @@ def _failed(
     detail: str,
 ) -> VerifyResult:
     return VerifyResult(
+        verifiable=False,
         preserved=False,
         path=path,
         base_ref=base_ref,

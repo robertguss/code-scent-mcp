@@ -245,6 +245,12 @@ MIGRATION_STATEMENTS: Final[dict[int, tuple[str, ...]]] = {
         create index if not exists idx_finding_baseline_file
             on finding_baseline(file_path)
         """,
+        """
+        create table if not exists baseline_meta (
+            id integer primary key check (id = 1),
+            accepted_at text not null
+        )
+        """,
     ),
 }
 

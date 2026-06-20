@@ -132,6 +132,23 @@ def test_ratchet_catches_a_swapped_finding_at_constant_count(tmp_path: Path) -> 
     )
 
 
+def test_ratchet_treats_a_pre_v8_baseline_as_stale_not_all_new(tmp_path: Path) -> None:
+    # Simulate a baseline accepted before schema v8: health_baseline is populated
+    # but finding_baseline is empty. The ratchet must not treat the whole backlog
+    # as new (which would fail CI) — it should no-op and flag the baseline stale.
+    repo = _repo(tmp_path, _function_module("process", 30))
+    service = CiService(repo)
+    _ = service.update_baseline()
+    _simulate_pre_v8_baseline(repo)
+
+    report = service.run(threshold="high", ratchet=True)
+
+    assert report.baseline_exists is True
+    assert report.baseline_stale is True
+    assert report.new_finding_count == 0
+    assert report.ok is True
+
+
 @pytest.mark.skipif(which("git") is None, reason="git is required for --base scoping")
 def test_ratchet_base_ref_scopes_to_changed_files(tmp_path: Path) -> None:
     repo = _repo(tmp_path, _function_module("small", 2))
@@ -164,6 +181,14 @@ def _git(repo: Path, *args: str) -> None:
         capture_output=True,
         text=True,
     )
+
+
+def _simulate_pre_v8_baseline(repo: Path) -> None:
+    # Pre-v8 baselines populated only health_baseline (no stable keys, no marker).
+    with closing(sqlite3.connect(repo / ".codescent" / "index.sqlite")) as connection:
+        _ = connection.execute("delete from finding_baseline")
+        _ = connection.execute("delete from baseline_meta")
+        connection.commit()
 
 
 def _finding_baseline_keys(repo: Path) -> tuple[str, ...]:

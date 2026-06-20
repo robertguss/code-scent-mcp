@@ -206,12 +206,11 @@ def _severity_weight(severity: str) -> float:
 
 
 def _max_severity(members: list[FindingRow]) -> str:
-    if any(member.severity in {"error", "warning"} for member in members):
-        return next(
-            member.severity
-            for member in members
-            if member.severity in {"error", "warning"}
-        )
+    severities = {member.severity for member in members}
+    if "error" in severities:
+        return "error"
+    if "warning" in severities:
+        return "warning"
     return members[0].severity
 
 

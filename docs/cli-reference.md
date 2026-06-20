@@ -160,10 +160,11 @@ absent from the baseline; CI fails only when a new finding is at least
 `fail_on_new_severity` severe (default `warning`), so resolving one finding and
 introducing a different one is caught even when the per-file count is unchanged.
 The pre-existing backlog never fails the build. `--base <ref>` scopes the check
-to files changed since that git ref (merge-base). With no accepted baseline the
-ratchet is a no-op that recommends accepting one rather than failing. Defaults
-live in the `[ratchet]` config section; omitting `--ratchet` keeps the absolute
-threshold behavior.
+to files changed since that git ref (merge-base). With no accepted baseline — or
+one accepted before stable-key tracking shipped (`baseline_stale: true`) — the
+ratchet is a no-op that recommends re-running `--update-baseline` rather than
+failing. Defaults live in the `[ratchet]` config section; omitting `--ratchet`
+keeps the absolute threshold behavior.
 
 ### `review-diff`
 

@@ -59,6 +59,7 @@ class CiReportPayload(TypedDict):
     ratchet_enabled: NotRequired[bool]
     ratchet_regressions: NotRequired[list[ChangedFileHealthPayload]]
     baseline_exists: NotRequired[bool]
+    baseline_stale: NotRequired[bool]
     base_ref: NotRequired[str]
     new_finding_count: NotRequired[int]
     resolved_count: NotRequired[int]
@@ -307,6 +308,7 @@ def _ci_payload(report_data: CiReport) -> CiReportPayload:
             for health in report_data.ratchet_regressions
         ]
         payload["baseline_exists"] = report_data.baseline_exists
+        payload["baseline_stale"] = report_data.baseline_stale
         payload["base_ref"] = report_data.base_ref
         payload["new_finding_count"] = report_data.new_finding_count
         payload["resolved_count"] = report_data.resolved_count

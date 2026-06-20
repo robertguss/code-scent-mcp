@@ -54,6 +54,7 @@ def test_migrates_mvp_schema_to_latest_without_data_loss(tmp_path: Path) -> None
             "select 1 from stored_results limit 0",
             "select 1 from verification_runs limit 0",
             "select 1 from finding_baseline limit 0",
+            "select 1 from baseline_meta limit 0",
         ):
             cursor = connection.execute(statement)
             assert cursor.description is not None

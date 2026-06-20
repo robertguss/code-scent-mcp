@@ -54,6 +54,7 @@ class CiReport:
     ratchet_enabled: bool = False
     ratchet_regressions: tuple[ChangedFileSummary, ...] = ()
     baseline_exists: bool = True
+    baseline_stale: bool = False
     base_ref: str = ""
     new_findings: tuple[NewFindingSummary, ...] = ()
     new_finding_count: int = 0
@@ -97,14 +98,24 @@ class CiService:
         resolved_count = 0
         blocking_new = False
         baseline_exists = True
+        baseline_stale = False
         if ratchet:
             ratchet_config = ConfigService(self.repo_root).load().ratchet
             base_ref = base_ref or ratchet_config.base_ref
-            baseline_exists = _baseline_exists(self.repo_root)
-            if baseline_exists:
+            accepted = _baseline_accepted(self.repo_root)
+            health_exists = _baseline_exists(self.repo_root)
+            baseline_exists = accepted or health_exists
+            # A baseline accepted before schema v8 populated only health_baseline
+            # (no stable-key marker). Trusting its empty finding_baseline would
+            # make the ratchet treat the entire backlog as new and fail CI — the
+            # regression the ratchet exists to prevent. No-op and flag it instead.
+            baseline_stale = health_exists and not accepted
+            if accepted:
+                stable_keys = _baseline_stable_keys(self.repo_root)
                 new_findings, resolved_count = self._new_and_resolved(
                     scan.findings,
                     base_ref=base_ref,
+                    baseline_keys=stable_keys,
                 )
                 blocking_new = _has_blocking_new(
                     new_findings,
@@ -114,8 +125,8 @@ class CiService:
         # In ratchet mode the gate is *new* debt only — the pre-existing
         # backlog (and the absolute risk level it drives) must not fail CI, which
         # is the whole point of the ratchet. The count-based regressions remain
-        # for display only. With no accepted baseline the ratchet is a no-op
-        # (it recommends accepting a baseline rather than failing).
+        # for display only. With no accepted baseline (or a stale pre-v8 one) the
+        # ratchet is a no-op that recommends accepting a baseline.
         ok = not blocking_new if ratchet else _passes(threshold, risk_level)
         return CiReport(
             ok=ok,
@@ -127,6 +138,7 @@ class CiService:
             ratchet_enabled=ratchet,
             ratchet_regressions=ratchet_regressions,
             baseline_exists=baseline_exists if ratchet else True,
+            baseline_stale=baseline_stale,
             base_ref=base_ref,
             new_findings=new_findings[:_NEW_FINDING_REPORT_LIMIT],
             new_finding_count=len(new_findings),
@@ -138,8 +150,8 @@ class CiService:
         findings: tuple[CodeHealthFinding, ...],
         *,
         base_ref: str,
+        baseline_keys: frozenset[str],
     ) -> tuple[tuple[NewFindingSummary, ...], int]:
-        baseline_keys = _baseline_stable_keys(self.repo_root)
         ratchet_findings = _ratchet_findings(findings)
         in_scope = _scope_findings(self.repo_root, ratchet_findings, base_ref)
         new_findings = tuple(
@@ -197,6 +209,16 @@ class CiService:
                     )
                     for finding in _ratchet_findings(scan.findings)
                 ),
+            )
+            # Mark that a stable-key baseline has been accepted. This survives a
+            # zero-finding baseline (empty finding_baseline), distinguishing it
+            # from a pre-v8 baseline that populated only health_baseline.
+            _ = connection.execute(
+                """
+                insert into baseline_meta (id, accepted_at) values (1, ?)
+                on conflict(id) do update set accepted_at = excluded.accepted_at
+                """,
+                (now,),
             )
         return BaselineUpdateResult(
             files_recorded=len(file_rows),
@@ -270,6 +292,15 @@ def _baseline_exists(repo_root: Path | str) -> bool:
     with RepositoryStorage(state).read_connection() as connection:
         rows: list[tuple[int]] = connection.execute(
             "select 1 from health_baseline limit 1",
+        ).fetchall()
+    return bool(rows)
+
+
+def _baseline_accepted(repo_root: Path | str) -> bool:
+    state = initialize_storage(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        rows: list[tuple[int]] = connection.execute(
+            "select 1 from baseline_meta limit 1",
         ).fetchall()
     return bool(rows)
 

@@ -42,6 +42,21 @@ def test_verify_refactor_preserves_unchanged_file(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(which("git") is None, reason="git is required for verify_refactor")
+def test_verify_refactor_accepts_an_absolute_path(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    absolute = str(repo / "src" / "config.py")
+
+    result = VerifyRefactorService(repo).verify_refactor(path=absolute)
+
+    # An absolute path must still resolve the before state (not degrade to a
+    # false "no before state; preserved"); the path is normalized for both sides.
+    assert result.path == "src/config.py"
+    assert result.verifiable is True
+    assert result.preserved is True
+    assert not any("no before state" in warning for warning in result.warnings)
+
+
+@pytest.mark.skipif(which("git") is None, reason="git is required for verify_refactor")
 def test_verify_refactor_flags_a_signature_change_versus_head(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     # Edit the working tree only; HEAD still has the original signature.
@@ -63,4 +78,6 @@ def test_verify_refactor_reports_unsupported_language(tmp_path: Path) -> None:
     result = VerifyRefactorService(repo).verify_refactor(path="app.ts")
 
     assert result.language == "unsupported"
+    # Not verifiable: callers must not treat this as "behavior broke".
+    assert result.verifiable is False
     assert result.preserved is False

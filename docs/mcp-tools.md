@@ -556,10 +556,13 @@ events, and telemetry.
   than blessing a risky change.
 - Inputs: repository root, required `path`, optional `base_ref` (default
   `HEAD`), optional `transform_kind` (default `generic`).
-- Outputs: `preserved` (bool), `violations` (each with `kind`, `symbol`,
-  `detail` — `removed_symbol` and `signature_changed` are blocking), `warnings`
-  (added public symbols, net-new branches), `added_symbols`, `removed_symbols`,
-  `changed_symbols`, `language`, `base_ref`, `transform_kind`, and `confidence`.
+- Outputs: `verifiable` (bool — `preserved` is only meaningful when true; false
+  for unsupported languages or an unreadable/unparseable state), `preserved`
+  (bool), `violations` (each with `kind`, `symbol`, `detail` — `removed_symbol`
+  and `signature_changed` are blocking), `warnings` (added public symbols,
+  net-new branches), `added_symbols`, `removed_symbols`, `changed_symbols`,
+  `language`, `base_ref`, `transform_kind`, and `confidence`. Signatures track
+  parameter names, order, kind, and default presence.
 - Bounds: source-read-only for analyzed files; both before/after states are read
   read-only (working tree on disk, baseline via `git show`) and compared in
   memory; bounded output by default; runtime no-network. Python (`.py`/`.pyi`)

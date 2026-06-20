@@ -44,6 +44,16 @@ def test_signature_change_on_a_surviving_symbol_is_a_violation() -> None:
     assert "strict" in violation.detail
 
 
+def test_removing_a_parameter_default_is_a_signature_change() -> None:
+    before = "def load(a, b=1):\n    return a\n"
+    after = "def load(a, b):\n    return a\n"
+
+    result = verify_python_sources(before, after, path="config.py")
+
+    assert result.preserved is False
+    assert result.changed_symbols == ("load",)
+
+
 def test_added_public_symbol_is_a_warning_not_a_violation() -> None:
     after = _BEFORE + "\n\ndef new_helper(value):\n    return value\n"
 
@@ -78,6 +88,7 @@ def test_private_helpers_are_not_part_of_the_public_surface() -> None:
 def test_missing_before_state_preserves_but_warns() -> None:
     result = verify_python_sources(None, _BEFORE, path="config.py")
 
+    assert result.verifiable is True
     assert result.preserved is True
     assert any("no before state" in warning for warning in result.warnings)
 
@@ -85,5 +96,7 @@ def test_missing_before_state_preserves_but_warns() -> None:
 def test_unparseable_after_state_is_unverifiable() -> None:
     result = verify_python_sources(_BEFORE, "def broken(:\n", path="config.py")
 
+    # Not verifiable — callers must not read preserved=False as "behavior broke".
+    assert result.verifiable is False
     assert result.preserved is False
     assert result.violations[0].kind == "unverifiable"
