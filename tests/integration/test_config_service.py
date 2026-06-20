@@ -1,6 +1,33 @@
 from pathlib import Path
 
+from codescent.core.models import (
+    ArchitectureRule,
+    ArchitectureRules,
+    MaintainabilityThresholds,
+    ProjectConfig,
+)
 from codescent.services.config import ConfigService
+
+
+def test_save_round_trips_all_config_sections(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    config = ProjectConfig(
+        coverage_path="reports/coverage.xml",
+        architecture=ArchitectureRules(
+            rules=(ArchitectureRule(layer="src/a", forbidden_imports=("b",)),),
+        ),
+        thresholds=MaintainabilityThresholds.strict(),
+    )
+
+    ConfigService(repo).save(config)
+    loaded = ConfigService(repo).load()
+
+    # save() must not silently drop sections it does not specifically set.
+    assert loaded.coverage_path == "reports/coverage.xml"
+    assert loaded.architecture.rules == config.architecture.rules
+    assert loaded.thresholds.large_file_lines == 70
+    assert loaded.token_budgets.context == config.token_budgets.context
 
 
 def test_config_service_loads_default_coverage_path(tmp_path: Path) -> None:

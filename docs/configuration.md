@@ -113,14 +113,16 @@ require_non_negative_net_health = false
 ```
 
 Accept a baseline with `codescent ci --update-baseline`; it records the current
-findings by stable key. A finding is _new_ when its stable key is absent from
-the baseline. `fail_on_new_severity` gates which new findings fail CI —
-`warning` (the default) ignores new `info` findings (e.g. a new TODO), `info`
-fails on any new finding. `base_ref` (or `--base <ref>`) restricts the check to
-files changed since that ref. The transient
-`python.changed_source_without_related_test` rule is excluded from the baseline
-comparison. CodeScent never runs tests; the ratchet reads only its own scan
-output and the local git diff.
+findings by stable key (and a marker so a zero-finding baseline is distinguished
+from a pre-v8 one). A finding is _new_ when its stable key is absent from the
+baseline. With `require_non_negative_net_health = true`, CI also fails when a
+run resolves fewer findings than it introduces (`net_health_delta < 0`).
+`fail_on_new_severity` gates which new findings fail CI — `warning` (the
+default) ignores new `info` findings (e.g. a new TODO), `info` fails on any new
+finding. `base_ref` (or `--base <ref>`) restricts the check to files changed
+since that ref. The transient `python.changed_source_without_related_test` rule
+is excluded from the baseline comparison. CodeScent never runs tests; the
+ratchet reads only its own scan output and the local git diff.
 
 ## Adaptive Findings
 

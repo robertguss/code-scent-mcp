@@ -83,10 +83,17 @@ class CalibrationService:
         )
 
     def adjusted_confidence(self, rule_id: str) -> RuleCalibration | None:
-        for calibration in self.get_calibration().rules:
-            if calibration.rule_id == rule_id:
-                return calibration
-        return None
+        # Calibrate only the requested rule rather than building the whole-repo
+        # report, so a single explain_score lookup does not group every rule.
+        settings = ConfigService(self.repo_root).load().adaptive
+        members = [
+            finding
+            for finding in _repository(self.repo_root).list_findings()
+            if finding.rule_id == rule_id
+        ]
+        if not members:
+            return None
+        return _rule_calibration(rule_id, members, settings)
 
 
 def _rule_calibrations(

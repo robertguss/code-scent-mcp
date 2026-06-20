@@ -59,6 +59,7 @@ class CiReport:
     new_findings: tuple[NewFindingSummary, ...] = ()
     new_finding_count: int = 0
     resolved_count: int = 0
+    net_health_delta: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +98,8 @@ class CiService:
         new_findings: tuple[NewFindingSummary, ...] = ()
         resolved_count = 0
         blocking_new = False
+        net_health_fail = False
+        net_health_delta = 0
         baseline_exists = True
         baseline_stale = False
         if ratchet:
@@ -121,13 +124,22 @@ class CiService:
                     new_findings,
                     ratchet_config.fail_on_new_severity,
                 )
+                net_health_delta = resolved_count - len(new_findings)
+                net_health_fail = (
+                    ratchet_config.require_non_negative_net_health
+                    and net_health_delta < 0
+                )
 
         # In ratchet mode the gate is *new* debt only — the pre-existing
         # backlog (and the absolute risk level it drives) must not fail CI, which
         # is the whole point of the ratchet. The count-based regressions remain
         # for display only. With no accepted baseline (or a stale pre-v8 one) the
         # ratchet is a no-op that recommends accepting a baseline.
-        ok = not blocking_new if ratchet else _passes(threshold, risk_level)
+        ok = (
+            not blocking_new and not net_health_fail
+            if ratchet
+            else _passes(threshold, risk_level)
+        )
         return CiReport(
             ok=ok,
             risk_level=risk_level,
@@ -143,6 +155,7 @@ class CiService:
             new_findings=new_findings[:_NEW_FINDING_REPORT_LIMIT],
             new_finding_count=len(new_findings),
             resolved_count=resolved_count,
+            net_health_delta=net_health_delta,
         )
 
     def _new_and_resolved(

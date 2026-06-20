@@ -179,8 +179,11 @@ def _cluster(
         effort_points=round(effort_points, 2),
         health_gain=health_gain,
         roi=roi,
+        # Keep the full membership: a cluster is the unit of work, so callers
+        # must be able to reach every finding in it (the plan itself is bounded
+        # at the cluster level). `files` is a capped human-facing summary.
         files=files[:_MEMBER_LIMIT],
-        finding_ids=tuple(member.id for member in members)[:_MEMBER_LIMIT],
+        finding_ids=tuple(member.id for member in members),
         suggested_action=members[0].suggested_action,
     )
 

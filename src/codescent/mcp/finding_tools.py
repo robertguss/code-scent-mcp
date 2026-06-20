@@ -43,8 +43,20 @@ _BACKLOG_STATUSES = frozenset(
     },
 )
 
+
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from fastmcp import FastMCP
+
+    from codescent.storage.repositories import FindingRow
+
+
+def _status_counts(rows: Iterable[FindingRow]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for finding in rows:
+        counts[finding.status.value] = counts.get(finding.status.value, 0) + 1
+    return counts
 
 
 def register_finding_tools(mcp: FastMCP) -> None:
@@ -203,7 +215,7 @@ def get_backlog(repo: str = ".") -> BacklogToolPayload:
     aggregates: dict[str, object] = {
         "open_count": len(rows),
         "total_count": len(rows),
-        "status_counts": report.status_counts,
+        "status_counts": _status_counts(rows),
         "severity_counts": severity_counts,
         "rule_counts": rule_counts,
     }
@@ -257,7 +269,7 @@ def get_regressions(repo: str = ".") -> RegressionsToolPayload:
     aggregates: dict[str, object] = {
         "count": len(rows),
         "total_count": len(rows),
-        "status_counts": report.status_counts,
+        "status_counts": _status_counts(rows),
         "severity_counts": severity_counts,
         "rule_counts": rule_counts,
     }

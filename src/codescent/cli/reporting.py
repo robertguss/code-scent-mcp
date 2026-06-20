@@ -61,6 +61,7 @@ class CiReportPayload(TypedDict):
     baseline_exists: NotRequired[bool]
     baseline_stale: NotRequired[bool]
     base_ref: NotRequired[str]
+    net_health_delta: NotRequired[int]
     new_finding_count: NotRequired[int]
     resolved_count: NotRequired[int]
     new_findings: NotRequired[list[NewFindingPayload]]
@@ -310,6 +311,7 @@ def _ci_payload(report_data: CiReport) -> CiReportPayload:
         payload["baseline_exists"] = report_data.baseline_exists
         payload["baseline_stale"] = report_data.baseline_stale
         payload["base_ref"] = report_data.base_ref
+        payload["net_health_delta"] = report_data.net_health_delta
         payload["new_finding_count"] = report_data.new_finding_count
         payload["resolved_count"] = report_data.resolved_count
         payload["new_findings"] = [

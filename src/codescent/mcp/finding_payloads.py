@@ -441,8 +441,11 @@ def build_scan_envelope(
     }
     extra: dict[str, object] | None = None
     if regressed_finding_ids is not None:
+        # Report the full regressed set: unlike the scan items it is not stored
+        # behind a result_id, so truncating it would silently drop regressions a
+        # watcher cannot recover. Ids are cheap and regressions are a focused set.
         extra = {
-            "regressed_finding_ids": regressed_finding_ids[:INLINE_ITEM_LIMIT],
+            "regressed_finding_ids": regressed_finding_ids,
             "regressed_count": len(regressed_finding_ids),
         }
     return bounded_finding_list(

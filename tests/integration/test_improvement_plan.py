@@ -67,6 +67,8 @@ def test_improvement_plan_clusters_by_theme_with_roi_and_effort(tmp_path: Path) 
     assert duplicates.theme == "Consolidate 5 duplicate literal(s) in src/pkg"
     assert duplicates.effort in {"S", "M"}
     assert len(duplicates.files) == 5
+    # The full membership is retained (not capped), so every finding is reachable.
+    assert len(duplicates.finding_ids) == duplicates.size
     # The clustered, mechanical fix has a higher ROI than the structural one.
     assert duplicates.roi > large_function.roi
     # Clusters are returned in descending ROI order.

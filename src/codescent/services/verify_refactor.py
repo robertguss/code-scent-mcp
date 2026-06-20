@@ -15,6 +15,7 @@ import ast
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
+from codescent.core.errors import CodeScentError
 from codescent.core.paths import normalize_repo_path, resolve_repo_root
 from codescent.engine.source_read import read_source_text
 from codescent.services.git import git_file_at_ref
@@ -85,7 +86,17 @@ class VerifyRefactorService:
         repo_root = resolve_repo_root(self.repo_root)
         if not path.endswith((".py", ".pyi")):
             return _unsupported(path, base_ref, transform_kind)
-        after_path = normalize_repo_path(repo_root, path)
+        try:
+            after_path = normalize_repo_path(repo_root, path)
+        except CodeScentError:
+            # A path that escapes the repo is a caller error, but the tool's
+            # contract is to always return a structured (unverifiable) result.
+            return _failed(
+                path,
+                base_ref,
+                transform_kind,
+                "path is outside the repository",
+            )
         # Use the normalized repo-relative path for *both* states so an absolute
         # or `..` path cannot read the working tree while silently failing the
         # `git show` and degrading to a false "preserved".

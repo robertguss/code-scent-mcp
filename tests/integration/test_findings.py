@@ -13,6 +13,7 @@ from codescent.core.models import (
     MaintainabilityThresholds,
     ProjectConfig,
 )
+from codescent.mcp.finding_tools import get_backlog
 from codescent.services.code_health import CodeHealthService
 from codescent.services.config import ConfigService
 from codescent.services.findings import (
@@ -389,6 +390,22 @@ class SeedFinding:
     file_path: str
     severity: str
     line_count: int
+
+
+def test_backlog_status_counts_describe_only_the_returned_rows(tmp_path: Path) -> None:
+    repo = _repo_with_todo(tmp_path)
+    scan = CodeHealthService(repo).scan()
+    _ = FindingsService(repo).mark_finding(
+        scan.finding_ids[0],
+        FindingStatus.WONTFIX,
+    )
+
+    payload = get_backlog(str(repo))
+
+    # wontfix is filtered out of the backlog, so it must not be counted in the
+    # payload's status_counts (which previously described every finding).
+    assert "wontfix" not in payload["status_counts"]
+    assert sum(payload["status_counts"].values()) == payload["total_count"]
 
 
 def _repo_with_todo(tmp_path: Path) -> Path:

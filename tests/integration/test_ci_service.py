@@ -6,7 +6,11 @@ from shutil import which
 
 import pytest
 
-from codescent.core.models import MaintainabilityThresholds, ProjectConfig
+from codescent.core.models import (
+    MaintainabilityThresholds,
+    ProjectConfig,
+    RatchetSettings,
+)
 from codescent.services.ci import CiService
 from codescent.services.config import ConfigService
 
@@ -130,6 +134,24 @@ def test_ratchet_catches_a_swapped_finding_at_constant_count(tmp_path: Path) -> 
     assert any(
         finding.rule_id == "python.large_function" for finding in report.new_findings
     )
+
+
+def test_ratchet_net_health_gate_fails_on_net_negative_change(tmp_path: Path) -> None:
+    repo = _repo(tmp_path, _function_module("small", 2))
+    config = ProjectConfig(
+        thresholds=MaintainabilityThresholds.strict(),
+        ratchet=RatchetSettings(require_non_negative_net_health=True),
+    )
+    ConfigService(repo).save(config)
+    service = CiService(repo)
+    _ = service.update_baseline()
+
+    # Add a new large function (net +1 finding, nothing resolved).
+    _write(repo, _function_module("process", 30))
+    report = service.run(threshold="high", ratchet=True)
+
+    assert report.net_health_delta < 0
+    assert report.ok is False
 
 
 def test_ratchet_treats_a_pre_v8_baseline_as_stale_not_all_new(tmp_path: Path) -> None:
