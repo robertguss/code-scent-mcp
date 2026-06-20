@@ -142,6 +142,18 @@ the plan already designed (opt-in, deferred-not-deleted, reversible — all good
 
 ### P5 / P6 — Split the safe-refactor loop (#3)
 
+**P5 status: shipped 2026-06-19.** New `verify_refactor` MCP tool
+(`VerifyRefactorService`, planning group) deterministically proves an edit
+preserved a Python file's public surface: it compares the working tree against a
+git ref (default `HEAD`), diffs the set of exported symbols and their
+signatures, and flags net-new control-flow branches — reporting concrete
+`removed_symbol` / `signature_changed` violations or confirming
+`preserved: true`. Both states are read-only (working tree on disk, baseline via
+`git show`), compared in memory; no LLM judgment. Python-first; TS and feeding
+the result into `verification_runs` are follow-ups. **P6 (`propose_patch` /
+extract-function) remains deferred** by design — highest corruption risk, and
+the verify half delivers the safety-net value on its own.
+
 The plan bundles `verify_refactor` and `propose_patch` (including
 extract-function) into one phase. Split them:
 

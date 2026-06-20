@@ -127,6 +127,30 @@ def git_changed_paths_since(repo_root: Path, base_ref: str) -> frozenset[str] | 
     return changed | git_changed_paths(repo_root)
 
 
+def git_file_at_ref(repo_root: Path, ref: str, path: str) -> str | None:
+    """Return the text of ``path`` as of git ``ref``, or None if unavailable.
+
+    None means "no before state to compare against" (not a git repo, git
+    missing, unknown ref, or the file did not exist at that ref).
+    """
+    if not (repo_root / ".git").exists():
+        return None
+    git_path = which("git")
+    if git_path is None:
+        return None
+    try:
+        result = subprocess.run(
+            [git_path, "-C", str(repo_root), "show", f"{ref}:{path}"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=GIT_STATUS_TIMEOUT_SECONDS,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout
+
+
 def _git_merge_base(git_path: str, repo_root: Path, base_ref: str) -> str | None:
     try:
         result = subprocess.run(

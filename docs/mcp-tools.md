@@ -39,6 +39,7 @@ by the service and contract tests.
 - `get_related_files`
 - `get_impact`
 - `verify_change`
+- `verify_refactor`
 - `get_finding`
 - `explain_score`
 - `get_backlog`
@@ -105,7 +106,7 @@ Code health and finding lifecycle tools:
 Planning tools:
 
 `get_finding_context`, `plan_refactor`, `suggest_tests`, `get_impact`,
-`verify_change`, `select_tests`
+`verify_change`, `verify_refactor`, `select_tests`
 
 Risk tools:
 
@@ -543,6 +544,29 @@ events, and telemetry.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network.
 - Example shape: `{"tool": "verify_change", "ok": true, "data": {...}}`
+
+### `verify_refactor`
+
+- Group: `planning`
+- Purpose: Deterministically check that an edit preserved a Python file's public
+  surface. It compares the file's working-tree state against a git ref (default
+  `HEAD`) and proves — without LLM judgment — that the set of exported symbols
+  and their signatures is unchanged and that no net-new control-flow branches
+  slipped in. When it cannot prove safety it reports concrete violations rather
+  than blessing a risky change.
+- Inputs: repository root, required `path`, optional `base_ref` (default
+  `HEAD`), optional `transform_kind` (default `generic`).
+- Outputs: `preserved` (bool), `violations` (each with `kind`, `symbol`,
+  `detail` — `removed_symbol` and `signature_changed` are blocking), `warnings`
+  (added public symbols, net-new branches), `added_symbols`, `removed_symbols`,
+  `changed_symbols`, `language`, `base_ref`, `transform_kind`, and `confidence`.
+- Bounds: source-read-only for analyzed files; both before/after states are read
+  read-only (working tree on disk, baseline via `git show`) and compared in
+  memory; bounded output by default; runtime no-network. Python (`.py`/`.pyi`)
+  in v1; other languages return an unsupported note. Deterministic given the two
+  states.
+- Example shape:
+  `{"tool": "verify_refactor", "ok": true, "preserved": false, "violations": [{"kind": "signature_changed", "symbol": "load_config", "detail": "(path) -> str -> (path, strict) -> str"}], "removed_symbols": [], "changed_symbols": ["load_config"]}`
 
 ### `get_backlog`
 

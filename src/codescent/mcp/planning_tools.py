@@ -9,6 +9,7 @@ from codescent.services.refactor_planning import (
     SafeRefactorPlan,
 )
 from codescent.services.verification import VerificationService
+from codescent.services.verify_refactor import VerifyRefactorService
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
         SuggestedTests,
         VerificationRecommendation,
     )
+    from codescent.services.verify_refactor import VerifyResult
 
 
 class FindingContextToolPayload(TypedDict):
@@ -82,6 +84,22 @@ class ImpactToolPayload(TypedDict):
     confidence: float
 
 
+class VerifyRefactorToolPayload(TypedDict):
+    ok: bool
+    preserved: bool
+    path: str
+    base_ref: str
+    transform_kind: str
+    language: str
+    violations: tuple[dict[str, str], ...]
+    warnings: tuple[str, ...]
+    added_symbols: tuple[str, ...]
+    removed_symbols: tuple[str, ...]
+    changed_symbols: tuple[str, ...]
+    confidence: float
+    next_tools: tuple[str, ...]
+
+
 def register_planning_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
@@ -120,6 +138,14 @@ def register_planning_tools(mcp: FastMCP) -> None:
             "This does not execute target project commands."
         ),
     )(verify_change)
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to deterministically check that an edit preserved a "
+            "Python file's public surface (exported symbols and signatures) "
+            "versus a git ref. Read-only; proves behavior preservation or "
+            "reports concrete violations."
+        ),
+    )(verify_refactor)
 
 
 def get_finding_context(
@@ -167,6 +193,20 @@ def get_impact(
             finding_id=finding_id,
         ),
     )
+
+
+def verify_refactor(
+    path: str,
+    repo: str = ".",
+    base_ref: str = "HEAD",
+    transform_kind: str = "generic",
+) -> VerifyRefactorToolPayload:
+    result = VerifyRefactorService(repo).verify_refactor(
+        path=path,
+        base_ref=base_ref,
+        transform_kind=transform_kind,
+    )
+    return _verify_refactor_payload(result)
 
 
 def verify_change(finding_id: str, repo: str = ".") -> VerifyChangeToolPayload:
@@ -250,4 +290,29 @@ def _verify_change_payload(
         "missing_characterization_tests": (
             recommendation.missing_characterization_tests
         ),
+    }
+
+
+def _verify_refactor_payload(result: VerifyResult) -> VerifyRefactorToolPayload:
+    return {
+        "ok": True,
+        "preserved": result.preserved,
+        "path": result.path,
+        "base_ref": result.base_ref,
+        "transform_kind": result.transform_kind,
+        "language": result.language,
+        "violations": tuple(
+            {
+                "kind": violation.kind,
+                "symbol": violation.symbol,
+                "detail": violation.detail,
+            }
+            for violation in result.violations
+        ),
+        "warnings": result.warnings,
+        "added_symbols": result.added_symbols,
+        "removed_symbols": result.removed_symbols,
+        "changed_symbols": result.changed_symbols,
+        "confidence": result.confidence,
+        "next_tools": ("get_finding_context", "suggest_tests", "rescan"),
     }
