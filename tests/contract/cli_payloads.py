@@ -111,3 +111,8 @@ class CiBaselinePayload(BaseModel):
 class CiRatchetPayload(CiPayload):
     ratchet_enabled: bool
     ratchet_regressions: tuple[dict[str, JsonValue], ...]
+    baseline_exists: bool
+    base_ref: str
+    new_finding_count: int
+    resolved_count: int
+    new_findings: tuple[dict[str, JsonValue], ...]

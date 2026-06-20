@@ -193,6 +193,39 @@ async def test_verify_change_records_recommendations_without_execution(
     assert not (repo / ".pytest_cache").exists()
 
 
+class VerifyRefactorPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
+
+    ok: bool
+    preserved: bool
+    language: str
+    changed_symbols: tuple[str, ...]
+    violations: tuple[dict[str, str], ...]
+
+
+@pytest.mark.anyio
+async def test_verify_refactor_checks_public_surface(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    _ = (repo / "src" / "config.py").write_text(
+        "def load_config(path):\n    return path\n"
+    )
+
+    # No git baseline -> nothing to compare against, but it runs and is bounded.
+    async with Client(mcp) as client:
+        tools = await client.list_tools()
+        result = await client.call_tool(
+            "verify_refactor",
+            {"repo": str(repo), "path": "src/config.py", "base_ref": ""},
+        )
+
+    assert "verify_refactor" in {tool.name for tool in tools}
+    payload = VerifyRefactorPayload.model_validate_json(_text_content(result.content))
+    assert payload.ok is True
+    assert payload.language == "python"
+    assert payload.preserved is True
+
+
 def _repo_with_smell(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     source = repo / "src" / "pkg" / "config.py"

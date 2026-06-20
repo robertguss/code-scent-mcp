@@ -53,6 +53,8 @@ def test_migrates_mvp_schema_to_latest_without_data_loss(tmp_path: Path) -> None
             "select 1 from session_events limit 0",
             "select 1 from stored_results limit 0",
             "select 1 from verification_runs limit 0",
+            "select 1 from finding_baseline limit 0",
+            "select 1 from baseline_meta limit 0",
         ):
             cursor = connection.execute(statement)
             assert cursor.description is not None
@@ -107,6 +109,97 @@ def test_migrates_mvp_schema_to_latest_without_data_loss(tmp_path: Path) -> None
         "query_fingerprint": "sha256:1be0f95493281d6c",
         "raw_tokens": 42,
     }
+
+
+def test_reconciles_stored_results_missing_project_id_column(tmp_path: Path) -> None:
+    # Regression: a database whose `stored_results` table predates the
+    # `project_id` column (the column was added to migration 5's create
+    # statement after the table already existed) was stuck — store_result
+    # raised "table stored_results has no column named project_id" because
+    # create-table-if-not-exists never alters and there is no column migration.
+    repo = tmp_path / "repo"
+    state_dir = repo / ".codescent"
+    database_path = state_dir / "index.sqlite"
+    repo.mkdir()
+    state_dir.mkdir()
+    _ = (repo / "app.py").write_text("value = 1\n")
+    _ = (state_dir / "config.toml").write_text(
+        f"[project]\nschema_version = {SCHEMA_VERSION}\n",
+    )
+    _create_database_with_legacy_stored_results(database_path)
+
+    state = initialize_storage(repo)
+
+    storage = RepositoryStorage(state)
+    with RepositoryStorage(state).read_connection() as connection:
+        assert "project_id" in _table_columns(connection, "stored_results")
+
+    # The previously stuck write now succeeds.
+    result = StoredResultRepository(storage).create_result(
+        StoredResultCreate(
+            project_id="project-alpha",
+            session_id="session-1",
+            tool_name="get_smell_report",
+            input_json='{"repo":"."}',
+            raw_result_json='{"items":[]}',
+            summary_json=None,
+            content_type="application/json",
+            raw_token_estimate=1,
+            returned_token_estimate=1,
+            created_at=None,
+            expires_at=None,
+        ),
+    )
+    assert result.id.startswith("ctx_")
+
+    # The pre-existing legacy row survives, back-filled with the default.
+    with RepositoryStorage(state).read_connection() as connection:
+        legacy_project_id = _single_value(
+            connection,
+            "select project_id from stored_results where id = 'ctx_legacy0000000'",
+        )
+    assert legacy_project_id == ""
+
+
+def _create_database_with_legacy_stored_results(database_path: Path) -> None:
+    # A stored_results table in its pre-project_id shape, marked at the current
+    # schema version so migrate() runs no create/alter for it on its own.
+    with closing(sqlite3.connect(database_path)) as connection:
+        _ = connection.execute(
+            """
+            create table stored_results (
+                id text primary key,
+                session_id text,
+                tool_name text not null,
+                input_json text not null,
+                raw_result_json text not null,
+                summary_json text,
+                content_type text,
+                raw_token_estimate integer,
+                returned_token_estimate integer,
+                created_at text not null,
+                expires_at text,
+                retrieval_count integer not null default 0
+            )
+            """,
+        )
+        _ = connection.execute(
+            """
+            insert into stored_results (
+                id, tool_name, input_json, raw_result_json, created_at
+            ) values ('ctx_legacy0000000', 'get_smell_report', '{}', '{}', 'now')
+            """,
+        )
+        _ = connection.execute(f"pragma user_version = {SCHEMA_VERSION}")
+        connection.commit()
+
+
+def _table_columns(connection: sqlite3.Connection, table: str) -> set[str]:
+    rows: list[tuple[str]] = connection.execute(
+        "select name from pragma_table_info(?)",
+        (table,),
+    ).fetchall()
+    return {row[0] for row in rows}
 
 
 def _create_mvp_v4_database(database_path: Path) -> None:

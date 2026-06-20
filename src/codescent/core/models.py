@@ -88,6 +88,105 @@ class ArchitectureRules(BaseModel):
     rules: tuple[ArchitectureRule, ...] = ()
 
 
+class MaintainabilityThresholds(BaseModel):
+    """Tunable size/count thresholds for the deterministic maintainability rules.
+
+    Defaults are calibrated for real codebases — they flag genuinely large or
+    repetitive code, not the median file. Lower them per-repo (or use
+    ``strict()``) to surface more findings on small inputs.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    # Python
+    large_file_lines: int = Field(default=300, ge=1)
+    large_function_lines: int = Field(default=50, ge=1)
+    large_class_lines: int = Field(default=200, ge=1)
+    too_many_imports: int = Field(default=20, ge=1)
+    deep_nesting: int = Field(default=4, ge=1)
+    todo_cluster_size: int = Field(default=3, ge=1)
+    duplicate_literal_min_count: int = Field(default=4, ge=2)
+    duplicate_literal_min_length: int = Field(default=8, ge=1)
+    # Relative ("large for this repository") thresholds. These add an
+    # outlier-for-this-repo finding flavor on top of the absolute thresholds,
+    # catching files/functions/classes that are unusually large for the repo
+    # even when under the absolute floor. Uses a robust IQR outlier rule so it
+    # fires only on genuine outliers, not a fixed fraction of the codebase.
+    relative_thresholds_enabled: bool = True
+    relative_outlier_iqr_multiplier: float = Field(default=1.5, ge=0)
+    relative_min_sample_size: int = Field(default=12, ge=2)
+    # TypeScript / React / Next
+    ts_large_component_lines: int = Field(default=150, ge=1)
+    ts_too_many_hooks: int = Field(default=8, ge=1)
+    ts_too_many_props: int = Field(default=8, ge=1)
+    ts_too_many_exports: int = Field(default=10, ge=1)
+    ts_route_handler_lines: int = Field(default=40, ge=1)
+
+    @classmethod
+    def strict(cls) -> Self:
+        """The historical aggressive thresholds.
+
+        Retained for the tiny test fixtures and deterministic evals, which need a
+        rich finding set on small inputs. Not recommended for real repositories —
+        these flag most files and were the cause of the signal-to-noise problem.
+        """
+        return cls(
+            large_file_lines=70,
+            large_function_lines=25,
+            large_class_lines=60,
+            too_many_imports=12,
+            deep_nesting=4,
+            todo_cluster_size=3,
+            duplicate_literal_min_count=3,
+            duplicate_literal_min_length=4,
+            relative_thresholds_enabled=False,
+            ts_large_component_lines=12,
+            ts_too_many_hooks=1,
+            ts_too_many_props=3,
+            ts_too_many_exports=3,
+            ts_route_handler_lines=3,
+        )
+
+
+class RatchetSettings(BaseModel):
+    """CI ratchet: fail only on new debt, not the pre-existing backlog.
+
+    The ratchet compares the current scan against an accepted baseline of finding
+    stable keys. A finding is *new* when its stable key is absent from the
+    baseline; CI fails only when a new finding is at least ``fail_on_new_severity``
+    severe. ``base_ref`` (empty = disabled) scopes the check to files changed
+    since that git ref.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    enabled: bool = False
+    base_ref: str = ""
+    fail_on_new_severity: str = "warning"
+    require_non_negative_net_health: bool = False
+
+
+class AdaptiveSettings(BaseModel):
+    """Adaptive, self-calibrating findings driven by the repo's own verdicts.
+
+    Confidence recalibration nudges a rule's confidence toward its empirical
+    accept rate (resolved vs wontfix/ignored) once enough verdicts exist; below
+    ``min_sample_size`` the base confidence is used unchanged (cold start). The
+    adjustment is bounded by ``max_confidence_delta`` and never falls below
+    ``confidence_floor``. Learned suppression flags rule+directory scopes that
+    have been dismissed at least ``suppression_threshold`` times.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    confidence_recalibration: bool = True
+    learned_suppression: bool = False
+    min_sample_size: int = Field(default=8, ge=1)
+    max_confidence_delta: float = Field(default=0.2, ge=0, le=1)
+    confidence_floor: float = Field(default=0.3, ge=0, le=1)
+    suppression_threshold: int = Field(default=5, ge=1)
+
+
 class ProjectConfig(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
@@ -104,6 +203,11 @@ class ProjectConfig(BaseModel):
     token_budgets: TokenBudgets = Field(default_factory=TokenBudgets)
     privacy: PrivacySettings = Field(default_factory=PrivacySettings)
     architecture: ArchitectureRules = Field(default_factory=ArchitectureRules)
+    thresholds: MaintainabilityThresholds = Field(
+        default_factory=MaintainabilityThresholds,
+    )
+    ratchet: RatchetSettings = Field(default_factory=RatchetSettings)
+    adaptive: AdaptiveSettings = Field(default_factory=AdaptiveSettings)
     llm: LlmSettings | None = None
 
     def with_overrides(

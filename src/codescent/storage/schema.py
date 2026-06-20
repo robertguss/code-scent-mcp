@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Final
 
-SCHEMA_VERSION: Final = 7
+SCHEMA_VERSION: Final = 8
 
 BASE_TABLE_STATEMENTS: Final[tuple[str, ...]] = (
     "create table if not exists schema_version (version integer not null)",
@@ -230,7 +230,42 @@ MIGRATION_STATEMENTS: Final[dict[int, tuple[str, ...]]] = {
         )
         """,
     ),
+    8: (
+        """
+        create table if not exists finding_baseline (
+            id integer primary key,
+            stable_key text not null unique,
+            rule_id text not null,
+            file_path text not null,
+            severity text not null,
+            created_at text not null
+        )
+        """,
+        """
+        create index if not exists idx_finding_baseline_file
+            on finding_baseline(file_path)
+        """,
+        """
+        create table if not exists baseline_meta (
+            id integer primary key check (id = 1),
+            accepted_at text not null
+        )
+        """,
+    ),
 }
+
+
+# Columns that were added to a table's `create table` statement after the table
+# first shipped. Databases created before the column was added keep the old
+# shape, because `create table if not exists` never alters an existing table and
+# SQLite has no `add column if not exists`. We reconcile that drift here,
+# idempotently, on every migrate. `add column` cannot introduce a bare NOT NULL
+# column to a populated table, so each definition carries a default; new writes
+# always supply the real value.
+RECONCILED_COLUMNS: Final[tuple[tuple[str, str, str], ...]] = (
+    ("stored_results", "project_id", "project_id text not null default ''"),
+    ("session_events", "project_id", "project_id text not null default ''"),
+)
 
 
 def migrate(connection: sqlite3.Connection) -> None:
@@ -240,12 +275,30 @@ def migrate(connection: sqlite3.Connection) -> None:
     for version in range(current_version + 1, SCHEMA_VERSION + 1):
         for statement in MIGRATION_STATEMENTS.get(version, ()):
             _ = connection.execute(statement)
+    _reconcile_columns(connection)
     _ = connection.execute(f"pragma user_version = {SCHEMA_VERSION}")
     _ = connection.execute("delete from schema_version")
     _ = connection.execute(
         "insert into schema_version (version) values (?)",
         (SCHEMA_VERSION,),
     )
+
+
+def _reconcile_columns(connection: sqlite3.Connection) -> None:
+    for table, column, definition in RECONCILED_COLUMNS:
+        existing = _column_names(connection, table)
+        if existing and column not in existing:
+            # `definition` and `table` come from the trusted constant above, not
+            # from user input; DDL cannot be parameterized.
+            _ = connection.execute(f"alter table {table} add column {definition}")
+
+
+def _column_names(connection: sqlite3.Connection, table: str) -> set[str]:
+    rows: list[tuple[str]] = connection.execute(
+        "select name from pragma_table_info(?)",
+        (table,),
+    ).fetchall()
+    return {row[0] for row in rows}
 
 
 def _current_schema_version(connection: sqlite3.Connection) -> int:

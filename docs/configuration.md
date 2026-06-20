@@ -41,6 +41,114 @@ rules = [
 Python import prefixes, so `codescent.cli` also matches `codescent.cli.main`.
 When no architecture rules are configured, the scanner returns no findings.
 
+## Maintainability Thresholds
+
+The deterministic maintainability rules use size/count thresholds that you can
+tune per repo. Defaults are calibrated for real codebases — they flag genuinely
+large or repetitive code, not the median file. Override any subset in
+`.codescent/config.toml`:
+
+```toml
+[thresholds]
+# Python
+large_file_lines = 300
+large_function_lines = 50
+large_class_lines = 200
+too_many_imports = 20
+deep_nesting = 4
+todo_cluster_size = 3
+duplicate_literal_min_count = 4
+duplicate_literal_min_length = 8
+# Relative ("large for this repository") thresholds
+relative_thresholds_enabled = true
+relative_outlier_iqr_multiplier = 1.5
+relative_min_sample_size = 12
+# TypeScript / React / Next
+ts_large_component_lines = 150
+ts_too_many_hooks = 8
+ts_too_many_props = 8
+ts_too_many_exports = 10
+ts_route_handler_lines = 40
+```
+
+The values above are the defaults. Lower them to surface more findings (useful
+on small or strict codebases); raise them to reduce noise on large legacy
+repositories. Every finding records the threshold it was measured against in its
+evidence, so `explain_score` and `get_finding` always show why something was
+flagged. Thresholds are a pure input to the deterministic scan — the same repo
+and the same thresholds always produce the same findings.
+
+### Relative thresholds
+
+The absolute thresholds above are a fixed floor. The relative thresholds add an
+_outlier-for-this-repo_ flavor on top: a file, function, or class that is well
+under the absolute floor but unusually large **for this repository** is flagged
+as `python.relative_large_file` / `python.relative_large_function` /
+`python.relative_large_class` (severity `info`). The cutoff is the standard IQR
+outlier rule over the repo's own size distribution
+(`Q3 + relative_outlier_iqr_multiplier * IQR`), so it fires only on genuine
+outliers — not a fixed fraction of the codebase — and stays silent when the
+absolute floor is already the binding constraint. Each finding's evidence
+carries `repo_median`, `repo_q3`, `outlier_cutoff`, and `sample_size` for
+explainability, and the metrics never enter the finding's stable id (adding an
+unrelated file does not re-key existing outliers).
+
+Tuning knobs: `relative_outlier_iqr_multiplier` raises/lowers the cutoff (higher
+= fewer, more extreme outliers); `relative_min_sample_size` skips the rule on
+metrics with too few samples to be meaningful;
+`relative_thresholds_enabled = false` turns the flavor off entirely.
+
+## CI Ratchet
+
+The CI ratchet (`codescent ci --ratchet`) fails only on _new_ debt versus an
+accepted baseline, never on the pre-existing backlog. Configure its defaults in
+`.codescent/config.toml`:
+
+```toml
+[ratchet]
+enabled = false                      # reserved; --ratchet enables per-run today
+base_ref = ""                        # default git ref for diff scoping ("" = whole repo)
+fail_on_new_severity = "warning"     # block new findings at this severity or worse
+require_non_negative_net_health = false
+```
+
+Accept a baseline with `codescent ci --update-baseline`; it records the current
+findings by stable key (and a marker so a zero-finding baseline is distinguished
+from a pre-v8 one). A finding is _new_ when its stable key is absent from the
+baseline. With `require_non_negative_net_health = true`, CI also fails when a
+run resolves fewer findings than it introduces (`net_health_delta < 0`).
+`fail_on_new_severity` gates which new findings fail CI — `warning` (the
+default) ignores new `info` findings (e.g. a new TODO), `info` fails on any new
+finding. `base_ref` (or `--base <ref>`) restricts the check to files changed
+since that ref. The transient `python.changed_source_without_related_test` rule
+is excluded from the baseline comparison. CodeScent never runs tests; the
+ratchet reads only its own scan output and the local git diff.
+
+## Adaptive Findings
+
+CodeScent can learn from how its findings are actually resolved. The
+`[adaptive]` section turns the stored lifecycle verdicts into empirical per-rule
+confidence and learned-suppression candidates:
+
+```toml
+[adaptive]
+confidence_recalibration = true   # nudge confidence toward the empirical accept rate
+learned_suppression = false       # opt-in; flag heavily-dismissed rule+scope pairs
+min_sample_size = 8               # verdicts required before recalibrating (cold start below)
+max_confidence_delta = 0.2        # most a rule's confidence can move
+confidence_floor = 0.3            # recalibrated confidence never drops below this
+suppression_threshold = 5         # dismissals in a rule+directory scope to flag suppression
+```
+
+For each rule, CodeScent counts `resolved` (accepted) versus `wontfix`/`ignored`
+(rejected) findings; once at least `min_sample_size` verdicts exist it pulls the
+rule's confidence toward that accept rate, bounded by `max_confidence_delta` and
+never below `confidence_floor`. Below the sample size the base confidence is
+used unchanged, so new repositories see no change. Inspect it with the
+`get_calibration` MCP tool; `explain_score` carries the same block for a single
+finding. The adjustment is a pure, deterministic function of `.codescent` state
+— same verdicts in, same calibration out.
+
 ## Coverage Report
 
 Coverage ingestion reads an existing Cobertura XML report when present. By

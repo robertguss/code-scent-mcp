@@ -21,6 +21,8 @@ from tests.contract.cli_payloads import (
 from typer.testing import CliRunner
 
 from codescent.cli.main import app
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
+from codescent.services.config import ConfigService
 
 RUNNER = CliRunner()
 
@@ -263,40 +265,23 @@ def test_ci_and_review_diff_emit_json_markdown_and_threshold_exit_codes() -> Non
 
 def test_ci_update_baseline_and_ratchet_flags(tmp_path: Path) -> None:
     repo = _repo_with_related_test(tmp_path)
+    # Strict thresholds so a small function trips a warning-level finding.
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
+    )
 
     baseline_result = RUNNER.invoke(
         app,
-        [
-            "ci",
-            "--repo",
-            str(repo),
-            "--format",
-            "json",
-            "--update-baseline",
-        ],
+        ["ci", "--repo", str(repo), "--format", "json", "--update-baseline"],
     )
+    # Introduce a new large function (warning) absent from the baseline.
+    body = "\n".join(f"    step_{index} = {index}" for index in range(30))
     _ = (repo / "src" / "pkg" / "config.py").write_text(
-        """STATUS = "pending-review"
-
-
-def load_config() -> str:
-    # TODO: split config
-    # FIXME: preserve compatibility
-    # HACK: keep old queue name
-    return STATUS
-""",
+        f"def process() -> None:\n{body}\n",
     )
     default_result = RUNNER.invoke(
         app,
-        [
-            "ci",
-            "--repo",
-            str(repo),
-            "--format",
-            "json",
-            "--threshold",
-            "high",
-        ],
+        ["ci", "--repo", str(repo), "--format", "json", "--threshold", "high"],
     )
     ratchet_result = RUNNER.invoke(
         app,
@@ -314,19 +299,23 @@ def load_config() -> str:
 
     baseline_payload = CiBaselinePayload.model_validate_json(baseline_result.output)
     ratchet_payload = CiRatchetPayload.model_validate_json(ratchet_result.output)
-    regression = ratchet_payload.ratchet_regressions[0]
 
     assert baseline_result.exit_code == 0
     assert baseline_payload.ok is True
     assert baseline_payload.files_recorded == 2
     assert baseline_payload.finding_count == 0
-    assert default_result.exit_code == 0
+    # Without the ratchet, the new warning trips the absolute gate.
+    assert default_result.exit_code == 1
     assert "ratchet_enabled" not in json.loads(default_result.output)
+    # The ratchet fails specifically on the new finding.
     assert ratchet_result.exit_code == 1
     assert ratchet_payload.ratchet_enabled is True
-    assert regression["path"] == "src/pkg/config.py"
-    assert regression["baseline_count"] == 0
-    assert regression["regressed"] is True
+    assert ratchet_payload.baseline_exists is True
+    assert ratchet_payload.new_finding_count >= 1
+    assert any(
+        finding["rule_id"] == "python.large_function"
+        for finding in ratchet_payload.new_findings
+    )
 
 
 def test_doctor_json_reports_invalid_repo_root(tmp_path: Path) -> None:

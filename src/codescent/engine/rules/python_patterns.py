@@ -7,11 +7,9 @@ from typing import TYPE_CHECKING, Final
 from codescent.engine.rules.model import CodeHealthFinding, FindingSpec, build_finding
 
 if TYPE_CHECKING:
+    from codescent.core.models import MaintainabilityThresholds
     from codescent.engine.parsers.python import ParsedPythonFile
 
-TOO_MANY_IMPORTS: Final = 12
-DEEP_NESTING: Final = 4
-LARGE_FILE_LINES: Final = 70
 MIXED_RESPONSIBILITY_VERBS: Final = frozenset(
     {"load", "save", "render", "export", "build", "summarize"},
 )
@@ -22,18 +20,22 @@ def secondary_findings(
     parsed: ParsedPythonFile,
     source_text: str,
     lines: list[str],
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
     findings: list[CodeHealthFinding] = []
-    findings.extend(_too_many_imports(parsed))
-    findings.extend(_deep_nesting(parsed, source_text))
+    findings.extend(_too_many_imports(parsed, thresholds))
+    findings.extend(_deep_nesting(parsed, source_text, thresholds))
     findings.extend(_missing_nearby_tests(parsed))
-    findings.extend(_mixed_responsibilities(parsed, lines))
+    findings.extend(_mixed_responsibilities(parsed, lines, thresholds))
     findings.extend(_slop_candidate(parsed, lines))
     return tuple(findings)
 
 
-def _too_many_imports(parsed: ParsedPythonFile) -> tuple[CodeHealthFinding, ...]:
-    if len(parsed.imports) <= TOO_MANY_IMPORTS:
+def _too_many_imports(
+    parsed: ParsedPythonFile,
+    thresholds: MaintainabilityThresholds,
+) -> tuple[CodeHealthFinding, ...]:
+    if len(parsed.imports) <= thresholds.too_many_imports:
         return ()
     return (
         build_finding(
@@ -49,7 +51,7 @@ def _too_many_imports(parsed: ParsedPythonFile) -> tuple[CodeHealthFinding, ...]
                 confidence=0.75,
                 evidence={
                     "import_count": len(parsed.imports),
-                    "threshold": TOO_MANY_IMPORTS,
+                    "threshold": thresholds.too_many_imports,
                 },
                 suggested_action=(
                     "Review whether this module has too many responsibilities."
@@ -62,13 +64,14 @@ def _too_many_imports(parsed: ParsedPythonFile) -> tuple[CodeHealthFinding, ...]
 def _deep_nesting(
     parsed: ParsedPythonFile,
     source_text: str,
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
     try:
         tree = ast.parse(source_text, filename=parsed.path)
     except SyntaxError:
         return ()
     depth = _max_nesting(tree)
-    if depth <= DEEP_NESTING:
+    if depth <= thresholds.deep_nesting:
         return ()
     return (
         build_finding(
@@ -80,7 +83,7 @@ def _deep_nesting(
                 symbol=None,
                 severity="warning",
                 confidence=0.75,
-                evidence={"depth": depth, "threshold": DEEP_NESTING},
+                evidence={"depth": depth, "threshold": thresholds.deep_nesting},
                 suggested_action="Flatten control flow or extract guard clauses.",
             ),
         ),
@@ -113,6 +116,7 @@ def _missing_nearby_tests(parsed: ParsedPythonFile) -> tuple[CodeHealthFinding, 
 def _mixed_responsibilities(
     parsed: ParsedPythonFile,
     lines: list[str],
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
     symbol_verbs = {
         symbol.name.split("_", maxsplit=1)[0]
@@ -122,7 +126,7 @@ def _mixed_responsibilities(
     matching_verbs = symbol_verbs & MIXED_RESPONSIBILITY_VERBS
     if len(matching_verbs) < MIXED_RESPONSIBILITY_VERB_MINIMUM:
         return ()
-    if len(lines) < LARGE_FILE_LINES:
+    if len(lines) < thresholds.large_file_lines:
         return ()
     return (
         build_finding(

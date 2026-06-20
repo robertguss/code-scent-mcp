@@ -13,6 +13,7 @@ import scripts.smoke_lx_data_lake as lx_smoke
 from pydantic import TypeAdapter
 from scripts.prove_source_read_only import prove_source_read_only
 
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.engine.inventory import build_file_inventory
 from codescent.mcp.context_tools import find_symbol
 from codescent.mcp.finding_tools import (
@@ -25,6 +26,7 @@ from codescent.mcp.planning_tools import suggest_tests
 from codescent.mcp.result_tools import retrieve_result
 from codescent.mcp.search_tools import search_content, search_files
 from codescent.mcp.session_stats_tools import context_stats
+from codescent.services.config import ConfigService
 from codescent.services.result_store import ResultStoreService
 from codescent.services.subjective_review import (
     FakeSubjectiveReviewProvider,
@@ -127,11 +129,14 @@ def test_verification_commands_are_recommended_not_executed(
 ) -> None:
     repo = "tests/fixtures/python-basic"
     shutil.rmtree(Path(repo) / ".codescent", ignore_errors=True)
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
+    )
     _ = scan_code_health(repo)
     report = get_smell_report(repo)
     selected = next(
         finding["finding_id"]
-        for finding in report["findings"]
+        for finding in report["items"]
         if finding["file_path"] == "src/acme_tasks/workflow.py"
     )
     assert isinstance(selected, str)

@@ -39,9 +39,12 @@ by the service and contract tests.
 - `get_related_files`
 - `get_impact`
 - `verify_change`
+- `verify_refactor`
 - `get_finding`
 - `explain_score`
 - `get_backlog`
+- `get_improvement_plan`
+- `get_calibration`
 - `get_progress`
 - `get_regressions`
 - `review_diff_risk`
@@ -97,12 +100,13 @@ Code health and finding lifecycle tools:
 
 `scan_code_health`, `get_smell_report`, `get_next_improvement`, `mark_finding`,
 `record_verification`, `rescan`, `get_finding`, `explain_score`, `get_backlog`,
-`get_progress`, `get_regressions`, `context_stats`
+`get_improvement_plan`, `get_calibration`, `get_progress`, `get_regressions`,
+`context_stats`
 
 Planning tools:
 
 `get_finding_context`, `plan_refactor`, `suggest_tests`, `get_impact`,
-`verify_change`, `select_tests`
+`verify_change`, `verify_refactor`, `select_tests`
 
 Risk tools:
 
@@ -239,11 +243,16 @@ events, and telemetry.
 - Purpose: Run deterministic code-health scanning.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
-- Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+- Outputs: a bounded scan envelope with aggregate counts (`total_count`,
+  `severity_counts`, `rule_counts`, `rule_ids`), a capped `finding_ids`/`items`
+  preview, and `returned_count`/`omitted_count`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
-- Example shape: `{"tool": "scan_code_health", "ok": true, "data": {...}}`
+  runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
+  (default 25) items; when findings are omitted the envelope carries a
+  `result_id` with `retrieval_available` and `retrieval_hints` so the full set
+  is reachable via `retrieve_result`. It never dumps every finding id inline.
+- Example shape:
+  `{"ok": true, "kind": "scan", "total_count": 1270, "rule_counts": {...}, "items": [...], "omitted_count": 1245, "result_id": "ctx_…", "retrieval_available": true}`
 
 ### `get_smell_report`
 
@@ -251,14 +260,17 @@ events, and telemetry.
 - Purpose: Return summarized open finding report data.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
-- Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump. Index-backed graph tools include `index_fresh`,
-  `index_was_stale`, `auto_refreshed`, `changed_files`, `refresh_error`,
-  `warnings`, `confidence`, and `next_tools`.
+- Outputs: a bounded list envelope: `open_count`, `total_count`,
+  `status_counts`, `severity_counts`, `rule_counts`, and a capped `items`
+  preview with `returned_count`/`omitted_count`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network. If the index is stale, the tool refreshes `.codescent`
-  state before answering.
-- Example shape: `{"tool": "get_smell_report", "ok": true, "data": {...}}`
+  runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
+  (default 25) findings; when findings are omitted the envelope carries a
+  `result_id` with `retrieval_available` and `retrieval_hints` so the full
+  report is reachable via `retrieve_result`. It does not return every finding
+  inline.
+- Example shape:
+  `{"ok": true, "kind": "smell_report", "open_count": 1270, "total_count": 1270, "items": [...], "omitted_count": 1245, "result_id": "ctx_…", "retrieval_available": true}`
 
 ### `get_finding_context`
 
@@ -364,11 +376,15 @@ events, and telemetry.
 - Purpose: Run scan again and report resolved or regressed findings.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
-- Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+- Outputs: a bounded scan envelope (same shape as `scan_code_health`) plus
+  `regressed_finding_ids` (capped) and `regressed_count`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
-- Example shape: `{"tool": "rescan", "ok": true, "data": {...}}`
+  runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
+  (default 25) items; when findings are omitted the envelope carries a
+  `result_id` with `retrieval_available` and `retrieval_hints` for
+  `retrieve_result`.
+- Example shape:
+  `{"ok": true, "kind": "rescan", "total_count": 1270, "items": [...], "omitted_count": 1245, "regressed_count": 2, "result_id": "ctx_…", "retrieval_available": true}`
 
 ### `multi_search_content`
 
@@ -529,17 +545,96 @@ events, and telemetry.
   runtime no-network.
 - Example shape: `{"tool": "verify_change", "ok": true, "data": {...}}`
 
+### `verify_refactor`
+
+- Group: `planning`
+- Purpose: Deterministically check that an edit preserved a Python file's public
+  surface. It compares the file's working-tree state against a git ref (default
+  `HEAD`) and proves — without LLM judgment — that the set of exported symbols
+  and their signatures is unchanged and that no net-new control-flow branches
+  slipped in. When it cannot prove safety it reports concrete violations rather
+  than blessing a risky change.
+- Inputs: repository root, required `path`, optional `base_ref` (default
+  `HEAD`), optional `transform_kind` (default `generic`).
+- Outputs: `verifiable` (bool — `preserved` is only meaningful when true; false
+  for unsupported languages or an unreadable/unparseable state), `preserved`
+  (bool), `violations` (each with `kind`, `symbol`, `detail` — `removed_symbol`
+  and `signature_changed` are blocking), `warnings` (added public symbols,
+  net-new branches), `added_symbols`, `removed_symbols`, `changed_symbols`,
+  `language`, `base_ref`, `transform_kind`, and `confidence`. Signatures track
+  parameter names, order, kind, and default presence.
+- Bounds: source-read-only for analyzed files; both before/after states are read
+  read-only (working tree on disk, baseline via `git show`) and compared in
+  memory; bounded output by default; runtime no-network. Python (`.py`/`.pyi`)
+  in v1; other languages return an unsupported note. Deterministic given the two
+  states.
+- Example shape:
+  `{"tool": "verify_refactor", "ok": true, "preserved": false, "violations": [{"kind": "signature_changed", "symbol": "load_config", "detail": "(path) -> str -> (path, strict) -> str"}], "removed_symbols": [], "changed_symbols": ["load_config"]}`
+
 ### `get_backlog`
 
 - Group: `health`
 - Purpose: Return backlog-style finding summary.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
-- Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+- Outputs: a bounded list envelope: `open_count`, `total_count`,
+  `status_counts`, `severity_counts`, `rule_counts`, and a capped `items`
+  preview with `returned_count`/`omitted_count`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
-- Example shape: `{"tool": "get_backlog", "ok": true, "data": {...}}`
+  runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
+  (default 25) findings; when findings are omitted the envelope carries a
+  `result_id` with `retrieval_available` and `retrieval_hints` for
+  `retrieve_result`.
+- Example shape:
+  `{"ok": true, "kind": "backlog", "open_count": 1245, "items": [...], "omitted_count": 1220, "result_id": "ctx_…", "retrieval_available": true}`
+
+### `get_improvement_plan`
+
+- Group: `health`
+- Purpose: Turn the flat finding backlog into a deterministic, ROI-ordered
+  improvement campaign. Findings are clustered by theme (rule + directory) — for
+  example "39 duplicate literals in tests/integration" instead of 39 separate
+  to-dos — and each cluster carries an effort estimate (`S`/`M`/`L` and
+  `effort_points`), a `health_gain` estimate, an `roi` (health-gain ÷ effort),
+  the affected `files`, and a capped list of member `finding_ids`. Clusters are
+  ordered by ROI so the cheapest, highest-impact work comes first.
+- Inputs: repository root.
+- Outputs: a bounded plan envelope: `total_clusters`, `total_findings`, and a
+  capped `clusters` preview with `returned_count`/`omitted_count`. Each cluster
+  has `theme`, `rule_id`, `scope`, `size`, `severity`, `effort`,
+  `effort_points`, `health_gain`, `roi`, `files`, `finding_ids`, and
+  `suggested_action`.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network. A pure transform over open findings — no new indexing. The
+  inline preview holds at most `INLINE_ITEM_LIMIT` (default 25) clusters; when
+  clusters are omitted the envelope carries a `result_id` with
+  `retrieval_available` and `retrieval_hints` for `retrieve_result`. Effort and
+  ROI are deterministic functions of the finding set.
+- Example shape:
+  `{"ok": true, "kind": "improvement_plan", "total_clusters": 97, "total_findings": 503, "clusters": [{"theme": "Consolidate 39 duplicate literal(s) in tests/integration", "effort": "M", "roi": 3.86, ...}], "omitted_count": 72, "result_id": "ctx_…", "retrieval_available": true}`
+
+### `get_calibration`
+
+- Group: `health`
+- Purpose: Report adaptive, self-calibrating signal derived from this repo's own
+  lifecycle verdicts. For each rule it returns the empirical accept rate
+  (resolved vs wontfix/ignored), the base confidence, and an
+  `adjusted_confidence` nudged toward that accept rate once enough verdicts
+  exist — plus learned `suppression_candidates` (rule + directory scopes
+  dismissed often enough to be auto-deferred, when learned suppression is
+  enabled).
+- Inputs: repository root.
+- Outputs: `confidence_recalibration`, `learned_suppression`, `min_sample_size`,
+  a `rules` list (each with `rule_id`, `base_confidence`, `adjusted_confidence`,
+  `accepted`, `rejected`, `sample_size`, `accept_rate`, `calibrated`), and
+  `suppression_candidates`.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network. A pure, deterministic function of the stored findings —
+  below `min_sample_size` verdicts the base confidence is used unchanged (cold
+  start), so new repos see no change. `explain_score` carries the same
+  calibration block for a single finding.
+- Example shape:
+  `{"ok": true, "confidence_recalibration": true, "min_sample_size": 8, "rules": [{"rule_id": "python.dead_code_candidate", "base_confidence": 0.6, "adjusted_confidence": 0.8, "accepted": 13, "rejected": 0, "sample_size": 13, "calibrated": true}], "suppression_candidates": []}`
 
 ### `get_progress`
 
@@ -559,11 +654,16 @@ events, and telemetry.
 - Purpose: Return findings that regressed across scans.
 - Inputs: repository root plus tool-specific arguments such as query, path,
   symbol, finding id, status, or limit.
-- Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
+- Outputs: a bounded list envelope: `count`, `total_count`, `status_counts`,
+  `severity_counts`, `rule_counts`, and a capped `items` preview with
+  `returned_count`/`omitted_count`.
 - Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
-- Example shape: `{"tool": "get_regressions", "ok": true, "data": {...}}`
+  runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
+  (default 25) findings; when findings are omitted the envelope carries a
+  `result_id` with `retrieval_available` and `retrieval_hints` for
+  `retrieve_result`.
+- Example shape:
+  `{"ok": true, "kind": "regressions", "count": 3, "items": [...], "omitted_count": 0, "result_id": null, "retrieval_available": false}`
 
 ### `review_diff_risk`
 

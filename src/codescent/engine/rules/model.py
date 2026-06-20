@@ -60,7 +60,22 @@ def _stable_key(
     fingerprint = "|".join(
         f"{key}={value}"
         for key, value in sorted(evidence.items())
-        if key not in {"line_count", "count", "threshold", "depth", "import_count"}
+        if key
+        not in {
+            "line_count",
+            "count",
+            "threshold",
+            "depth",
+            "import_count",
+            # Relative-threshold stats depend on the whole-repo distribution, so
+            # they must not enter a finding's identity (adding an unrelated file
+            # would otherwise re-key existing outlier findings).
+            "repo_median",
+            "repo_q3",
+            "outlier_cutoff",
+            "sample_size",
+            "absolute_threshold",
+        }
     )
     raw = f"{rule_id}|{file_path}|{symbol or ''}|{fingerprint}"
     digest = hashlib.sha256(raw.encode()).hexdigest()[:12]

@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict
 from typer.testing import CliRunner
 
 from codescent.cli.main import app
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
+from codescent.services.config import ConfigService
 
 
 class ScanCliPayload(BaseModel):
@@ -43,6 +45,9 @@ def load_config() -> dict[str, str]:
     # HACK: keep old queue name
     return {"status": STATUS}
 """,
+    )
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
     )
 
     result = CliRunner().invoke(app, ["scan", "--repo", str(repo), "--json"])

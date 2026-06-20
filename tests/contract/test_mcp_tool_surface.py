@@ -5,6 +5,7 @@ from fastmcp import Client
 from mcp.types import ContentBlock, TextContent
 from pydantic import BaseModel, ConfigDict
 
+from codescent.mcp.finding_payloads import INLINE_ITEM_LIMIT
 from codescent.mcp.server import mcp
 
 ABSENT_POST_MVP_TOOL_NAMES = {
@@ -37,6 +38,8 @@ MVP_TOOL_NAMES = {
     "get_finding",
     "explain_score",
     "get_backlog",
+    "get_improvement_plan",
+    "get_calibration",
     "get_progress",
     "get_regressions",
     "get_impact",
@@ -45,6 +48,7 @@ MVP_TOOL_NAMES = {
     "suggest_tests",
     "select_tests",
     "verify_change",
+    "verify_refactor",
     "mark_finding",
     "record_verification",
     "rescan",
@@ -62,6 +66,11 @@ class ToolScanPayload(BaseModel):
     status: str
     finding_ids: tuple[str, ...]
     rule_ids: tuple[str, ...]
+    total_count: int
+    items: tuple[dict[str, str | float], ...]
+    returned_count: int
+    omitted_count: int
+    retrieval_available: bool
 
 
 class ToolReportPayload(BaseModel):
@@ -69,7 +78,12 @@ class ToolReportPayload(BaseModel):
 
     ok: bool
     open_count: int
-    findings: tuple[dict[str, str | float], ...]
+    total_count: int
+    items: tuple[dict[str, str | float], ...]
+    returned_count: int
+    omitted_count: int
+    result_id: str | None
+    retrieval_available: bool
 
 
 @pytest.mark.anyio
@@ -96,6 +110,7 @@ async def test_no_post_mvp_tools_exposed() -> None:
     assert "get_related_files" in tool_names
     assert "get_impact" in tool_names
     assert "verify_change" in tool_names
+    assert "verify_refactor" in tool_names
     assert "get_backlog" in tool_names
     assert "get_progress" in tool_names
     assert "get_regressions" in tool_names
@@ -127,10 +142,22 @@ async def test_tool_outputs_match_bounded_schema_snapshots() -> None:
     assert scan.ok is True
     assert scan.status == "complete"
     assert scan.finding_ids
-    assert "python.large_function" in scan.rule_ids
+    # A size-independent rule so this stays stable regardless of threshold config.
+    assert "python.dead_code_candidate" in scan.rule_ids
+    # Boundedness: inline ids/items never exceed the cap, even if total is larger.
+    assert len(scan.finding_ids) <= INLINE_ITEM_LIMIT
+    assert len(scan.items) <= INLINE_ITEM_LIMIT
+    assert scan.returned_count == len(scan.items)
+    assert scan.omitted_count == max(0, scan.total_count - scan.returned_count)
     assert report.ok is True
     assert report.open_count >= 1
-    assert set(report.findings[0]) == {
+    assert len(report.items) <= INLINE_ITEM_LIMIT
+    assert report.returned_count == len(report.items)
+    assert report.omitted_count == max(0, report.total_count - report.returned_count)
+    # When findings are omitted, a retrieval handle must be offered.
+    assert report.retrieval_available == (report.omitted_count > 0)
+    assert (report.result_id is not None) == (report.omitted_count > 0)
+    assert set(report.items[0]) == {
         "finding_id",
         "rule_id",
         "file_path",

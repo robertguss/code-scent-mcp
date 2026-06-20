@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import ast
 from collections import Counter
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
-from codescent.core.models import ProjectConfig
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.parsers.python import parse_python_file
@@ -15,6 +15,7 @@ from codescent.engine.rules.model import (
     build_finding,
 )
 from codescent.engine.rules.python_patterns import secondary_findings
+from codescent.engine.rules.relative_size import SizeSample, relative_outlier_findings
 from codescent.engine.rules.structural_duplicates import structural_duplicate_findings
 from codescent.engine.source_read import read_source_text
 
@@ -23,12 +24,7 @@ if TYPE_CHECKING:
 
     from codescent.engine.parsers.python import ParsedPythonFile
 
-LARGE_FILE_LINES: Final = 70
-LARGE_FUNCTION_LINES: Final = 25
-LARGE_CLASS_LINES: Final = 60
-TODO_CLUSTER_SIZE: Final = 3
-DUPLICATE_LITERAL_COUNT: Final = 3
-MIN_LITERAL_LENGTH: Final = 3
+_FUNCTION_KINDS = frozenset({"function", "async_function", "method"})
 
 
 def scan_python_health(
@@ -38,7 +34,11 @@ def scan_python_health(
 ) -> tuple[CodeHealthFinding, ...]:
     repo_root = resolve_repo_root(root)
     project_config = config or ProjectConfig()
+    thresholds = project_config.thresholds
     findings: list[CodeHealthFinding] = []
+    file_samples: list[SizeSample] = []
+    function_samples: list[SizeSample] = []
+    class_samples: list[SizeSample] = []
     for item in build_file_inventory(repo_root, config=project_config):
         if item.language != "python":
             continue
@@ -48,21 +48,56 @@ def scan_python_health(
         if source.text is None:
             continue
         lines = source.text.splitlines()
-        findings.extend(_large_file(parsed, len(lines)))
-        findings.extend(_symbol_size_findings(parsed))
-        findings.extend(_todo_cluster(parsed, lines))
-        findings.extend(_duplicate_literals(parsed, source.text))
-        findings.extend(secondary_findings(parsed, source.text, lines))
+        findings.extend(_large_file(parsed, len(lines), thresholds))
+        findings.extend(_symbol_size_findings(parsed, thresholds))
+        findings.extend(_todo_cluster(parsed, lines, thresholds))
+        findings.extend(_duplicate_literals(parsed, source.text, thresholds))
+        findings.extend(secondary_findings(parsed, source.text, lines, thresholds))
+        _collect_size_samples(
+            parsed,
+            len(lines),
+            file_samples=file_samples,
+            function_samples=function_samples,
+            class_samples=class_samples,
+        )
     findings.extend(structural_duplicate_findings(repo_root, config=project_config))
     findings.extend(scan_dead_code(repo_root, config=project_config))
+    findings.extend(
+        relative_outlier_findings(
+            file_samples=file_samples,
+            function_samples=function_samples,
+            class_samples=class_samples,
+            thresholds=thresholds,
+        ),
+    )
     return tuple(findings)
+
+
+def _collect_size_samples(
+    parsed: ParsedPythonFile,
+    line_count: int,
+    *,
+    file_samples: list[SizeSample],
+    function_samples: list[SizeSample],
+    class_samples: list[SizeSample],
+) -> None:
+    file_samples.append(SizeSample(parsed.path, None, line_count))
+    for symbol in parsed.symbols:
+        span = symbol.end_line - symbol.start_line + 1
+        if symbol.kind == "class":
+            class_samples.append(SizeSample(parsed.path, symbol.qualified_name, span))
+        elif symbol.kind in _FUNCTION_KINDS:
+            function_samples.append(
+                SizeSample(parsed.path, symbol.qualified_name, span),
+            )
 
 
 def _large_file(
     parsed: ParsedPythonFile,
     line_count: int,
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
-    if line_count < LARGE_FILE_LINES:
+    if line_count < thresholds.large_file_lines:
         return ()
     return (
         build_finding(
@@ -74,7 +109,10 @@ def _large_file(
                 symbol=None,
                 severity="warning",
                 confidence=0.9,
-                evidence={"line_count": line_count, "threshold": LARGE_FILE_LINES},
+                evidence={
+                    "line_count": line_count,
+                    "threshold": thresholds.large_file_lines,
+                },
                 suggested_action=(
                     "Split cohesive responsibilities into smaller modules."
                 ),
@@ -83,11 +121,14 @@ def _large_file(
     )
 
 
-def _symbol_size_findings(parsed: ParsedPythonFile) -> tuple[CodeHealthFinding, ...]:
+def _symbol_size_findings(
+    parsed: ParsedPythonFile,
+    thresholds: MaintainabilityThresholds,
+) -> tuple[CodeHealthFinding, ...]:
     findings: list[CodeHealthFinding] = []
     for symbol in parsed.symbols:
         span = symbol.end_line - symbol.start_line + 1
-        if symbol.kind == "class" and span >= LARGE_CLASS_LINES:
+        if symbol.kind == "class" and span >= thresholds.large_class_lines:
             findings.append(
                 build_finding(
                     FindingSpec(
@@ -100,14 +141,16 @@ def _symbol_size_findings(parsed: ParsedPythonFile) -> tuple[CodeHealthFinding, 
                         confidence=0.85,
                         evidence={
                             "line_count": span,
-                            "threshold": LARGE_CLASS_LINES,
+                            "threshold": thresholds.large_class_lines,
                         },
                         suggested_action="Extract smaller classes or collaborators.",
                     ),
                 ),
             )
         if symbol.kind in {"function", "async_function", "method"}:
-            findings.extend(_large_function(parsed, symbol.qualified_name, span))
+            findings.extend(
+                _large_function(parsed, symbol.qualified_name, span, thresholds),
+            )
     return tuple(findings)
 
 
@@ -115,8 +158,9 @@ def _large_function(
     parsed: ParsedPythonFile,
     qualified_name: str,
     span: int,
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
-    if span < LARGE_FUNCTION_LINES:
+    if span < thresholds.large_function_lines:
         return ()
     return (
         build_finding(
@@ -128,7 +172,10 @@ def _large_function(
                 symbol=qualified_name,
                 severity="warning",
                 confidence=0.9,
-                evidence={"line_count": span, "threshold": LARGE_FUNCTION_LINES},
+                evidence={
+                    "line_count": span,
+                    "threshold": thresholds.large_function_lines,
+                },
                 suggested_action="Extract named steps while preserving behavior.",
             ),
         ),
@@ -138,9 +185,10 @@ def _large_function(
 def _todo_cluster(
     parsed: ParsedPythonFile,
     lines: list[str],
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
     count = sum(1 for line in lines if _todo_marker(line))
-    if count < TODO_CLUSTER_SIZE:
+    if count < thresholds.todo_cluster_size:
         return ()
     return (
         build_finding(
@@ -152,7 +200,7 @@ def _todo_cluster(
                 symbol=None,
                 severity="info",
                 confidence=0.9,
-                evidence={"count": count, "threshold": TODO_CLUSTER_SIZE},
+                evidence={"count": count, "threshold": thresholds.todo_cluster_size},
                 suggested_action="Resolve or split the TODO cluster into tracked work.",
             ),
         ),
@@ -162,6 +210,7 @@ def _todo_cluster(
 def _duplicate_literals(
     parsed: ParsedPythonFile,
     source_text: str,
+    thresholds: MaintainabilityThresholds,
 ) -> tuple[CodeHealthFinding, ...]:
     try:
         tree = ast.parse(source_text, filename=parsed.path)
@@ -172,7 +221,7 @@ def _duplicate_literals(
         for node in ast.walk(tree)
         if isinstance(node, ast.Constant)
         and isinstance(node.value, str)
-        and len(node.value) > MIN_LITERAL_LENGTH
+        and len(node.value) >= thresholds.duplicate_literal_min_length
     )
     return tuple(
         build_finding(
@@ -189,7 +238,7 @@ def _duplicate_literals(
             ),
         )
         for literal, count in literals.items()
-        if count >= DUPLICATE_LITERAL_COUNT
+        if count >= thresholds.duplicate_literal_min_count
     )
 
 
