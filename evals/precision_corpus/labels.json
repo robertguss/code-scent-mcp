@@ -1,0 +1,86 @@
+{
+  "description": "U10 per-rule eval-precision corpus. Each rule lists known-smelly fixtures (a finding there is a true positive) and known-clean fixtures (a finding there is a false positive). Paths are relative to this corpus root. Smelly fixtures are intentionally flawed and MUST stay flawed (see AGENTS.md).",
+  "corpus_root": "evals/precision_corpus",
+  "rules": {
+    "python.large_file": {
+      "smelly": ["pkg/large_file.py"],
+      "clean": ["pkg/tidy.py"]
+    },
+    "python.large_function": {
+      "smelly": ["pkg/large_function.py"],
+      "clean": ["pkg/tidy.py"]
+    },
+    "python.large_class": {
+      "smelly": ["pkg/large_class.py"],
+      "clean": ["pkg/tidy.py"]
+    },
+    "python.too_many_imports": {
+      "smelly": ["pkg/too_many_imports.py"],
+      "clean": ["pkg/tidy.py"]
+    },
+    "python.deep_nesting": {
+      "smelly": ["pkg/deep_nesting.py"],
+      "clean": ["pkg/tidy.py"]
+    },
+    "python.todo_cluster": {
+      "smelly": ["pkg/todo_cluster.py"],
+      "clean": ["pkg/tidy.py"]
+    },
+    "python.duplicate_literal": {
+      "smelly": ["pkg/duplicate_literal.py"],
+      "clean": ["pkg/tidy.py"]
+    },
+    "python.mixed_responsibilities": {
+      "smelly": ["pkg/mixed_responsibilities.py"],
+      "clean": ["pkg/tidy.py"]
+    },
+    "python.suspicious_slop_candidate": {
+      "smelly": ["pkg/slop_candidate.py"],
+      "clean": ["pkg/tidy.py"]
+    },
+    "python.import_cycle": {
+      "smelly": ["pkg/cycle_alpha.py"],
+      "clean": ["pkg/tidy.py"]
+    },
+    "python.missing_nearby_test": {
+      "smelly": ["pkg/untested_module.py"],
+      "clean": ["tests/test_corpus_clean.py"]
+    },
+    "typescript.large_component": {
+      "smelly": ["ts/big_component.tsx"],
+      "clean": ["ts/clean.ts"]
+    },
+    "react.too_many_hooks": {
+      "smelly": ["ts/hooks_heavy.ts"],
+      "clean": ["ts/clean.ts"]
+    },
+    "react.too_many_props": {
+      "smelly": ["ts/many_props.tsx"],
+      "clean": ["ts/clean.ts"]
+    },
+    "typescript.too_many_exports": {
+      "smelly": ["ts/many_exports.ts"],
+      "clean": ["ts/clean.ts"]
+    },
+    "next.route_handler_too_much": {
+      "smelly": ["app/api/things/route.ts"],
+      "clean": ["ts/clean.ts"]
+    },
+    "typescript.todo_cluster": {
+      "smelly": ["ts/todo.ts"],
+      "clean": ["ts/clean.ts"]
+    },
+    "typescript.duplicate_literal": {
+      "smelly": ["ts/dup_literal.ts"],
+      "clean": ["ts/clean.ts"]
+    },
+    "typescript.suspicious_slop_candidate": {
+      "smelly": ["ts/slop.ts"],
+      "clean": ["ts/clean.ts"]
+    },
+    "typescript.missing_nearby_test": {
+      "smelly": ["ts/untested.ts"],
+      "clean": ["ts/tests/clean.test.ts"]
+    }
+  }
+}

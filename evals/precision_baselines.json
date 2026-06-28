@@ -1,0 +1,25 @@
+{
+  "comment": "Per-rule eval precision (TP/(TP+FP)) floors for the U10 CI gate. Regenerate with: uv run python evals/run_precision.py --update-baseline",
+  "baselines": {
+    "next.route_handler_too_much": 1.0,
+    "python.deep_nesting": 1.0,
+    "python.duplicate_literal": 1.0,
+    "python.import_cycle": 1.0,
+    "python.large_class": 1.0,
+    "python.large_file": 1.0,
+    "python.large_function": 1.0,
+    "python.missing_nearby_test": 1.0,
+    "python.mixed_responsibilities": 1.0,
+    "python.suspicious_slop_candidate": 1.0,
+    "python.todo_cluster": 1.0,
+    "python.too_many_imports": 1.0,
+    "react.too_many_hooks": 1.0,
+    "react.too_many_props": 1.0,
+    "typescript.duplicate_literal": 1.0,
+    "typescript.large_component": 1.0,
+    "typescript.missing_nearby_test": 1.0,
+    "typescript.suspicious_slop_candidate": 1.0,
+    "typescript.todo_cluster": 1.0,
+    "typescript.too_many_exports": 1.0
+  }
+}

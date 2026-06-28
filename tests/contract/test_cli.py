@@ -3,6 +3,11 @@ import shutil
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
+
+from codescent.cli.main import app
+from codescent.core.models import MaintainabilityThresholds, ProjectConfig
+from codescent.services.config import ConfigService
 from tests.contract.cli_payloads import (
     CiBaselinePayload,
     CiPayload,
@@ -18,11 +23,6 @@ from tests.contract.cli_payloads import (
     StatusPayload,
     WatchPayload,
 )
-from typer.testing import CliRunner
-
-from codescent.cli.main import app
-from codescent.core.models import MaintainabilityThresholds, ProjectConfig
-from codescent.services.config import ConfigService
 
 RUNNER = CliRunner()
 

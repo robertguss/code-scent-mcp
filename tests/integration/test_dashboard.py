@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tests.integration.dashboard_http import JsonObject, get_json, get_text, post_json
-
 from codescent.dashboard.server import start_dashboard_server
 from codescent.services.code_health import CodeHealthService
 from codescent.storage.schema import SCHEMA_VERSION
+from tests.integration.dashboard_http import JsonObject, get_json, get_text, post_json
 
 if TYPE_CHECKING:
     from pathlib import Path

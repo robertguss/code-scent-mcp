@@ -44,6 +44,7 @@ exclude = [
     "**/dist",
     "tests/fixtures/python-basic",
     "tests/fixtures/python-import-cycle",
+    "evals/precision_corpus",
 ]
 reportUnusedCallResult = "warning"
 reportUnnecessaryTypeIgnoreComment = "error"
@@ -55,7 +56,11 @@ reportPrivateUsage = "error"
 target-version = "py312"
 line-length = 88
 src = ["src", "tests"]
-extend-exclude = ["tests/fixtures/python-basic", "tests/fixtures/python-import-cycle"]
+extend-exclude = [
+    "tests/fixtures/python-basic",
+    "tests/fixtures/python-import-cycle",
+    "evals/precision_corpus",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]

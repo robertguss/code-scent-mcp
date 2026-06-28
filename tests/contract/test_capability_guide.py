@@ -10,12 +10,12 @@ from pathlib import Path
 import pytest
 from fastmcp import Client
 from mcp.types import TextResourceContents
-from tests.contract.guide_payloads import GuidePayloadModel, guide_text
 
 from codescent.core.public_surface import registered_mcp_tool_names
 from codescent.mcp.guide_tools import GUIDE_RESOURCE_URI
 from codescent.mcp.server import mcp
 from codescent.services.guide import MAX_TOOLS_PER_GROUP, GuidePayload, build_guide
+from tests.contract.guide_payloads import GuidePayloadModel, guide_text
 
 MCP_TOOLS_DOC = Path("docs/mcp-tools.md")
 

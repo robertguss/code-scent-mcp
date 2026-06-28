@@ -3,7 +3,6 @@
 import pytest
 from fastmcp import Client
 from mcp.types import TextResourceContents
-from tests.contract.guide_payloads import GuidePayloadModel, guide_text
 
 from codescent.core.public_surface import registered_mcp_tool_names
 from codescent.mcp.guide_tools import GUIDE_RESOURCE_URI
@@ -13,6 +12,7 @@ from codescent.services.guide import (
     SAFETY_BOUNDARIES,
     WORKFLOW,
 )
+from tests.contract.guide_payloads import GuidePayloadModel, guide_text
 
 
 @pytest.mark.anyio
