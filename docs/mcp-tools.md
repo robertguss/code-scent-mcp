@@ -42,6 +42,7 @@ by the service and contract tests.
 - `verify_refactor`
 - `get_finding`
 - `explain_score`
+- `explain_finding`
 - `get_backlog`
 - `get_improvement_plan`
 - `get_calibration`
@@ -321,6 +322,22 @@ events, and telemetry.
   runtime no-network. If the index is stale, the tool refreshes `.codescent`
   state before answering.
 - Example shape: `{"tool": "get_finding_context", "ok": true, "data": {...}}`
+
+### `explain_finding`
+
+- Group: `planning`
+- Purpose: Return one bounded, fix-ready explanation of a finding: why it
+  matters (`why` message + structured `evidence`), the suggested `fix`
+  (`suggested_action`), confidence tier/provenance, and a bounded source
+  `snippet` anchored at the finding's lines.
+- Inputs: repository root plus the finding id.
+- Outputs: JSON-compatible structured payload with local evidence and a bounded
+  source snippet (`snippet.source`); no unbounded source dump. Carries
+  `confidence_tier`, `provenance`, `snippet_truncated`, and `next_tools`.
+- Bounds: source-read-only for analyzed files; the snippet is clipped to a line
+  cap and a character cap (and dropped for files beyond the source-read byte
+  budget) so output stays bounded by default; runtime no-network.
+- Example shape: `{"tool": "explain_finding", "ok": true, "data": {...}}`
 
 ### `get_next_improvement`
 

@@ -38,6 +38,7 @@ MVP_TOOL_NAMES = {
     "get_finding_context",
     "get_finding",
     "explain_score",
+    "explain_finding",
     "get_backlog",
     "get_improvement_plan",
     "get_calibration",

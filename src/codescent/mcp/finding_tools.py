@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 from codescent.core.models import FindingStatus
 from codescent.mcp.finding_payloads import (
@@ -30,6 +30,7 @@ from codescent.mcp.finding_payloads import (
 )
 from codescent.services.calibration import CalibrationService
 from codescent.services.code_health import CodeHealthService
+from codescent.services.explain import ExplainService, FindingExplanation
 from codescent.services.findings import FindingsService
 from codescent.services.improvement_plan import ImprovementPlanService
 from codescent.services.reports import ReportService
@@ -42,6 +43,22 @@ _BACKLOG_STATUSES = frozenset(
         FindingStatus.REGRESSED,
     },
 )
+
+
+class ExplainFindingToolPayload(TypedDict):
+    ok: bool
+    finding_id: str
+    rule_id: str
+    file_path: str
+    severity: str
+    confidence_tier: str
+    provenance: dict[str, str | int | float | bool | None]
+    why: str
+    evidence: dict[str, str | int | float | bool | None]
+    fix: str
+    snippet: dict[str, str | int]
+    snippet_truncated: bool
+    next_tools: tuple[str, ...]
 
 
 if TYPE_CHECKING:
@@ -84,6 +101,13 @@ def register_finding_tools(mcp: FastMCP) -> None:
             "reasons for a finding. Does not use subjective LLM judgment."
         ),
     )(explain_score)
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent for one fix-ready explanation of a finding: why it "
+            "matters (message + evidence), the suggested fix, and a bounded "
+            "source snippet. Source-read-only; never an unbounded source dump."
+        ),
+    )(explain_finding)
     _ = mcp.tool(
         description=(
             "Use CodeScent to choose the next deterministic improvement from "
@@ -181,6 +205,28 @@ def explain_score(
     repo: str = ".",
 ) -> ScoreExplanationToolPayload:
     return score_explanation_payload(ReportService(repo).explain_score(finding_id))
+
+
+def explain_finding(finding_id: str, repo: str = ".") -> ExplainFindingToolPayload:
+    return _explain_payload(ExplainService(repo).explain_finding(finding_id))
+
+
+def _explain_payload(explanation: FindingExplanation) -> ExplainFindingToolPayload:
+    return {
+        "ok": True,
+        "finding_id": explanation.finding_id,
+        "rule_id": explanation.rule_id,
+        "file_path": explanation.file_path,
+        "severity": explanation.severity,
+        "confidence_tier": explanation.confidence_tier,
+        "provenance": explanation.provenance,
+        "why": explanation.why,
+        "evidence": explanation.evidence,
+        "fix": explanation.fix,
+        "snippet": explanation.snippet,
+        "snippet_truncated": explanation.snippet_truncated,
+        "next_tools": explanation.next_tools,
+    }
 
 
 def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
