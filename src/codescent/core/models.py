@@ -205,6 +205,10 @@ class ProjectConfig(BaseModel):
         "ts-react-next",
         "go-maintainability",
     )
+    # Lowest-precedence text-only fallback for files no specific language pack
+    # owns (line/text heuristics only, `generic.*` rule ids). On by default;
+    # specific packs always win for their own suffixes.
+    generic_fallback: bool = True
     coverage_path: str = "coverage.xml"
     auto_bootstrap: bool = True
     # Honor inline `# codescent: ignore[<rule_id>]` comments that silence a

@@ -58,6 +58,7 @@ def test_python_pack_registers_parser_rules_and_context_without_behavior_regress
         "python-maintainability",
         "ts-react-next",
         "go-maintainability",
+        "generic",
     )
     assert registry.parser_for_language("python") is not None
     assert registry.parser_for_language("typescript") is not None

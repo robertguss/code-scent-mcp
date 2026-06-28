@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from codescent.core.models import ProjectConfig
+from codescent.engine.packs_generic import scan_generic_health
 from codescent.engine.packs_go import GO_EXTENSIONS, parse_go_file, scan_go_health
 from codescent.engine.packs_ts import TS_EXTENSIONS, parse_typescript_file
 from codescent.engine.parsers.python import ParsedPythonFile, parse_python_file
@@ -26,6 +27,7 @@ GO_LANGUAGE_PACK = "go"
 GO_RULE_PACK = "go-maintainability"
 ARCHITECTURE_RULE_PACK = "architecture"
 KNOWLEDGE_SILO_RULE_PACK = "knowledge-silo"
+GENERIC_RULE_PACK = "generic"
 
 
 class ParseFile(Protocol):
@@ -77,7 +79,10 @@ class PackRegistry:
 def build_pack_registry(config: ProjectConfig | None = None) -> PackRegistry:
     project_config = config or ProjectConfig()
     language_packs = _language_packs(project_config.language_packs)
-    rule_packs = _rule_packs(project_config.rule_packs)
+    rule_packs = _rule_packs(
+        project_config.rule_packs,
+        generic_fallback=project_config.generic_fallback,
+    )
     return PackRegistry(
         language_packs=language_packs,
         rule_packs=rule_packs,
@@ -129,7 +134,11 @@ def _go_language_packs(enabled: tuple[str, ...]) -> tuple[LanguagePack, ...]:
     )
 
 
-def _rule_packs(enabled: tuple[str, ...]) -> tuple[RulePack, ...]:
+def _rule_packs(
+    enabled: tuple[str, ...],
+    *,
+    generic_fallback: bool = True,
+) -> tuple[RulePack, ...]:
     packs: list[RulePack] = []
     packs.append(
         RulePack(
@@ -170,6 +179,20 @@ def _rule_packs(enabled: tuple[str, ...]) -> tuple[RulePack, ...]:
                 name=GO_RULE_PACK,
                 languages=("go",),
                 scan=_scan_go_health,
+            ),
+        )
+    # Generic text-only fallback. Registered LAST so it is lowest precedence: it
+    # only inspects files no specific pack owns (the specific suffixes are
+    # reserved inside packs_generic), so python/typescript/go always win for
+    # their own files. Gated by its own flag (default on) rather than rule_packs
+    # membership -- like architecture/knowledge-silo, it is an always-applicable
+    # cross-language pack, not one of the per-language opt-in packs.
+    if generic_fallback:
+        packs.append(
+            RulePack(
+                name=GENERIC_RULE_PACK,
+                languages=("generic",),
+                scan=_scan_generic_health,
             ),
         )
     return tuple(packs)
@@ -214,3 +237,10 @@ def _scan_go_health(
     config: ProjectConfig,
 ) -> tuple[CodeHealthFinding, ...]:
     return scan_go_health(root, config=config)
+
+
+def _scan_generic_health(
+    root: Path | str,
+    config: ProjectConfig,
+) -> tuple[CodeHealthFinding, ...]:
+    return scan_generic_health(root, config=config)

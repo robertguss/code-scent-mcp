@@ -127,6 +127,27 @@ uv run codescent rules --repo "$repo" --json
 `doctor` reports database/config health and `routing_templates`. Templates are
 examples only and are not auto-written into analyzed repos.
 
+## Language Packs & Generic Fallback
+
+`language_packs` and `rule_packs` select the per-language packs (Python,
+TypeScript/React/Next, Go); remove an entry to disable that language's parser
+and rules. Defaults:
+
+```toml
+language_packs = ["python", "typescript", "go"]
+rule_packs = ["python-maintainability", "ts-react-next", "go-maintainability"]
+```
+
+On top of those, a **generic text-only fallback** covers files in any language
+that has no specific pack. It runs at lowest precedence (specific packs always
+win for their own suffixes) and emits only line/text heuristics --
+`generic.large_file`, `generic.todo_cluster`, `generic.duplicate_literal` -- with
+no symbol/structural claims. It is on by default; turn it off with:
+
+```toml
+generic_fallback = false
+```
+
 ## Architecture Rules
 
 Architecture boundary checks are opt-in and report-only. Add rules to

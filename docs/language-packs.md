@@ -72,6 +72,25 @@ git-derived, so they carry the `heuristic` confidence tier and `resolution:
 git` provenance. The pack self-disables (no findings) when there is no git
 history, so non-git and shallow trees stay clean.
 
+### Generic fallback (any language)
+
+The `generic` rule pack is a **text-only** fallback so repos in languages without
+a specific pack are not completely blind to CodeScent. It runs **last** (lowest
+precedence): it inspects only files whose suffix no specific pack owns -- the
+`.py`/`.pyi`, `.js`/`.jsx`/`.ts`/`.tsx`, and `.go` suffixes are reserved, so
+Python/TypeScript/Go always win for their own files (this holds even if a
+specific pack is disabled, so the fallback never invents heuristics for a `.py`
+file). Binary, oversized, minified, and excluded files are skipped.
+
+It emits three line/text smells under a `generic.*` namespace:
+`generic.large_file`, `generic.todo_cluster`, and `generic.duplicate_literal`
+(quoted-string literals, either quote style). The pack **degrades honestly**: it
+does no parsing and emits no symbols, references, imports, or structural claims.
+Every finding is symbol-less, carries the `heuristic` confidence tier, and gets
+`resolution: text` / `language: generic` provenance. The pack is gated by the
+`generic_fallback` config flag (on by default); set `generic_fallback = false`
+to turn it off.
+
 ## Parser Decision
 
 The non-Python packs use **local, dependency-free regex parsers** (corrected per

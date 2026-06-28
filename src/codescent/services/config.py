@@ -75,6 +75,7 @@ def _render_config(config: ProjectConfig) -> str:
         "coverage_path": config.coverage_path,
         "auto_bootstrap": config.auto_bootstrap,
         "inline_suppression": config.inline_suppression,
+        "generic_fallback": config.generic_fallback,
         "commands": _section(config.commands),
         "token_budgets": _section(config.token_budgets),
         "privacy": _section(config.privacy),

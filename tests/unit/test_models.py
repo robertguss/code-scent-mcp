@@ -153,6 +153,10 @@ def test_project_config_defaults_enable_python_typescript_and_go_packs() -> None
         "ts-react-next",
         "go-maintainability",
     )
+    # The generic text-only fallback is an always-applicable rule pack (like
+    # architecture/knowledge-silo), gated by its own flag rather than
+    # rule_packs membership; on by default, specific packs still win.
+    assert config.generic_fallback is True
     assert config.architecture.rules == ()
 
 

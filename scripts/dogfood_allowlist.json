@@ -50,6 +50,12 @@
       "file": "src/codescent/dashboard/server.py",
       "symbol": null
     },
+    "python.large_function:4aeb3b3c7402": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/engine/packs.py",
+      "symbol": "engine.packs._rule_packs"
+    },
     "python.deep_nesting:6783b16fd9cc": {
       "rule_id": "python.deep_nesting",
       "severity": "warning",
