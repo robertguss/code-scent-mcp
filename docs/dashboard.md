@@ -15,7 +15,7 @@ current verified path is the dashboard server used by integration tests and
 The dashboard shows:
 
 - repository status and health summary;
-- findings and progress;
+- findings and progress, with per-finding confidence/tier + precision badges;
 - per-rule acceptance precision and a health trend (`/api/precision`);
 - rule configuration updates;
 - JSON export data.
@@ -64,6 +64,25 @@ Response shape:
 `acceptance_precision` is `null` until a rule has at least one verdict. The trend
 is bounded to the most recent 90 daily points. The same data is available from
 the `codescent precision` CLI command (see the CLI reference).
+
+## Confidence & Precision Badges (`/api/findings`)
+
+Each finding in `GET /api/findings` carries the trust metadata the dashboard
+renders as badges next to the finding in the list and detail panels:
+
+- `confidence_tier` — `verified` (an AST pack resolved a concrete symbol) or
+  `heuristic` (regex/file-level finding);
+- `provenance` — a small bounded scalar dict (`rule_id`, `language`,
+  `resolution`, `symbol_resolved`); the `language` value drives the language
+  badge;
+- `acceptance_precision` — the finding's rule acceptance precision from
+  `/api/precision` (`null` until that rule has a verdict).
+
+The static UI renders three chips per finding: a confidence-tier chip
+(`verified` accent / `heuristic` warn), a language chip from provenance, and a
+precision chip (`precision NN%`, or `precision n/a` when `null`). This is the
+same read-only, loopback-only data as every other route — no new network
+surface.
 
 ## Smoke Verification
 

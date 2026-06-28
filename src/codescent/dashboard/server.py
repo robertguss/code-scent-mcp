@@ -15,6 +15,7 @@ from codescent.dashboard.payloads import (
     JsonObject,
     asset_text,
     json_int_map,
+    provenance_object,
     string_list,
 )
 from codescent.services.findings import FindingsService
@@ -100,6 +101,9 @@ class DashboardApplication:
 
     def findings(self) -> JsonObject:
         rows = FindingsService(self.repo_root).get_smell_report().findings
+        precision_by_rule = PrecisionService(
+            self.repo_root,
+        ).acceptance_precision_by_rule()
         return {
             "read_only": True,
             "findings": [
@@ -109,6 +113,9 @@ class DashboardApplication:
                     "file_path": row.file_path,
                     "severity": row.severity,
                     "confidence": row.confidence,
+                    "confidence_tier": row.confidence_tier,
+                    "provenance": provenance_object(row.provenance_json),
+                    "acceptance_precision": precision_by_rule.get(row.rule_id),
                     "status": row.status.value,
                     "suggested_action": row.suggested_action,
                 }

@@ -4,6 +4,8 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
+from codescent.mcp.finding_payloads import decode_provenance
+
 type JsonValue = (
     None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]
 )
@@ -30,6 +32,18 @@ def string_list(value: JsonValue) -> list[str] | None:
             return None
         strings.append(item)
     return strings
+
+
+def provenance_object(raw: str) -> JsonObject:
+    """Decode stored provenance JSON to a bounded scalar JsonObject.
+
+    Reuses the MCP ``decode_provenance`` (bounded to small str/bool scalars) so
+    the dashboard and MCP surfaces agree on provenance shape.
+    """
+    result: JsonObject = {}
+    for key, value in decode_provenance(raw).items():
+        result[key] = value
+    return result
 
 
 def json_int_map(values: dict[str, int]) -> JsonObject:
