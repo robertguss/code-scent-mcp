@@ -7,7 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, cast
 from uuid import uuid4
 
 from codescent.core.models import FindingStatus
@@ -41,6 +41,7 @@ from codescent.storage.schema import SCHEMA_VERSION
 
 if TYPE_CHECKING:
     import sqlite3
+    from collections.abc import Mapping
     from pathlib import Path
 
     from codescent.engine.packs import PackRegistry
@@ -54,6 +55,17 @@ logger = logging.getLogger(__name__)
 # that ships under a new tag invalidates stale cached findings. Mirrors the
 # ``rule_version`` persisted on scan_runs.
 RULE_VERSION: Final = "python-mvp-1"
+
+# Evidence keys that encode absolute source positions. They shift when unrelated
+# lines move above a finding, so the re-verification fingerprint ignores them --
+# a line shift must NOT invalidate a recorded verification. This is the position
+# subset of engine/rules/model.py._VOLATILE_EVIDENCE_KEYS; unlike the stable_key
+# fingerprint, the re-verification fingerprint KEEPS size/count magnitudes
+# (line_count, count, depth, ...) so that editing the flagged symbol's body
+# changes the fingerprint and re-triggers verification.
+_VERIFICATION_VOLATILE_KEYS: Final = frozenset(
+    {"start_line", "end_line", "line", "locations"},
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +132,9 @@ class CodeHealthService:
 
         with storage.write_transaction() as connection:
             previous = _previous_lifecycle(connection)
+            # Capture the prior evidence fingerprints BEFORE the upsert overwrites
+            # evidence_json, so re-verification can detect a body change.
+            previous_fingerprints = _previous_evidence_fingerprints(connection)
             suppressed_matches = (
                 _compute_suppressions(connection, state.repo_root, findings)
                 if config.inline_suppression
@@ -226,6 +241,12 @@ class CodeHealthService:
             _record_resolved_absent(connection, resolved_ids, now)
             _record_regressed(connection, regressed_ids, now)
             _record_suppressions(connection, suppressed_matches, previous, now)
+            _invalidate_stale_verifications(
+                connection,
+                findings,
+                previous_fingerprints,
+                now,
+            )
 
         return CodeHealthScanResult(
             scan_id=scan_id,
@@ -411,6 +432,78 @@ def _has_likely_test(
         ):
             return True
     return False
+
+
+def _verification_fingerprint(evidence: Mapping[str, object]) -> str:
+    """Canonical hash material for a finding's body, minus absolute positions.
+
+    Keeps size/count substance (line_count, count, depth, ...) so a body edit
+    changes the fingerprint, but drops line positions so a benign line shift
+    above the finding does not.
+    """
+    body = {
+        key: value
+        for key, value in evidence.items()
+        if key not in _VERIFICATION_VOLATILE_KEYS
+    }
+    return json.dumps(body, sort_keys=True)
+
+
+def _previous_evidence_fingerprints(
+    connection: sqlite3.Connection,
+) -> dict[str, str]:
+    rows: list[tuple[str, str]] = connection.execute(
+        "select stable_key, evidence_json from findings",
+    ).fetchall()
+    fingerprints: dict[str, str] = {}
+    for stable_key, evidence_json in rows:
+        parsed = cast("dict[str, object]", json.loads(evidence_json))
+        fingerprints[stable_key] = _verification_fingerprint(parsed)
+    return fingerprints
+
+
+def _invalidate_stale_verifications(
+    connection: sqlite3.Connection,
+    findings: tuple[CodeHealthFinding, ...],
+    previous_fingerprints: dict[str, str],
+    now: str,
+) -> None:
+    """Drop recorded verifications whose finding's body changed since last scan.
+
+    When a ``stable_key`` persists (same logical finding) but its evidence
+    fingerprint changes, the symbol body was edited, so any prior passing
+    verification no longer vouches for the current code. The verification ledger
+    rows are removed and the staleness is logged to ``finding_events``. A line
+    shift leaves the fingerprint unchanged, so the ledger stays attached.
+    """
+    for finding in findings:
+        previous = previous_fingerprints.get(finding.stable_key)
+        if previous is None or previous == _verification_fingerprint(finding.evidence):
+            continue
+        cursor = connection.execute(
+            "delete from verification_runs where finding_id = ?",
+            (finding.id,),
+        )
+        if cursor.rowcount > 0:
+            _ = connection.execute(
+                """
+                insert into finding_events (
+                    finding_id,
+                    event_type,
+                    created_at,
+                    details_json
+                ) values (?, ?, ?, ?)
+                """,
+                (
+                    finding.id,
+                    "verification_stale",
+                    now,
+                    json.dumps(
+                        {"reason": "evidence_fingerprint_changed"},
+                        sort_keys=True,
+                    ),
+                ),
+            )
 
 
 def _previous_lifecycle(
