@@ -8,6 +8,10 @@ from typing import TYPE_CHECKING, Final, Literal
 from codescent.core.models import ProjectConfig
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
+from codescent.engine.rules.entry_points import (
+    EntryPointRegistry,
+    build_entry_point_registry,
+)
 from codescent.engine.rules.model import CodeHealthFinding, FindingSpec, build_finding
 from codescent.engine.source_read import read_source_text
 
@@ -119,8 +123,12 @@ def structural_duplicate_findings(
     *,
     config: ProjectConfig | None = None,
 ) -> tuple[CodeHealthFinding, ...]:
+    # ponytail: re-derives the registry here rather than threading it through the
+    # rule aggregator; share it via engine/rules/python.py only if scan latency
+    # on large repos measurably regresses.
+    entry_points = build_entry_point_registry(root, config=config)
     return tuple(
-        _cluster_finding(cluster)
+        _cluster_finding(cluster, entry_points)
         for cluster in group_structural_duplicates(root, config=config)
         if cluster.locations
     )
@@ -252,7 +260,10 @@ def _statement_count(node: StructuralNode) -> int:
     return sum(1 for child in ast.walk(node) if isinstance(child, ast.stmt)) - 1
 
 
-def _cluster_finding(cluster: StructuralDuplicateCluster) -> CodeHealthFinding:
+def _cluster_finding(
+    cluster: StructuralDuplicateCluster,
+    entry_points: EntryPointRegistry,
+) -> CodeHealthFinding:
     first = cluster.locations[0]
     return build_finding(
         FindingSpec(
@@ -261,6 +272,7 @@ def _cluster_finding(cluster: StructuralDuplicateCluster) -> CodeHealthFinding:
             message=(
                 f"{first.path}:{first.start_line} shares a structural fingerprint "
                 f"with {cluster.member_count - 1} other location(s)."
+                f"{_reachable_members_note(cluster, entry_points)}"
             ),
             file_path=first.path,
             symbol=first.name,
@@ -276,6 +288,26 @@ def _cluster_finding(cluster: StructuralDuplicateCluster) -> CodeHealthFinding:
             ),
         ),
     )
+
+
+def _reachable_members_note(
+    cluster: StructuralDuplicateCluster,
+    entry_points: EntryPointRegistry,
+) -> str:
+    # Entry-point awareness for structural duplication: duplication is a smell
+    # regardless of reachability, so the cluster is still reported. We only
+    # annotate the message (never the evidence/stable key) so a reviewer knows a
+    # duplicated member is externally reachable and cannot simply be deleted.
+    reachable = sorted(
+        {
+            location.name
+            for location in cluster.locations
+            if entry_points.is_entry_point(location.name)
+        },
+    )
+    if not reachable:
+        return ""
+    return f" Reachable via entry points: {', '.join(reachable)}."
 
 
 def _locations_evidence(cluster: StructuralDuplicateCluster) -> str:

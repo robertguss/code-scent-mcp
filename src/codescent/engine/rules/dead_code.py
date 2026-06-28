@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ast
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -11,6 +10,10 @@ from codescent.engine.parsers.python import (
     ParsedPythonFile,
     ParsedSymbol,
     parse_python_file,
+)
+from codescent.engine.rules.entry_points import (
+    EntryPointRegistry,
+    build_entry_point_registry,
 )
 from codescent.engine.rules.model import CodeHealthFinding, FindingSpec, build_finding
 
@@ -36,6 +39,7 @@ class DeadCodeCandidate:
 class NameUseIndex:
     used_names: frozenset[str]
     candidates: tuple[DeadCodeCandidate, ...]
+    entry_points: EntryPointRegistry
 
 
 def build_name_use_index(
@@ -55,11 +59,13 @@ def build_name_use_index(
         parsed_files.append(parsed)
         used_names.update(reference.name for reference in parsed.references)
         used_names.update(imported.name for imported in parsed.imports if imported.name)
-        used_names.update(_exported_names(repo_root / parsed.path))
+
+    entry_points = build_entry_point_registry(repo_root, config=project_config)
 
     return NameUseIndex(
         used_names=frozenset(sorted(used_names)),
-        candidates=tuple(_candidate_symbols(parsed_files, used_names)),
+        candidates=tuple(_candidate_symbols(parsed_files, used_names, entry_points)),
+        entry_points=entry_points,
     )
 
 
@@ -106,6 +112,7 @@ def _candidate_finding(candidate: DeadCodeCandidate) -> CodeHealthFinding:
 def _candidate_symbols(
     parsed_files: list[ParsedPythonFile],
     used_names: set[str],
+    entry_points: EntryPointRegistry,
 ) -> list[DeadCodeCandidate]:
     candidates: list[DeadCodeCandidate] = []
     for parsed in parsed_files:
@@ -117,6 +124,11 @@ def _candidate_symbols(
             if _is_excluded_name(symbol.name):
                 continue
             if symbol.name in used_names:
+                continue
+            # Registered/exported/decorated/dynamic-dispatch entry points are
+            # reachable from outside the internal call graph; excluding them
+            # keeps tools like `how_to_use` (in-degree 0) off the dead list.
+            if entry_points.is_entry_point(symbol.name):
                 continue
             candidates.append(
                 DeadCodeCandidate(
@@ -147,39 +159,3 @@ def _is_module_level_symbol(parsed: ParsedPythonFile, symbol: ParsedSymbol) -> b
 
 def _is_excluded_name(name: str) -> bool:
     return name in ENTRYPOINT_NAMES or (name.startswith("__") and name.endswith("__"))
-
-
-def _exported_names(path: Path) -> set[str]:
-    try:
-        tree = ast.parse(path.read_text(), filename=path.as_posix())
-    except (OSError, SyntaxError):
-        return set()
-
-    exported: set[str] = set()
-    for node in tree.body:
-        match node:
-            case ast.Assign(targets=targets, value=value):
-                if any(_is_all_target(target) for target in targets):
-                    exported.update(_string_constants(value))
-            case ast.AnnAssign(target=target, value=value):
-                if value is not None and _is_all_target(target):
-                    exported.update(_string_constants(value))
-            case _:
-                continue
-    return exported
-
-
-def _is_all_target(target: ast.AST) -> bool:
-    return isinstance(target, ast.Name) and target.id == "__all__"
-
-
-def _string_constants(node: ast.AST) -> set[str]:
-    match node:
-        case ast.List(elts=elts) | ast.Tuple(elts=elts) | ast.Set(elts=elts):
-            return {
-                element.value
-                for element in elts
-                if isinstance(element, ast.Constant) and isinstance(element.value, str)
-            }
-        case _:
-            return set()
