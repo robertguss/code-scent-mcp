@@ -16,11 +16,21 @@ uv run codescent init --repo "$repo" --json
 
 ### `index`
 
-Indexes included source files and reports changed files.
+Indexes included source files and reports changed files. Indexing is
+**incremental by default**: only added or modified files (detected by comparing
+on-disk content hashes to the persisted index) are re-parsed, and rows for
+modified or deleted files are removed via foreign-key cascade. Pass `--full` to
+force a complete rebuild. Both modes produce an equivalent index for the same
+on-disk state.
 
 ```bash
-uv run codescent index --repo "$repo" --json
+uv run codescent index --repo "$repo" --json          # incremental delta
+uv run codescent index --repo "$repo" --full --json   # full rebuild
 ```
+
+The JSON result reports `indexed_files` (total in the index), `reindexed_files`
+(files actually reprocessed this pass), `changed_files`, `deleted_files`, and
+`full`.
 
 ### `scan`
 
@@ -40,11 +50,20 @@ uv run codescent status --repo "$repo" --json
 
 ### `watch`
 
-Runs an index pass. Use `--once` for bounded local checks.
+Watches the repository and runs a **debounced incremental reindex** when files
+change. The watcher polls for changes every `--interval` seconds and only
+reindexes once the set of changed files has stayed stable for `--debounce`
+seconds, so a burst of edits collapses into a single incremental pass. Use
+`--once` for a single bounded reindex (e.g. local checks or CI).
 
 ```bash
-uv run codescent watch --repo "$repo" --once --json
+uv run codescent watch --repo "$repo" --once --json              # one pass, exit
+uv run codescent watch --repo "$repo" --interval 1 --debounce 2  # poll + debounce
 ```
+
+Options: `--once` (single pass), `--interval` (seconds between change polls,
+default `1.0`), `--debounce` (seconds a change set must stay stable before
+reindexing, default `2.0`).
 
 ### `reset`
 

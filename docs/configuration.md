@@ -49,6 +49,28 @@ When state is missing or stale it leaves `.codescent/` untouched and returns
 clear "run `scan_code_health` to initialize" guidance (legacy behavior) in the
 tool warnings and the `bootstrap.guidance` note instead.
 
+## Incremental Indexing
+
+Indexing is incremental by default. CodeScent compares each on-disk file's
+content hash against the hash persisted in `.codescent/index.sqlite` and only
+re-parses added or modified files; rows for modified or deleted files are
+removed through foreign-key cascade. Unchanged files are left untouched, so
+re-indexing a large repo after a small edit reprocesses only the delta. This
+applies everywhere indexing runs (the `index` command, `scan`, auto-bootstrap,
+and `watch`).
+
+The incremental index is always equivalent to a full rebuild for the same
+on-disk state. Force a full rebuild with `codescent index --full` if you ever
+need to rebuild from scratch (for example after manually editing the database).
+
+`codescent watch` reindexes incrementally on change, debounced so a burst of
+edits collapses into one pass:
+
+- `--interval` — seconds between change polls (default `1.0`).
+- `--debounce` — seconds a change set must stay stable before reindexing
+  (default `2.0`).
+- `--once` — run a single incremental pass and exit.
+
 ## Inline Suppression
 
 Silence a specific finding at its location with an inline comment, the way most

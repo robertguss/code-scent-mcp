@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     import sqlite3
     from pathlib import Path
 
+    from codescent.core.models import IndexedFile
     from codescent.engine.parsers.python import ParsedPythonFile, ParsedSymbol
 
 
@@ -24,6 +25,9 @@ class IndexResult:
     file_hashes: dict[str, str]
     git_available: bool
     git_status: str
+    deleted_files: tuple[str, ...] = ()
+    reindexed_files: int = 0
+    full: bool = False
 
 
 class MissingRowIdError(RuntimeError):
@@ -34,29 +38,55 @@ class MissingRowIdError(RuntimeError):
 class RepoIndexService:
     repo_root: Path | str
 
-    def index_repo(self) -> IndexResult:
+    def index_repo(self, *, full: bool = False) -> IndexResult:
+        """Persist the file graph for the repo.
+
+        Incremental by default: only added/modified files are re-parsed and
+        re-inserted, and rows for modified/deleted files are removed (FK
+        cascade clears their symbols/imports/references/edges). Pass
+        ``full=True`` to rebuild the whole index from scratch. Both paths
+        produce an equivalent index for the same on-disk state — every graph
+        row references only its own file, so per-file reindex == full reindex.
+        """
         state = initialize_storage(self.repo_root)
         config = ConfigService(state.repo_root).load()
         inventory = build_file_inventory(state.repo_root, config=config)
         previous_hashes = _load_hashes(RepositoryStorage(state))
         now = datetime.now(UTC).isoformat()
 
+        file_hashes = {item.path: item.hash for item in inventory}
         changed_files = tuple(
             item.path
             for item in inventory
             if previous_hashes.get(item.path) != item.hash
         )
-        file_hashes = {item.path: item.hash for item in inventory}
+        deleted_files = tuple(
+            path for path in previous_hashes if path not in file_hashes
+        )
         git_state = detect_git_state(state.repo_root)
         registry = build_pack_registry(config)
 
+        if full:
+            to_index: tuple[IndexedFile, ...] = inventory
+        else:
+            changed_set = set(changed_files)
+            to_index = tuple(item for item in inventory if item.path in changed_set)
+
         with RepositoryStorage(state).write_transaction() as connection:
-            _ = connection.execute("delete from files")
-            _ = connection.execute("delete from symbols")
-            _ = connection.execute("delete from imports")
-            _ = connection.execute("delete from symbol_references")
-            _ = connection.execute("delete from call_edges")
-            for item in inventory:
+            if full:
+                # FK on-delete-cascade clears symbols/imports/references/edges.
+                _ = connection.execute("delete from files")
+            else:
+                # Stale rows = modified + deleted files; cascade clears their
+                # graph. Unchanged files are left untouched; added files have
+                # no prior row to remove.
+                for path in previous_hashes:
+                    if previous_hashes[path] != file_hashes.get(path):
+                        _ = connection.execute(
+                            "delete from files where path = ?",
+                            (path,),
+                        )
+            for item in to_index:
                 cursor = connection.execute(
                     """
                     insert into files (
@@ -99,6 +129,9 @@ class RepoIndexService:
             file_hashes=file_hashes,
             git_available=git_state.available,
             git_status=git_state.status,
+            deleted_files=deleted_files,
+            reindexed_files=len(to_index),
+            full=full,
         )
 
 

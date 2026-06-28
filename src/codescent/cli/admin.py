@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import shutil
 import sys
+import time
+from dataclasses import dataclass
 from typing import Annotated, NoReturn, Protocol, runtime_checkable
 
 import typer
@@ -10,8 +12,41 @@ import typer
 from codescent.core.errors import CodeScentError
 from codescent.core.paths import resolve_repo_root
 from codescent.services.config import ConfigService
-from codescent.services.repo_index import RepoIndexService
+from codescent.services.repo_index import IndexResult, RepoIndexService
 from codescent.services.rules import RulesService
+from codescent.services.status import RepoStatusService
+
+
+@dataclass(slots=True)
+class ReindexDebouncer:
+    """Coalesce a burst of file changes into a single incremental reindex.
+
+    Fed the current changed-file set on every poll, it fires (returns True)
+    only once the set has stayed identical for ``window_seconds`` -- so a
+    burst of edits collapses into one reindex instead of one per poll. An
+    empty set (index already fresh) resets the window.
+    """
+
+    window_seconds: float
+    _signature: tuple[str, ...] | None = None
+    _stable_since: float | None = None
+
+    def observe(self, changed: tuple[str, ...], now: float) -> bool:
+        if not changed:
+            self._signature = None
+            self._stable_since = None
+            return False
+        if changed != self._signature:
+            self._signature = changed
+            self._stable_since = now
+            return False
+        if self._stable_since is not None and now - self._stable_since >= (
+            self.window_seconds
+        ):
+            self._signature = None
+            self._stable_since = None
+            return True
+        return False
 
 
 @runtime_checkable
@@ -97,23 +132,62 @@ def watch(
     repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
     once: Annotated[
         bool,
-        typer.Option("--once", help="Run one index pass and exit."),
+        typer.Option("--once", help="Run one incremental index pass and exit."),
     ] = False,
+    interval: Annotated[
+        float,
+        typer.Option("--interval", help="Seconds between change polls."),
+    ] = 1.0,
+    debounce: Annotated[
+        float,
+        typer.Option(
+            "--debounce",
+            help="Seconds a change set must stay stable before reindexing.",
+        ),
+    ] = 2.0,
     json_output: Annotated[
         bool,
         typer.Option("--json", help="Print JSON watch result."),
     ] = False,
 ) -> None:
-    result = RepoIndexService(repo).index_repo()
-    payload = {
-        "mode": "once" if once else "poll",
+    if once:
+        result = RepoIndexService(repo).index_repo()
+        _emit_watch(_watch_payload(result, mode="once"), json_output=json_output)
+        return
+
+    # ponytail: hash-poll loop + debouncer; reuses RepoStatusService change
+    # detection so it stays deterministic and dependency-free. Swap in
+    # watchfiles for OS-level events if poll latency ever matters.
+    debouncer = ReindexDebouncer(window_seconds=debounce)
+    try:
+        while True:
+            status = RepoStatusService(repo).get_status()
+            if debouncer.observe(status.changed_files, time.monotonic()):
+                result = RepoIndexService(repo).index_repo()
+                _emit_watch(
+                    _watch_payload(result, mode="poll"),
+                    json_output=json_output,
+                )
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        return
+
+
+def _watch_payload(result: IndexResult, *, mode: str) -> dict[str, object]:
+    return {
+        "mode": mode,
         "indexed_files": result.indexed_files,
+        "reindexed_files": result.reindexed_files,
         "changed_files": list(result.changed_files),
+        "deleted_files": list(result.deleted_files),
     }
+
+
+def _emit_watch(payload: dict[str, object], *, json_output: bool) -> None:
     if json_output:
         typer.echo(json.dumps(payload))
         return
-    typer.echo(f"Indexed {result.indexed_files} files")
+    typer.echo(f"Indexed {payload['indexed_files']} files")
 
 
 def reset(
