@@ -44,6 +44,12 @@
       "file": "src/codescent/core/symbol_formatter.py",
       "symbol": "core.symbol_formatter.format_symbol_search_results"
     },
+    "python.large_file:794d9ef2e962": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/dashboard/server.py",
+      "symbol": null
+    },
     "python.deep_nesting:6783b16fd9cc": {
       "rule_id": "python.deep_nesting",
       "severity": "warning",
@@ -163,6 +169,12 @@
       "severity": "warning",
       "file": "src/codescent/services/code_health.py",
       "symbol": "services.code_health.CodeHealthService.scan"
+    },
+    "python.large_function:aac4413b29f3": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/code_health.py",
+      "symbol": "services.code_health.scan_rule_packs_cached"
     },
     "python.large_class:682ddee3acd2": {
       "rule_id": "python.large_class",
