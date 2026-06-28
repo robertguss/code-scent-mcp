@@ -127,6 +127,10 @@ def test_findings_to_sarif_matches_golden_and_validates() -> None:
                             "suggestedAction": "Split process into smaller units.",
                             "confidence": 0.8,
                             "confidenceTier": "verified",
+                            "provenance": {
+                                "rule_id": "python.large_function",
+                                "symbol_resolved": True,
+                            },
                         },
                     },
                     {
@@ -149,6 +153,10 @@ def test_findings_to_sarif_matches_golden_and_validates() -> None:
                             "suggestedAction": "Resolve or ticket the markers.",
                             "confidence": 0.5,
                             "confidenceTier": "heuristic",
+                            "provenance": {
+                                "rule_id": "python.todo_cluster",
+                                "symbol_resolved": False,
+                            },
                         },
                     },
                 ],

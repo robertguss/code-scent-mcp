@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -15,6 +16,8 @@ from codescent.storage import RepositoryStorage, initialize_storage
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 PRIVACY_NOTICE = (
     "Subjective LLM review is disabled by default. Enable it only when you "
@@ -55,6 +58,10 @@ _KEYED_SECRET: Final = re.compile(
 _SECRET_PATTERNS: Final = (
     re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+"),  # emails
     re.compile(r"\bAKIA[0-9A-Z]{16}\b"),  # AWS access key ids
+    re.compile(r"\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]+"),  # Stripe keys
+    re.compile(r"\bgh[posru]_[A-Za-z0-9]{20,}"),  # GitHub tokens
+    re.compile(r"\bxox[baprs]-[A-Za-z0-9-]+"),  # Slack tokens
+    re.compile(r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"),  # JWTs
     re.compile(r"\b[A-Za-z0-9+/]{40,}={0,2}\b"),  # long base64-ish secrets
     re.compile(r"\b[0-9a-fA-F]{32,}\b"),  # long hex tokens/hashes
 )
@@ -163,6 +170,11 @@ class SamplingSubjectiveReviewProvider:
         try:
             reply = await channel.sample(prompt)
         except (ValueError, McpError):
+            return cls(response_text=None, available=False)
+        except Exception:  # noqa: BLE001 - opt-in best-effort review must never
+            # crash the tool; any transport/framework failure degrades to a
+            # graceful "sampling unavailable" with an observable warning.
+            logger.warning("subjective sampling failed; degrading", exc_info=True)
             return cls(response_text=None, available=False)
         else:
             return cls(response_text=reply.text, available=True)

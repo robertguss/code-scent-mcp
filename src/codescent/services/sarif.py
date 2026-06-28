@@ -65,6 +65,7 @@ class _ResultProperties(TypedDict):
     suggestedAction: str
     confidence: float
     confidenceTier: str
+    provenance: dict[str, str | bool]
 
 
 class SarifResult(TypedDict):
@@ -170,6 +171,7 @@ def _sarif_result(
             "suggestedAction": finding.suggested_action,
             "confidence": finding.confidence,
             "confidenceTier": finding.confidence_tier,
+            "provenance": dict(finding.provenance),
         },
     }
 

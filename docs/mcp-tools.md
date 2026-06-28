@@ -93,7 +93,7 @@ No CLI commands are locked in the current local PRD-remainder stage.
 
 Repository tools:
 
-`get_repo_map`, `get_repo_status`, `start_task`
+`get_repo_map`, `get_repo_status`, `start_task`, `resume_task`
 
 Search and context tools:
 
@@ -106,12 +106,13 @@ Code health and finding lifecycle tools:
 `scan_code_health`, `get_smell_report`, `get_next_improvement`, `mark_finding`,
 `record_verification`, `rescan`, `get_finding`, `explain_score`, `get_backlog`,
 `get_improvement_plan`, `get_calibration`, `get_progress`, `get_regressions`,
-`context_stats`
+`context_stats`, `subjective_review`
 
 Planning tools:
 
 `get_finding_context`, `plan_refactor`, `suggest_tests`, `get_impact`,
-`verify_change`, `verify_refactor`, `select_tests`, `refactor_preflight`
+`verify_change`, `verify_refactor`, `select_tests`, `refactor_preflight`,
+`explain_finding`
 
 Risk tools:
 

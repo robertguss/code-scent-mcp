@@ -1,4 +1,4 @@
-"""Content-hash scan cache (plan unit U16).
+"""Content-hash scan cache.
 
 Persists the last scan's rule-pack findings under ``.codescent/`` keyed by a
 fingerprint of the repo's per-file content hashes (plus git working-tree status,
@@ -128,6 +128,9 @@ class ScanCache:
             raw = self.path.read_text(encoding="utf-8")
         except OSError:
             return None
+        return self._decode(raw)
+
+    def _decode(self, raw: str) -> CachedScan | None:
         try:
             decoded = cast("object", json.loads(raw))
         except json.JSONDecodeError:
@@ -148,10 +151,17 @@ class ScanCache:
         ):
             return None
         items = cast("list[dict[str, object]]", findings_raw)
+        try:
+            findings = tuple(_deserialize(item) for item in items)
+        except (KeyError, TypeError, ValueError):
+            # A structurally-corrupt entry that still passed the type guards
+            # above must degrade to a cold recompute, never crash the scan.
+            logger.warning("scan cache entry corrupt, ignoring: %s", self.path)
+            return None
         return CachedScan(
             fingerprint=fingerprint,
             file_hashes=cast("dict[str, str]", files),
-            findings=tuple(_deserialize(item) for item in items),
+            findings=findings,
         )
 
     def store(
@@ -167,11 +177,16 @@ class ScanCache:
             "files": dict(sorted(file_hashes.items())),
             "findings": [_serialize(finding) for finding in findings],
         }
-        self.state_dir.mkdir(exist_ok=True)
-        # Atomic write: a crash mid-write must not poison the next scan.
-        tmp = self.path.with_suffix(".json.tmp")
-        _ = tmp.write_text(
-            json.dumps(record, sort_keys=True, indent=2),
-            encoding="utf-8",
-        )
-        _ = tmp.replace(self.path)
+        # A cache write failure (disk full, read-only fs) must not discard a
+        # scan whose findings are already computed: log and return them.
+        try:
+            self.state_dir.mkdir(exist_ok=True)
+            # Atomic write: a crash mid-write must not poison the next scan.
+            tmp = self.path.with_suffix(".json.tmp")
+            _ = tmp.write_text(
+                json.dumps(record, sort_keys=True, indent=2),
+                encoding="utf-8",
+            )
+            _ = tmp.replace(self.path)
+        except OSError:
+            logger.warning("scan cache write failed, skipping: %s", self.path)
