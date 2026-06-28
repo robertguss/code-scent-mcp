@@ -34,6 +34,25 @@ TypeScript pack is regex-based, and resolving TS/JS import specifiers to files
 aliases) cannot currently be done at high enough confidence to avoid false or
 missing cycles. The rule id is reserved; Python ships first.
 
+### Knowledge silo (bus factor)
+
+The cross-language `knowledge-silo` rule pack flags files that are both
+high-churn **and** dominated by a single author -- a maintainability /
+bus-factor risk that size and complexity rules miss. It emits
+`python.knowledge_silo` for `.py`/`.pyi` files and `typescript.knowledge_silo`
+for `.js`/`.jsx`/`.ts`/`.tsx` files.
+
+The signal extends the existing single-pass `git log` parse in
+`services/git.py` to capture the commit author (`%H%x00%an`) and aggregates,
+per file, the recent commit count (`churn`), the dominant author's share
+(`top_author_share`), and the distinct `author_count` -- one `git log`
+invocation, no per-commit subprocess. A file is flagged when `churn >= 5` and
+`top_author_share >= 0.8`: confidence is **HIGH** (0.9) for a true single-author
+file and **LOW** (0.5) when ownership is concentrated but shared. Findings are
+git-derived, so they carry the `heuristic` confidence tier and `resolution:
+git` provenance. The pack self-disables (no findings) when there is no git
+history, so non-git and shallow trees stay clean.
+
 ## Parser Decision
 
 The TypeScript/JavaScript pack uses a local deterministic parser adapter backed

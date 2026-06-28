@@ -8,6 +8,7 @@ from codescent.engine.packs_ts import TS_EXTENSIONS, parse_typescript_file
 from codescent.engine.parsers.python import ParsedPythonFile, parse_python_file
 from codescent.engine.rules.architecture import scan_architecture
 from codescent.engine.rules.import_cycles import scan_import_cycles
+from codescent.engine.rules.knowledge_silo import scan_knowledge_silos
 from codescent.engine.rules.python import scan_python_health
 from codescent.engine.rules.ts_react_next import scan_ts_react_next_health
 
@@ -21,6 +22,7 @@ PYTHON_RULE_PACK = "python-maintainability"
 TYPESCRIPT_LANGUAGE_PACK = "typescript"
 TYPESCRIPT_RULE_PACK = "ts-react-next"
 ARCHITECTURE_RULE_PACK = "architecture"
+KNOWLEDGE_SILO_RULE_PACK = "knowledge-silo"
 
 
 class ParseFile(Protocol):
@@ -118,6 +120,16 @@ def _rule_packs(enabled: tuple[str, ...]) -> tuple[RulePack, ...]:
             scan=_scan_architecture_health,
         ),
     )
+    # Always-on (like architecture): the git-derived bus-factor signal spans both
+    # languages from one log pass and self-disables at runtime when there is no
+    # git history, so it needs no config gate.
+    packs.append(
+        RulePack(
+            name=KNOWLEDGE_SILO_RULE_PACK,
+            languages=("python", "typescript"),
+            scan=_scan_knowledge_silos,
+        ),
+    )
     if PYTHON_RULE_PACK in enabled:
         packs.append(
             RulePack(
@@ -162,3 +174,10 @@ def _scan_ts_react_next_health(
     config: ProjectConfig,
 ) -> tuple[CodeHealthFinding, ...]:
     return scan_ts_react_next_health(root, config=config)
+
+
+def _scan_knowledge_silos(
+    root: Path | str,
+    config: ProjectConfig,
+) -> tuple[CodeHealthFinding, ...]:
+    return scan_knowledge_silos(root, config=config)

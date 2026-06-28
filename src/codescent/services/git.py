@@ -20,6 +20,20 @@ class GitState:
     status: str
 
 
+@dataclass(frozen=True, slots=True)
+class FileAuthorChurn:
+    """Per-file authorship concentration from one ``git log`` pass.
+
+    ``churn`` is the recent commit count touching the file, ``top_author_share``
+    is the dominant author's fraction of those commits (1.0 == single author),
+    and ``author_count`` is the number of distinct authors.
+    """
+
+    churn: int
+    top_author_share: float
+    author_count: int
+
+
 def detect_git_state(repo_root: Path) -> GitState:
     if not (repo_root / ".git").exists():
         return GitState(available=False, status="not_git")
@@ -313,6 +327,92 @@ def git_change_counts(repo_root: Path) -> dict[str, int]:
     _add_change_counts(counts, commit_paths)
 
     return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
+def git_author_churn(repo_root: Path) -> dict[str, FileAuthorChurn]:
+    """Return per-file churn + author concentration from one ``git log`` pass.
+
+    Extends the single-pass log idiom of :func:`git_change_counts` to also
+    capture each commit's author (``%H%x00%an``) so callers can flag knowledge
+    silos (high-churn, single-/dominant-author files). One ``git log``
+    invocation parsed in a single pass — no per-commit subprocess. Returns
+    ``{}`` when there is no git repo, git is missing, or there is no history, so
+    callers self-disable cleanly.
+    """
+    if not (repo_root / ".git").exists():
+        return {}
+
+    git_path = which("git")
+    if git_path is None:
+        return {}
+
+    try:
+        result = subprocess.run(
+            [
+                git_path,
+                "-C",
+                str(repo_root),
+                "log",
+                "--no-renames",
+                "--format=%H%x00%an",
+                "--name-only",
+                "-n",
+                str(GIT_LOG_MAX_COMMITS),
+                "--",
+                ".",
+                ":(exclude).codescent",
+            ],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=GIT_HISTORY_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return {}
+    if result.returncode != 0:
+        return {}
+
+    totals: dict[str, int] = {}
+    authors: dict[str, dict[str, int]] = {}
+    commit_paths: set[str] = set()
+    current_author: str | None = None
+    for line in result.stdout.splitlines():
+        # The header line is ``<hash>\x00<author>``; file paths never contain a
+        # NUL, so the delimiter cleanly separates headers from name-only output.
+        if "\x00" in line:
+            _add_author_churn(totals, authors, commit_paths, current_author)
+            commit_paths = set()
+            current_author = line.split("\x00", 1)[1]
+            continue
+        changed_path = line.strip()
+        if changed_path:
+            commit_paths.add(changed_path)
+    _add_author_churn(totals, authors, commit_paths, current_author)
+
+    return {
+        path: FileAuthorChurn(
+            churn=total,
+            top_author_share=max(authors[path].values()) / total,
+            author_count=len(authors[path]),
+        )
+        for path, total in sorted(totals.items())
+    }
+
+
+def _add_author_churn(
+    totals: dict[str, int],
+    authors: dict[str, dict[str, int]],
+    commit_paths: set[str],
+    author: str | None,
+) -> None:
+    if author is None:
+        return
+    for changed_path in commit_paths:
+        if changed_path.startswith(".codescent"):
+            continue
+        totals[changed_path] = totals.get(changed_path, 0) + 1
+        per_author = authors.setdefault(changed_path, {})
+        per_author[author] = per_author.get(author, 0) + 1
 
 
 def _add_change_counts(counts: dict[str, int], commit_paths: set[str]) -> None:

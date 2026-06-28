@@ -146,7 +146,12 @@ def test_architecture_pack_runs_configured_rules(tmp_path: Path) -> None:
 
     findings = registry.scan_rule_packs(repo)
 
-    assert tuple(pack.name for pack in registry.rule_packs) == ("architecture",)
+    # knowledge-silo is always-on like architecture, but self-disables here (the
+    # tmp repo has no git history), so it adds no findings.
+    assert tuple(pack.name for pack in registry.rule_packs) == (
+        "architecture",
+        "knowledge-silo",
+    )
     assert [finding.rule_id for finding in findings] == [
         "architecture.boundary_violation",
     ]

@@ -200,6 +200,12 @@
       "file": "src/codescent/services/git.py",
       "symbol": null
     },
+    "python.large_function:c426c210bc40": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/git.py",
+      "symbol": "services.git.git_author_churn"
+    },
     "python.large_function:9dd4a5b10d31": {
       "rule_id": "python.large_function",
       "severity": "warning",
