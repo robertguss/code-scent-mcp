@@ -14,6 +14,7 @@ DASHBOARD_API_ROUTES = (
     "/api/status",
     "/api/findings",
     "/api/progress",
+    "/api/precision",
     "/api/rules",
     "/api/reports",
     "/api/exports",

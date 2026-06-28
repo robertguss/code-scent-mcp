@@ -145,6 +145,26 @@ Explains a finding score.
 uv run codescent explain "$finding_id" --repo "$repo" --json
 ```
 
+### `precision`
+
+Reports runtime **acceptance precision** — per-rule
+`accepted / (accepted + dismissed)` from the persisted finding status history,
+the calibration suppression-candidate count per rule, and an ordered health-trend
+timeline. Read-only. This is distinct from the labeled-corpus **eval precision**
+in [Evals](evals.md).
+
+```bash
+uv run codescent precision --repo "$repo" --format json
+uv run codescent precision --repo "$repo" --format markdown
+```
+
+The JSON payload reports overall `accepted`/`dismissed`/`sample_size`/
+`acceptance_precision`, a `rules` array (each with `rule_id`, `accepted`,
+`dismissed`, `sample_size`, `acceptance_precision`, `suppression_candidates`),
+and a bounded `trend` array of daily `{date, accepted, dismissed,
+acceptance_precision}` points. `acceptance_precision` is `null` until a rule has a
+verdict.
+
 ## MCP And CI
 
 ### `serve`
