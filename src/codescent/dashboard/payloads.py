@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from codescent.mcp.finding_payloads import decode_provenance
+from codescent.core.json_decode import decode_provenance
 
 type JsonValue = (
     None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]

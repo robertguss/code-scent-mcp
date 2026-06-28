@@ -29,6 +29,8 @@ PRIVACY_NOTICE = (
 CONFIDENCE_TIER_SUBJECTIVE: Final = "subjective"
 PROVENANCE_SUBJECTIVE: Final = "subjective"
 
+# Cap on findings sent to the client LLM, bounding prompt size and exposure.
+DEFAULT_PROMPT_FINDING_LIMIT: Final = 25
 _DEFAULT_CONFIDENCE: Final = 0.5
 _MIN_CONFIDENCE: Final = 0.0
 _MAX_CONFIDENCE: Final = 1.0
@@ -226,13 +228,18 @@ class SubjectiveReviewService:
         )
 
 
-def build_subjective_review_prompt(findings: Sequence[FindingMetadata] = ()) -> str:
+def build_subjective_review_prompt(
+    findings: Sequence[FindingMetadata] = (),
+    *,
+    max_findings: int = DEFAULT_PROMPT_FINDING_LIMIT,
+) -> str:
     if not findings:
         return _PROMPT_BASE
+    bounded = findings[:max_findings]
     lines = [_PROMPT_BASE, "", _PROMPT_INSTRUCTIONS, "", "Findings (metadata only):"]
     lines.extend(
         _scrub_secrets(_format_metadata(index, finding))
-        for index, finding in enumerate(findings, start=1)
+        for index, finding in enumerate(bounded, start=1)
     )
     return "\n".join(lines)
 

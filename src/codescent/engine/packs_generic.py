@@ -62,7 +62,7 @@ def scan_generic_health(
     project_config = config or ProjectConfig()
     thresholds = project_config.thresholds
     findings: list[CodeHealthFinding] = []
-    for relative in _generic_files(repo_root, project_config):
+    for relative in generic_pack_files(repo_root, project_config):
         source = read_source_bytes(repo_root / relative)
         content = source.content
         if content is None or b"\x00" in content:
@@ -76,7 +76,7 @@ def scan_generic_health(
     return tuple(findings)
 
 
-def _generic_files(repo_root: Path, config: ProjectConfig) -> tuple[str, ...]:
+def generic_pack_files(repo_root: Path, config: ProjectConfig) -> tuple[str, ...]:
     config_patterns = tuple(
         cleaned
         for pattern in (

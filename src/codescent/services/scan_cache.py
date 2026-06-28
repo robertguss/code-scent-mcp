@@ -8,6 +8,10 @@ rule packs, so a warm scan is byte-identical to a cold one for the same repo
 state. No schema bump: this is pure ``.codescent/`` state (rebuildable, ignored
 by git).
 
+The fingerprint hashes every file the enabled packs read: the language
+inventory's ``.py``/``.ts``/``.js`` hashes plus, via ``pack_input_hashes``, the
+Go and generic-fallback packs' own file sets (which the inventory does not map).
+
 ponytail: cache keyed by content hashes + git status + config + engine version.
 Pure git-history changes (new commits, identical file bytes) are caught by the
 clean<->dirty status flip; an amend-in-place that keeps status clean could serve
@@ -24,12 +28,17 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+from codescent.engine.packs import GO_LANGUAGE_PACK
+from codescent.engine.packs_generic import generic_pack_files
+from codescent.engine.packs_go import go_pack_files
 from codescent.engine.rules.model import CodeHealthFinding
+from codescent.engine.source_read import read_source_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
+    from codescent.core.models import ProjectConfig
     from codescent.engine.rules.model import EvidenceValue, Provenance
 
 logger = logging.getLogger(__name__)
@@ -56,6 +65,37 @@ def compute_fingerprint(
         sort_keys=True,
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def pack_input_hashes(
+    repo_root: Path,
+    config: ProjectConfig,
+) -> dict[str, str]:
+    """Content hashes of files scanned by packs the language inventory omits.
+
+    ``compute_fingerprint`` keys on the language inventory's per-file hashes
+    (``.py``/``.ts``/``.js``). The Go and generic-fallback packs walk their own
+    files, so without hashing them here a change to a ``.go`` or generic file
+    would be invisible to the fingerprint and a stale scan could be served.
+    Hash exactly the files those enabled packs read.
+    """
+    extra: dict[str, str] = {}
+    if GO_LANGUAGE_PACK in config.language_packs:
+        for relative in go_pack_files(repo_root, config):
+            extra[relative] = _content_hash(repo_root / relative)
+    if config.generic_fallback:
+        for relative in generic_pack_files(repo_root, config):
+            extra[relative] = _content_hash(repo_root / relative)
+    return extra
+
+
+def _content_hash(path: Path) -> str:
+    info = read_source_bytes(path)
+    if info.content is None:
+        # Oversized/unreadable: the packs skip the body, but a size change should
+        # still invalidate the cache.
+        return f"oversized:{info.size_bytes}"
+    return hashlib.sha256(info.content).hexdigest()
 
 
 def changed_paths(

@@ -30,6 +30,7 @@ from codescent.services.scan_cache import (
     ScanCache,
     changed_paths,
     compute_fingerprint,
+    pack_input_hashes,
 )
 from codescent.services.search_queries import (
     is_test_path,
@@ -312,8 +313,12 @@ def scan_rule_packs_cached(
     start = time.perf_counter()
     config = registry.config
     file_hashes = index_result.file_hashes
+    # The language inventory only hashes .py/.ts/.js; fold in the Go and generic
+    # packs' own file content so editing one of those never serves a stale scan.
+    fingerprint_files = dict(file_hashes)
+    fingerprint_files.update(pack_input_hashes(state.repo_root, config))
     fingerprint = compute_fingerprint(
-        file_hashes,
+        fingerprint_files,
         git_status=index_result.git_status,
         config_repr=repr(config),
         engine_version=f"{CACHE_VERSION}.{SCHEMA_VERSION}.{RULE_VERSION}",

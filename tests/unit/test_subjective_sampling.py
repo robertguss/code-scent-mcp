@@ -117,6 +117,24 @@ def test_prompt_carries_scrubbed_metadata_never_source() -> None:
     assert "[redacted]" in prompt
 
 
+def test_prompt_caps_findings_to_max() -> None:
+    metadata = tuple(
+        FindingMetadata(
+            rule_id="r",
+            file_path=f"src/f{index}.py",
+            severity="warning",
+            title="t",
+            message="m",
+        )
+        for index in range(30)
+    )
+
+    prompt = build_subjective_review_prompt(metadata, max_findings=5)
+
+    assert "src/f4.py" in prompt
+    assert "src/f5.py" not in prompt
+
+
 def test_empty_metadata_keeps_base_prompt() -> None:
     assert build_subjective_review_prompt() == build_subjective_review_prompt(())
     assert "CodeScent subjective review prompt" in build_subjective_review_prompt()

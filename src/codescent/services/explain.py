@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, TypeGuard, cast
+from typing import TYPE_CHECKING, Final
 
+from codescent.core.json_decode import JsonObject, JsonScalar, decode_json_object
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.context import source_range
 from codescent.storage import RepositoryStorage, initialize_storage
@@ -11,9 +11,6 @@ from codescent.storage.repositories import FindingRepository
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-JsonScalar = str | int | float | bool | None
-JsonObject = dict[str, JsonScalar]
 
 # Bounded snippet caps. A finding's source snippet is clipped to at most this
 # many lines (source_range) and this many characters (here) so an explanation is
@@ -55,7 +52,7 @@ class ExplainService:
         ``MAX_SNIPPET_CHARS`` characters -- never an unbounded source dump.
         """
         finding = _repository(self.repo_root).get_finding(finding_id)
-        evidence = _json_object(finding.evidence_json)
+        evidence = decode_json_object(finding.evidence_json)
         start_line, end_line = _line_range(evidence)
         snippet, truncated = _bounded_snippet(
             resolve_repo_root(self.repo_root),
@@ -70,7 +67,7 @@ class ExplainService:
             file_path=finding.file_path,
             severity=finding.severity,
             confidence_tier=finding.confidence_tier,
-            provenance=_json_object(finding.provenance_json),
+            provenance=decode_json_object(finding.provenance_json),
             why=finding.message,
             evidence=evidence,
             fix=finding.suggested_action,
@@ -113,21 +110,6 @@ def _int_value(value: JsonScalar) -> int | None:
     if isinstance(value, bool) or not isinstance(value, int):
         return None
     return value
-
-
-def _json_object(raw: str) -> JsonObject:
-    try:
-        decoded = cast("object", json.loads(raw))
-    except json.JSONDecodeError:
-        return {}
-    if not isinstance(decoded, dict):
-        return {}
-    items = cast("dict[object, object]", decoded)
-    return {str(key): value for key, value in items.items() if _is_json_scalar(value)}
-
-
-def _is_json_scalar(value: object) -> TypeGuard[JsonScalar]:
-    return isinstance(value, str | int | float | bool | type(None))
 
 
 def _repository(repo_root: Path | str) -> FindingRepository:

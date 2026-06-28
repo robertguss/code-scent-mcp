@@ -1,4 +1,4 @@
-from codescent.cli.admin import ReindexDebouncer
+from codescent.services.repo_index import ReindexDebouncer
 
 
 def test_debouncer_coalesces_burst_into_single_fire() -> None:

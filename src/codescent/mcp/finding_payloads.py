@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING, Final, TypedDict, cast
 
+from codescent.core.json_decode import ProvenanceItem, decode_provenance
 from codescent.core.models import FindingStatus
 from codescent.core.paths import resolve_repo_root
 from codescent.services.result_store import JsonValue, ResultStoreService
@@ -23,7 +23,6 @@ JsonObject = dict[str, JsonScalar]
 # A single finding preview row, as returned inline by the list/aggregate tools.
 # `provenance` is a small bounded dict (rule_id, language, resolution,
 # symbol_resolved); every other value is a scalar.
-ProvenanceItem = dict[str, str | bool]
 FindingItem = dict[str, str | float | ProvenanceItem]
 
 # Boundedness controls (see docs/ideas/boundedness-bug-fix.md). List/aggregate
@@ -244,22 +243,6 @@ def scan_finding_item(finding: CodeHealthFinding) -> FindingItem:
         "provenance": dict(finding.provenance),
         "suggested_action": finding.suggested_action,
     }
-
-
-def decode_provenance(raw: str) -> ProvenanceItem:
-    """Decode a stored provenance JSON blob to a small, bounded scalar dict."""
-    try:
-        decoded = cast("object", json.loads(raw))
-    except json.JSONDecodeError:
-        return {}
-    if not isinstance(decoded, dict):
-        return {}
-    items = cast("dict[object, object]", decoded)
-    result: ProvenanceItem = {}
-    for key, value in items.items():
-        if isinstance(value, str | bool):
-            result[str(key)] = value
-    return result
 
 
 def bounded_finding_list(  # noqa: PLR0913

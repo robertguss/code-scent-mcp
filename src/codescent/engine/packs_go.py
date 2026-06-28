@@ -39,7 +39,7 @@ def scan_go_health(
     repo_root = resolve_repo_root(root)
     project_config = config or ProjectConfig()
     thresholds = project_config.thresholds
-    go_paths = _go_files(repo_root, project_config)
+    go_paths = go_pack_files(repo_root, project_config)
     go_path_set = frozenset(go_paths)
     findings: list[CodeHealthFinding] = []
     for relative in go_paths:
@@ -54,7 +54,7 @@ def scan_go_health(
     return tuple(findings)
 
 
-def _go_files(repo_root: Path, config: ProjectConfig) -> tuple[str, ...]:
+def go_pack_files(repo_root: Path, config: ProjectConfig) -> tuple[str, ...]:
     # The shared inventory only maps known suffixes (no `.go`), and the suffix
     # map belongs to the generic-fallback unit, so the Go pack walks `.go` files
     # itself while honoring the same default and config-driven exclusions.
