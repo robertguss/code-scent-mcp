@@ -55,6 +55,7 @@ by the service and contract tests.
 - `start_task`
 - `record_verification`
 - `how_to_use`
+- `resume_task`
 
 ## Locked Post-MVP MCP Tools
 
@@ -166,6 +167,28 @@ events, and telemetry.
   refreshes `.codescent` state before answering and reports that refresh in the
   advisory fields.
 - Example shape: `{"tool": "start_task", "ok": true, "data": {...}}`
+
+### `resume_task`
+
+- Group: `repository`
+- Purpose: Reconstruct a bounded "where was I, what's next" session brief after
+  context loss (e.g. a compaction), purely from persisted state. The mirror of
+  `start_task` for continuing in-flight work rather than starting fresh.
+- Inputs: repository root, optional `session_id` (enriches the recent tool
+  trail), and optional `project_id`.
+- Outputs: `status`, `summary`, `active_findings` (the in-flight/last findings),
+  `verified_findings` (what the verification ledger shows passing),
+  `recently_touched_files`, `recent_tools`, `ratchet` (baseline accepted state
+  and finding count), and `next_tools` (the recommended next call derived from
+  the top active finding plus the ledger).
+- Bounds: source-read-only for analyzed files; reads no analyzed source at all;
+  deterministic; bounded output by default; runtime no-network. All lists are
+  capped. Reconstructed entirely from findings, the verification ledger, the
+  ratchet baseline, and sanitized session events; adds no new storage. Session
+  events are sanitized, so the active finding and touched files come from the
+  findings/ledger tables, not from event payloads.
+- Example shape:
+  `{"ok": true, "status": "in_progress", "active_findings": [...], "next_tools": [...]}`
 
 ### `search_files`
 

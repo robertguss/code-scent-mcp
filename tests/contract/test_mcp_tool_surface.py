@@ -19,6 +19,7 @@ MVP_TOOL_NAMES = {
     "get_repo_map",
     "get_repo_status",
     "start_task",
+    "resume_task",
     "search_files",
     "search_content",
     "multi_search_content",
