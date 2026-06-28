@@ -67,9 +67,11 @@ class _FakeCbmClient:
         *,
         healthy: bool = True,
         raise_on: tuple[str, ...] = (),
+        symbol_records: tuple[SymbolNode, ...] | None = None,
     ) -> None:
         self._healthy = healthy
         self._raise_on = set(raise_on)
+        self._symbol_records = symbol_records
 
     def healthy(self) -> bool:
         if "healthy" in self._raise_on:
@@ -81,6 +83,8 @@ class _FakeCbmClient:
         if "symbols" in self._raise_on:
             message = "boom"
             raise CbmClientError(message)
+        if self._symbol_records is not None:
+            return self._symbol_records
         return (
             SymbolNode(
                 "pkg.service.run",
@@ -187,6 +191,22 @@ def test_cbm_symbols_pass_through_all_tiers(tmp_path: Path) -> None:
     backend = _cbm_backend(tmp_path, _FakeCbmClient())
     languages = {symbol.language for symbol in backend.symbols()}
     assert {"python", "elixir"} <= languages
+
+
+def test_cbm_drops_symbols_with_out_of_repo_paths(tmp_path: Path) -> None:
+    client = _FakeCbmClient(
+        symbol_records=(
+            SymbolNode("ok", "ok", "function", "src/pkg/a.py", 1, 2, 1.0, "python"),
+            SymbolNode(
+                "rel", "rel", "function", "../../etc/passwd", 1, 2, 1.0, "python"
+            ),
+            SymbolNode("abs", "abs", "function", "/etc/shadow", 1, 2, 1.0, "python"),
+        ),
+    )
+
+    backend = _cbm_backend(tmp_path, client)
+
+    assert {symbol.path for symbol in backend.symbols()} == {"src/pkg/a.py"}
 
 
 def test_cbm_unhealthy_falls_back_to_native(tmp_path: Path) -> None:

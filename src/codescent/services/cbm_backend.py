@@ -75,6 +75,15 @@ def _validate[T](adapter: TypeAdapter[list[T]], payload: object) -> tuple[T, ...
         raise CbmClientError(message) from exc
 
 
+def _path_within(repo_root: Path, relative: str) -> bool:
+    candidate = (repo_root / relative).resolve()
+    try:
+        _ = candidate.relative_to(repo_root)
+    except ValueError:
+        return False
+    return True
+
+
 @dataclass(frozen=True, slots=True)
 class CbmCliClient:
     """Talk to a local cbm CLI over a documented JSON contract (no network).
@@ -170,16 +179,20 @@ class CbmGraphBackend:
 
     def symbols(self) -> tuple[SymbolNode, ...]:
         # Symbols carry no cross-symbol resolution, so every tier is safe.
-        data, _ = self._pull(self.client.symbols, self.native.symbols, "symbols")
-        return data
+        data, from_cbm = self._pull(self.client.symbols, self.native.symbols, "symbols")
+        if not from_cbm:
+            return data
+        return self._within_repo(data, lambda node: node.path, "symbol(s)")
 
     def complexity(self) -> tuple[ComplexityProps, ...]:
-        data, _ = self._pull(
+        data, from_cbm = self._pull(
             self.client.complexity,
             self.native.complexity,
             "complexity",
         )
-        return data
+        if not from_cbm:
+            return data
+        return self._within_repo(data, lambda props: props.path, "complexity record(s)")
 
     def call_edges(self) -> tuple[CallEdge, ...]:
         data, from_cbm = self._pull(
@@ -189,11 +202,14 @@ class CbmGraphBackend:
         )
         if not from_cbm:
             return data
-        tiered = tuple(edge for edge in data if is_hybrid_lsp(edge.language))
-        if len(tiered) != len(data):
+        contained = self._within_repo(
+            data, lambda edge: edge.caller_path, "call edge(s)"
+        )
+        tiered = tuple(edge for edge in contained if is_hybrid_lsp(edge.language))
+        if len(tiered) != len(contained):
             LOGGER.info(
                 "dropped %d tree-sitter-tier cbm call edge(s)",
-                len(data) - len(tiered),
+                len(contained) - len(tiered),
             )
         return tiered
 
@@ -216,6 +232,23 @@ class CbmGraphBackend:
                 len(data) - len(tiered),
             )
         return tiered
+
+    def _within_repo[T](
+        self,
+        records: tuple[T, ...],
+        path_of: Callable[[T], str],
+        label: str,
+    ) -> tuple[T, ...]:
+        # Defense-in-depth: a buggy/compromised local cbm could return a path
+        # that escapes the repo; never let it reach a finding's file_path.
+        repo_root = resolve_repo_root(self.native.repo_root)
+        kept = tuple(
+            record for record in records if _path_within(repo_root, path_of(record))
+        )
+        dropped = len(records) - len(kept)
+        if dropped:
+            LOGGER.warning("dropped %d cbm %s with out-of-repo path(s)", dropped, label)
+        return kept
 
     def _pull[T](
         self,
