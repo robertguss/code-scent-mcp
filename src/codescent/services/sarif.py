@@ -9,6 +9,7 @@ finding sequence.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Final, NotRequired, TypedDict
 
 if TYPE_CHECKING:
@@ -105,10 +106,20 @@ SarifLog = TypedDict(
 )
 
 
-def findings_to_sarif(findings: Sequence[CodeHealthFinding]) -> SarifLog:
-    """Return a SARIF 2.1.0 log for ``findings`` (one run, one tool)."""
+def findings_to_sarif(
+    findings: Sequence[CodeHealthFinding],
+    *,
+    repo_root: Path | str | None = None,
+) -> SarifLog:
+    """Return a SARIF 2.1.0 log for ``findings`` (one run, one tool).
+
+    ``repo_root`` relativizes any absolute ``file_path`` so the emitted
+    ``artifactLocation.uri`` stays repo-root-relative, as GitHub code scanning
+    requires. Findings already carry repo-relative paths, so this is a guard
+    against an absolute path ever reaching the serializer.
+    """
     rules, rule_index = _rules_and_index(findings)
-    results = [_sarif_result(finding, rule_index) for finding in findings]
+    results = [_sarif_result(finding, rule_index, repo_root) for finding in findings]
     return {
         "$schema": SARIF_SCHEMA_URI,
         "version": SARIF_VERSION,
@@ -147,6 +158,7 @@ def _rules_and_index(
 def _sarif_result(
     finding: CodeHealthFinding,
     rule_index: dict[str, int],
+    repo_root: Path | str | None,
 ) -> SarifResult:
     start = _start_line(finding.evidence)
     region: _Region = {"startLine": start}
@@ -161,7 +173,9 @@ def _sarif_result(
         "locations": [
             {
                 "physicalLocation": {
-                    "artifactLocation": {"uri": finding.file_path},
+                    "artifactLocation": {
+                        "uri": _artifact_uri(finding.file_path, repo_root),
+                    },
                     "region": region,
                 },
             },
@@ -174,6 +188,17 @@ def _sarif_result(
             "provenance": dict(finding.provenance),
         },
     }
+
+
+def _artifact_uri(file_path: str, repo_root: Path | str | None) -> str:
+    """Repo-root-relative URI for a finding path; pass-through when relative."""
+    path = Path(file_path)
+    if repo_root is None or not path.is_absolute():
+        return file_path
+    try:
+        return path.relative_to(repo_root).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def _github_annotation_line(finding: CodeHealthFinding) -> str:

@@ -168,6 +168,26 @@ def test_findings_to_sarif_matches_golden_and_validates() -> None:
     validate_sarif(document)
 
 
+def test_findings_to_sarif_relativizes_absolute_paths() -> None:
+    finding = _finding(
+        rule_id="python.large_function",
+        title="Large function",
+        message="big",
+        file_path="/abs/repo/src/pkg/config.py",
+        severity="warning",
+        stable_key="python.large_function:abc123",
+        evidence={"start_line": 1},
+    )
+
+    document = findings_to_sarif([finding], repo_root="/abs/repo")
+
+    location = document["runs"][0]["results"][0]["locations"][0]
+    assert (
+        location["physicalLocation"]["artifactLocation"]["uri"] == "src/pkg/config.py"
+    )
+    validate_sarif(document)
+
+
 def test_findings_to_github_annotations_matches_golden() -> None:
     output = findings_to_github_annotations(_golden_findings())
 

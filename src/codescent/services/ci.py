@@ -68,6 +68,8 @@ class CiReport:
     # Full active findings, carried so the CLI can serialize SARIF / GitHub
     # annotation output without re-scanning. Not part of the JSON/markdown payload.
     findings: tuple[CodeHealthFinding, ...] = ()
+    # Repo root, carried so SARIF serialization can relativize file paths.
+    repo_root: Path | str = "."
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,6 +170,7 @@ class CiService:
             resolved_count=resolved_count,
             net_health_delta=net_health_delta,
             findings=active_findings,
+            repo_root=self.repo_root,
         )
 
     def _new_and_resolved(
@@ -254,7 +257,7 @@ class CiService:
 
 def ci_sarif_document(report: CiReport) -> SarifLog:
     """Serialize a CI report's active findings as a SARIF 2.1.0 log."""
-    return findings_to_sarif(report.findings)
+    return findings_to_sarif(report.findings, repo_root=report.repo_root)
 
 
 def ci_github_annotations(report: CiReport) -> str:
