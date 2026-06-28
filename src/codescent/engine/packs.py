@@ -7,6 +7,7 @@ from codescent.core.models import ProjectConfig
 from codescent.engine.packs_ts import TS_EXTENSIONS, parse_typescript_file
 from codescent.engine.parsers.python import ParsedPythonFile, parse_python_file
 from codescent.engine.rules.architecture import scan_architecture
+from codescent.engine.rules.import_cycles import scan_import_cycles
 from codescent.engine.rules.python import scan_python_health
 from codescent.engine.rules.ts_react_next import scan_ts_react_next_health
 
@@ -147,7 +148,13 @@ def _scan_python_health(
     root: Path | str,
     config: ProjectConfig,
 ) -> tuple[CodeHealthFinding, ...]:
-    return scan_python_health(root, config=config)
+    # Import-cycle detection is a whole-repo Python maintainability concern, so
+    # it ships inside the python-maintainability pack rather than as a separate
+    # registered pack (keeps the pack set stable; gated by the same config flag).
+    return (
+        *scan_python_health(root, config=config),
+        *scan_import_cycles(root, config=config),
+    )
 
 
 def _scan_ts_react_next_health(
