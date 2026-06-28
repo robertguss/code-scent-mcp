@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeGuard, cast
+from typing import TYPE_CHECKING
 
+from codescent.core.json_decode import JsonObject, decode_json_object
 from codescent.services.calibration import CalibrationService
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import FindingRepository, FindingRow
@@ -12,9 +12,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from codescent.services.calibration import RuleCalibration
-
-JsonScalar = str | int | float | bool | None
-JsonObject = dict[str, JsonScalar]
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,7 +48,7 @@ class ReportService:
 
     def get_finding(self, finding_id: str) -> FindingDetail:
         finding = _repository(self.repo_root).get_finding(finding_id)
-        evidence = _json_object(finding.evidence_json)
+        evidence = decode_json_object(finding.evidence_json)
         return FindingDetail(
             finding_id=finding.id,
             rule_id=finding.rule_id,
@@ -59,7 +56,7 @@ class ReportService:
             severity=finding.severity,
             confidence=finding.confidence,
             confidence_tier=finding.confidence_tier,
-            provenance=_json_object(finding.provenance_json),
+            provenance=decode_json_object(finding.provenance_json),
             status=finding.status.value,
             title=finding.title,
             message=finding.message,
@@ -145,19 +142,3 @@ def _calibration_reasons(calibration: RuleCalibration | None) -> tuple[str, ...]
         ),
     )
     return (reason,)
-
-
-def _json_object(raw: str) -> JsonObject:
-    try:
-        decoded = cast("object", json.JSONDecoder().decode(raw))
-    except json.JSONDecodeError:
-        return {}
-    parsed = decoded
-    if not isinstance(parsed, dict):
-        return {}
-    items = cast("dict[object, object]", parsed)
-    return {str(key): value for key, value in items.items() if _is_json_scalar(value)}
-
-
-def _is_json_scalar(value: object) -> TypeGuard[JsonScalar]:
-    return isinstance(value, str | int | float | bool | type(None))

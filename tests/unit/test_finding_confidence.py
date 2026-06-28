@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from codescent.core.json_decode import decode_provenance
 from codescent.core.models import FindingStatus
 from codescent.engine.rules.model import (
     CONFIDENCE_TIER_HEURISTIC,
@@ -10,7 +11,6 @@ from codescent.engine.rules.model import (
     build_finding,
 )
 from codescent.mcp.finding_payloads import (
-    decode_provenance,
     finding_payload,
     scan_finding_item,
 )
