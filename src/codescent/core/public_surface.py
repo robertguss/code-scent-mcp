@@ -100,6 +100,7 @@ POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "resume_task",
         "refactor_preflight",
         "explain_finding",
+        "subjective_review",
     },
 )
 
@@ -134,6 +135,7 @@ REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "resume_task",
         "refactor_preflight",
         "explain_finding",
+        "subjective_review",
     },
 )
 
@@ -211,6 +213,7 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _registered_post_mvp_entry("resume_task", "repository"),
         _registered_post_mvp_entry("refactor_preflight", "planning"),
         _registered_post_mvp_entry("explain_finding", "planning"),
+        _registered_post_mvp_entry("subjective_review", "health"),
     ),
     cli_commands=(
         _mvp_entry("init", "repository"),

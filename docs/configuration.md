@@ -313,6 +313,36 @@ coverage_path = "reports/coverage.xml"
 Paths outside the analyzed repository are ignored. CodeScent reads coverage
 reports only; it does not run tests or generate coverage files.
 
+## Subjective LLM Review (Privacy)
+
+Everything in CodeScent is deterministic and offline by default. The optional
+`subjective_review` MCP tool is the one exception, and it is **off unless you
+turn it on**. It is gated by a single key in `.codescent/config.toml`:
+
+```toml
+[privacy]
+allow_llm_review = false   # default
+runtime_network = false    # default
+```
+
+With `allow_llm_review = false` (the default), `subjective_review` is a clean
+no-op: no model is consulted, no data leaves, and no findings are produced.
+
+Set `allow_llm_review = true` only when you intend to let your MCP client's own
+LLM judge findings. Even then:
+
+- The **CodeScent server makes no network call.** The request is sent back
+  through the MCP session as an MCP **sampling** request, and your client's model
+  produces the judgment.
+- Only **finding metadata** (rule id, file path, severity, title, message) is
+  sent — never whole source files — and that metadata is run through a secret/PII
+  scrub first (per PRD 14.5 data minimization).
+- Results are stored separately and labeled `subjective`; they never merge into
+  or masquerade as the deterministic findings.
+
+If the client cannot sample, the tool returns a clear "sampling unavailable"
+result instead of failing.
+
 ## Reset
 
 `reset` is intentionally explicit because it deletes CodeScent state:

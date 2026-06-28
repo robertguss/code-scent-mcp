@@ -54,6 +54,7 @@ by the service and contract tests.
 - `context_stats`
 - `select_tests`
 - `refactor_preflight`
+- `subjective_review`
 - `start_task`
 - `record_verification`
 - `how_to_use`
@@ -338,6 +339,31 @@ events, and telemetry.
   cap and a character cap (and dropped for files beyond the source-read byte
   budget) so output stays bounded by default; runtime no-network.
 - Example shape: `{"tool": "explain_finding", "ok": true, "data": {...}}`
+
+### `subjective_review`
+
+- Group: `health`
+- Purpose: Opt-in subjective second opinion on deterministic findings. CodeScent
+  asks the **client's own LLM** to judge findings via MCP **sampling** and
+  returns the model's notes as findings that are explicitly labeled subjective
+  (`confidence_tier: "subjective"`, `provenance: "subjective"`). They are
+  persisted separately and never merge into or masquerade as deterministic
+  findings.
+- Inputs: repository root only. There is no per-call enable flag — the feature is
+  gated solely by `privacy.allow_llm_review` (default `false`).
+- Outputs: JSON payload with `enabled`, `sampling_available`, `provider`, a
+  status `message`, a `privacy_notice`, and the labeled `subjective_findings`.
+- Data exposure (PRD 14.5): when enabled, the sampling prompt carries **only**
+  finding metadata (rule id, file path, severity, title, message) — never whole
+  source files — and that metadata is run through a secret/PII scrub before the
+  request leaves. The **CodeScent server makes no network call**: the sampling
+  request travels back through the MCP session and the client's model produces
+  the judgment.
+- Bounds: source-read-only for analyzed files; disabled by default (clean no-op);
+  degrades gracefully to a clear "sampling unavailable" result when the client
+  cannot sample; bounded output. The CodeScent process itself performs no
+  runtime network I/O.
+- Example shape: `{"tool": "subjective_review", "ok": true, "data": {...}}`
 
 ### `get_next_improvement`
 

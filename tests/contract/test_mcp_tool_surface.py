@@ -60,6 +60,7 @@ MVP_TOOL_NAMES = {
     "context_stats",
     "how_to_use",
     "refactor_preflight",
+    "subjective_review",
 }
 
 

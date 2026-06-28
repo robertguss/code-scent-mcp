@@ -290,6 +290,12 @@
       "file": "src/codescent/services/session_stats.py",
       "symbol": "services.session_stats._aggregate_stats"
     },
+    "python.large_file:f172dc913dab": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/subjective_review.py",
+      "symbol": null
+    },
     "python.large_function:de30c535bca2": {
       "rule_id": "python.large_function",
       "severity": "warning",

@@ -10,6 +10,7 @@ from codescent.mcp.result_tools import register_result_tools
 from codescent.mcp.risk_tools import register_risk_tools
 from codescent.mcp.search_tools import register_search_tools
 from codescent.mcp.session_stats_tools import register_session_stats_tools
+from codescent.mcp.subjective_tools import register_subjective_tools
 
 mcp = FastMCP(name="CodeScent")
 register_repo_tools(mcp)
@@ -21,6 +22,7 @@ register_planning_tools(mcp)
 register_risk_tools(mcp)
 register_session_stats_tools(mcp)
 register_guide_tools(mcp)
+register_subjective_tools(mcp)
 register_prompts(mcp)
 
 
