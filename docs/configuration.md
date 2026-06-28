@@ -252,6 +252,33 @@ used unchanged, so new repositories see no change. Inspect it with the
 finding. The adjustment is a pure, deterministic function of `.codescent` state
 — same verdicts in, same calibration out.
 
+### Per-repo severity calibration (noise normalization)
+
+The same `[adaptive]` block also drives a per-repo *noise baseline* used when
+ranking diff-risk findings. CodeScent measures how often each rule fires across
+the repo's stored findings (its firing rate = a rule's finding count ÷ total
+findings) and turns that into a ranking weight: a rule that fires *everywhere*
+is down-weighted, while a *rare* rule stands out. This keeps the backlog
+signal-rich across very different repos — a TODO-heavy or large-file-heavy repo
+no longer drowns its own rare-but-important findings — without any manual
+threshold tuning.
+
+- **Derived, not stored.** The baseline is recomputed from the findings already
+  in `.codescent` (no new config key, no new table); the same findings always
+  produce the same baseline.
+- **Bounds reuse the existing knobs.** A rule's weight is
+  `clamp(1 - max_confidence_delta × firing_rate, confidence_floor, 1)`. With the
+  defaults a rule that is 100% of findings drops to `0.8`; a rare rule stays near
+  `1.0`. Normalization only kicks in once the repo has at least `min_sample_size`
+  findings and `confidence_recalibration` is enabled (below that, every weight is
+  `1.0`, so small/new repos see no change).
+- **Transparent, never hides findings.** The weight multiplies a finding's
+  confidence *only for ordering*; it sinks noisy-rule findings within their
+  severity/tier band rather than removing them. Severity stays the primary sort
+  key and verified findings still rank above heuristic ones at equal severity.
+  Inspect the baseline (per-rule firing count, rate, and weight) via
+  `CalibrationService.get_noise_baseline()`.
+
 ## Coverage Report
 
 Coverage ingestion reads an existing Cobertura XML report when present. By
