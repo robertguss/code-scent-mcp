@@ -40,10 +40,7 @@ def provenance_object(raw: str) -> JsonObject:
     Reuses the MCP ``decode_provenance`` (bounded to small str/bool scalars) so
     the dashboard and MCP surfaces agree on provenance shape.
     """
-    result: JsonObject = {}
-    for key, value in decode_provenance(raw).items():
-        result[key] = value
-    return result
+    return dict(decode_provenance(raw))
 
 
 def json_int_map(values: dict[str, int]) -> JsonObject:

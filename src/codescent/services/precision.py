@@ -76,7 +76,7 @@ class PrecisionService:
     def acceptance_precision_by_rule(self) -> dict[str, float | None]:
         """Per-rule acceptance precision keyed by ``rule_id``.
 
-        Consumed by confidence-badges (U14): read ``acceptance_precision`` for a
+        Consumed by confidence-badges: read ``acceptance_precision`` for a
         finding's ``rule_id`` (``None`` when the rule has no verdicts yet).
         """
         return {

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from dataclasses import replace
 from typing import TYPE_CHECKING, Final
 
 from codescent.core.models import ProjectConfig
@@ -197,16 +198,8 @@ def _generic_finding(spec: FindingSpec) -> CodeHealthFinding:
     # so resolution is "text" (not regex/ast) and language is "generic". The
     # model's default derivation would mis-tag these as typescript/regex.
     return build_finding(
-        FindingSpec(
-            rule_id=spec.rule_id,
-            title=spec.title,
-            message=spec.message,
-            file_path=spec.file_path,
-            symbol=spec.symbol,
-            severity=spec.severity,
-            confidence=spec.confidence,
-            evidence=spec.evidence,
-            suggested_action=spec.suggested_action,
+        replace(
+            spec,
             confidence_tier=CONFIDENCE_TIER_HEURISTIC,
             provenance={
                 "rule_id": spec.rule_id,
