@@ -4,7 +4,7 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from fastmcp import Client
@@ -32,7 +32,7 @@ _TS_PREFIXES = ("typescript.", "react.", "next.")
 def _mixed_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     # TS half: the known-good regex-pack fixture (without its committed state).
-    shutil.copytree(TS_FIXTURE, repo, ignore=shutil.ignore_patterns(".codescent"))
+    _ = shutil.copytree(TS_FIXTURE, repo, ignore=shutil.ignore_patterns(".codescent"))
     # Python half: a large function anchored to a resolved AST symbol -> verified.
     py = repo / "src" / "pkg" / "workflow.py"
     py.parent.mkdir(parents=True)
@@ -50,15 +50,11 @@ def _text(content: list[ContentBlock]) -> str:
 
 
 def _items(text: str) -> list[dict[str, object]]:
-    decoded = json.loads(text)
-    assert isinstance(decoded, dict)
-    items = decoded["items"]
-    assert isinstance(items, list)
-    result: list[dict[str, object]] = []
-    for item in items:
-        assert isinstance(item, dict)
-        result.append(item)
-    return result
+    payload = cast("dict[str, object]", json.loads(text))
+    raw_items = payload["items"]
+    assert isinstance(raw_items, list)
+    items = cast("list[object]", raw_items)
+    return [cast("dict[str, object]", item) for item in items if isinstance(item, dict)]
 
 
 def _as_risk(finding: CodeHealthFinding) -> RiskFinding:
@@ -139,7 +135,7 @@ async def test_mixed_scan_tiers_provenance_ranking_and_bounded_payload(
         assert item["confidence_tier"] in {"verified", "heuristic"}
         provenance = item["provenance"]
         assert isinstance(provenance, dict)
-        assert set(provenance) == {
+        assert set(cast("dict[str, object]", provenance)) == {
             "rule_id",
             "language",
             "resolution",

@@ -93,6 +93,59 @@ thresholds and require a ≥12-sample size distribution); `python.uncovered_symb
 layering config); `python.changed_source_without_related_test` (git/index
 dependent — excluded, mirroring the deterministic eval).
 
+## Dogfood Gate — CodeScent scans CodeScent
+
+CodeScent runs its own engine over its own source as a CI gate. The gate fails
+when a **new** warning-or-higher finding appears on `src/codescent/` that is not
+in the reviewed allowlist, so regressions in absolute module/function/class size
+or nesting depth block the build.
+
+Run:
+
+```bash
+uv run python scripts/dogfood_scan.py
+```
+
+The script scans `src/codescent/` only (tests, fixtures, and the intentionally
+flawed eval corpora are out of scope), blocks network socket creation, reads
+source read-only, and exits nonzero if any non-allowlisted gated finding appears.
+It logs every gated finding as `ALLOW` (baselined) or `NEW` (a violation) plus a
+summary, and writes a JSON payload to `.codescent/dogfood-scan.json`.
+
+- **Allowlist** — `scripts/dogfood_allowlist.json`. A checked-in, reviewable
+  baseline of the current gated findings keyed by `stable_key`, with a per-rule
+  justification. New `stable_key`s (new findings) are not in the file and fail the
+  gate; this is the ratchet. The codebase's source is **not** refactored to chase
+  zero — the allowlist records the reviewed baseline.
+- **Gated severity** — `warning` and above (absolute `large_file`,
+  `large_function`, `large_class`, `deep_nesting`). `info`-level heuristics
+  (relative-size outliers, `missing_nearby_test` for the centralized `tests/`
+  layout, `dead_code_candidate`, `duplicate_literal`, `todo_cluster`) are tracked
+  by the engine but intentionally **not** gated: they are high-volume or
+  distribution-relative signals that would fire on routine development and make
+  the gate a nuisance rather than a regression alarm.
+
+Re-record the baseline after an intentional, reviewed change (the diff is the
+review surface):
+
+```bash
+uv run python scripts/dogfood_scan.py --update-baseline
+```
+
+Registered MCP tools and CLI commands are **not** flagged as dead code (the
+entry-point-aware dead-code rule consults the public surface), so the gate is not
+tripped by registered-but-uncalled entry points.
+
+## Continuous Integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request.
+It is the single gate host and runs, in order: `uv sync`, `uv run pytest`,
+`uv run ruff check .`, `uv run ruff format --check .`, `uv run basedpyright`, the
+deterministic offline eval, the source-read-only proof, the eval precision gate
+(`evals/run_precision.py --check`), and the dogfood gate
+(`scripts/dogfood_scan.py`). Allowlist and baseline changes land as reviewable
+diffs to their checked-in files.
+
 ## Agent-In-The-Loop Eval
 
 Run the transcript gate described in `evals/agent_task.md` and

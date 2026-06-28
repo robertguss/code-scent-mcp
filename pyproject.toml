@@ -44,6 +44,7 @@ exclude = [
     "**/dist",
     "tests/fixtures/python-basic",
     "tests/fixtures/python-import-cycle",
+    "tests/fixtures/python-entrypoint",
     "evals/precision_corpus",
 ]
 reportUnusedCallResult = "warning"
@@ -59,6 +60,7 @@ src = ["src", "tests"]
 extend-exclude = [
     "tests/fixtures/python-basic",
     "tests/fixtures/python-import-cycle",
+    "tests/fixtures/python-entrypoint",
     "evals/precision_corpus",
 ]
 

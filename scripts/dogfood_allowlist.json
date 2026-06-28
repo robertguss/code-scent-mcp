@@ -1,0 +1,306 @@
+{
+  "_comment": "Reviewed dogfood baseline (plan unit U9). scripts/dogfood_scan.py runs CodeScent's own engine over src/codescent and fails CI when a NEW warning-or-higher finding appears that is not listed here. info-level heuristics (relative-size outliers, missing-nearby-test for the tests/ layout, dead-code candidates, duplicate literals) are tracked by the engine but intentionally NOT gated; see docs/workflows.md. Regenerate after an intentional, reviewed change: uv run python scripts/dogfood_scan.py --update-baseline",
+  "gated_min_severity": "warning",
+  "reasons": {
+    "python.large_file": "Module exceeds the absolute line threshold. Reviewed: cohesive module; splitting now churns imports without cutting complexity. Baseline.",
+    "python.large_function": "Function exceeds the absolute line threshold. Reviewed: mostly flat orchestration/registration/formatting. Baseline.",
+    "python.large_class": "Class exceeds the absolute size threshold. Reviewed: cohesive service surface. Baseline.",
+    "python.deep_nesting": "Localized deep nesting. Reviewed: readable as-is. Baseline."
+  },
+  "findings": {
+    "python.large_file:a24e9708c0d0": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/cli/reporting.py",
+      "symbol": null
+    },
+    "python.large_file:e64ab263531b": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/core/models.py",
+      "symbol": null
+    },
+    "python.large_function:188a614b06ff": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/core/output_formatter.py",
+      "symbol": "core.output_formatter._empty_or_pass_envelope"
+    },
+    "python.large_function:c497e990306f": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/core/output_formatter.py",
+      "symbol": "core.output_formatter.format_test_output"
+    },
+    "python.large_file:bc2b03539b3d": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/core/symbol_formatter.py",
+      "symbol": null
+    },
+    "python.large_function:aad6789a97a2": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/core/symbol_formatter.py",
+      "symbol": "core.symbol_formatter.format_symbol_search_results"
+    },
+    "python.deep_nesting:6783b16fd9cc": {
+      "rule_id": "python.deep_nesting",
+      "severity": "warning",
+      "file": "src/codescent/engine/rules/architecture.py",
+      "symbol": null
+    },
+    "python.large_file:f85eb3451b4f": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/engine/rules/import_cycles.py",
+      "symbol": null
+    },
+    "python.deep_nesting:3aaa73e2cb80": {
+      "rule_id": "python.deep_nesting",
+      "severity": "warning",
+      "file": "src/codescent/engine/rules/structural_duplicates.py",
+      "symbol": null
+    },
+    "python.large_file:07f16a24cc3b": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/engine/rules/structural_duplicates.py",
+      "symbol": null
+    },
+    "python.large_function:d93d45f900bb": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/engine/rules/structural_duplicates.py",
+      "symbol": "engine.rules.structural_duplicates.group_structural_duplicates"
+    },
+    "python.large_file:ab8d97a28e1e": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/mcp/context_tools.py",
+      "symbol": null
+    },
+    "python.large_function:5fe2bb0e54a5": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/mcp/context_tools.py",
+      "symbol": "mcp.context_tools.find_symbol"
+    },
+    "python.large_function:54a01e32c887": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/mcp/context_tools.py",
+      "symbol": "mcp.context_tools.register_context_tools"
+    },
+    "python.large_file:3481ab0bb467": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/mcp/finding_payloads.py",
+      "symbol": null
+    },
+    "python.large_function:1956145b4963": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/mcp/finding_payloads.py",
+      "symbol": "mcp.finding_payloads.bounded_finding_list"
+    },
+    "python.large_function:76e0d1f0d965": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/mcp/finding_payloads.py",
+      "symbol": "mcp.finding_payloads.improvement_plan_payload"
+    },
+    "python.large_file:c7490e1a2bfe": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/mcp/finding_tools.py",
+      "symbol": null
+    },
+    "python.large_function:b7520ac353c7": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/mcp/finding_tools.py",
+      "symbol": "mcp.finding_tools.register_finding_tools"
+    },
+    "python.large_file:3588e3ad94ca": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/mcp/planning_tools.py",
+      "symbol": null
+    },
+    "python.large_function:d80852d6fb88": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/mcp/planning_tools.py",
+      "symbol": "mcp.planning_tools.register_planning_tools"
+    },
+    "python.large_file:89758191154e": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/ci.py",
+      "symbol": null
+    },
+    "python.large_function:e3390fe87e87": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/ci.py",
+      "symbol": "services.ci.CiService.run"
+    },
+    "python.large_function:756fb6d01d39": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/ci.py",
+      "symbol": "services.ci.CiService.update_baseline"
+    },
+    "python.large_file:ba226f6cd3fa": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/code_health.py",
+      "symbol": null
+    },
+    "python.large_function:139aa13ed2f2": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/code_health.py",
+      "symbol": "services.code_health.CodeHealthService.scan"
+    },
+    "python.large_class:682ddee3acd2": {
+      "rule_id": "python.large_class",
+      "severity": "warning",
+      "file": "src/codescent/services/context.py",
+      "symbol": "services.context.ContextService"
+    },
+    "python.large_file:00d756e2a2ee": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/context.py",
+      "symbol": null
+    },
+    "python.large_function:ddaf06b3ccf3": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/context.py",
+      "symbol": "services.context.ContextService.get_related_files"
+    },
+    "python.large_file:42ff2114b599": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/context_support.py",
+      "symbol": null
+    },
+    "python.large_function:296a40f19003": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/coverage.py",
+      "symbol": "services.coverage.coverage_findings"
+    },
+    "python.large_file:bf74b988e976": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/git.py",
+      "symbol": null
+    },
+    "python.large_function:9dd4a5b10d31": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/git.py",
+      "symbol": "services.git.git_co_change_counts"
+    },
+    "python.large_function:22d6a7664291": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/repo_index.py",
+      "symbol": "services.repo_index.RepoIndexService.index_repo"
+    },
+    "python.large_function:0c3087b5300d": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/repo_index.py",
+      "symbol": "services.repo_index._persist_python_graph"
+    },
+    "python.large_file:e6bc3cde4896": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/result_store.py",
+      "symbol": null
+    },
+    "python.large_function:9b77bb1a9389": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/result_store.py",
+      "symbol": "services.result_store.ResultStoreService.retrieve_result"
+    },
+    "python.large_class:23535e00206f": {
+      "rule_id": "python.large_class",
+      "severity": "warning",
+      "file": "src/codescent/services/search.py",
+      "symbol": "services.search.SearchService"
+    },
+    "python.large_function:b2c0a92551d4": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/search.py",
+      "symbol": "services.search.SearchService.multi_search_content"
+    },
+    "python.deep_nesting:802ce6cdca2a": {
+      "rule_id": "python.deep_nesting",
+      "severity": "warning",
+      "file": "src/codescent/services/session_stats.py",
+      "symbol": null
+    },
+    "python.large_function:0bba6d96c285": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/session_stats.py",
+      "symbol": "services.session_stats._aggregate_stats"
+    },
+    "python.large_function:de30c535bca2": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/task_brief.py",
+      "symbol": "services.task_brief.TaskBriefService.start_task"
+    },
+    "python.large_file:e1a21ce09a71": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/verify_refactor.py",
+      "symbol": null
+    },
+    "python.large_function:6fde5707aadb": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/verify_refactor.py",
+      "symbol": "services.verify_refactor.verify_python_sources"
+    },
+    "python.large_function:3d09aa7110df": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/storage/repositories/findings.py",
+      "symbol": "storage.repositories.findings.FindingRepository.list_findings"
+    },
+    "python.deep_nesting:607a6ef7878e": {
+      "rule_id": "python.deep_nesting",
+      "severity": "warning",
+      "file": "src/codescent/storage/repositories/session_events.py",
+      "symbol": null
+    },
+    "python.large_file:2e4cd1d80c1f": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/storage/repositories/stored_results.py",
+      "symbol": null
+    },
+    "python.large_function:1948f49f105c": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/storage/repositories/stored_results.py",
+      "symbol": "storage.repositories.stored_results.StoredResultRepository.list_summarized_results"
+    },
+    "python.large_file:112bff19f3c3": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/storage/schema.py",
+      "symbol": null
+    }
+  }
+}
