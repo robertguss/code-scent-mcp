@@ -355,13 +355,20 @@ events, and telemetry.
 ### `suggest_tests`
 
 - Group: `planning`
-- Purpose: Recommend verification commands for a finding or change.
-- Inputs: repository root plus tool-specific arguments such as query, path,
-  symbol, finding id, status, or limit.
+- Purpose: Recommend verification commands for a finding or change, and
+  optionally emit an honest characterization-test skeleton.
+- Inputs: repository root, a finding id, and an optional `scaffold` flag
+  (default `false`).
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
-- Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  unbounded source dump (`commands`, `likely_tests`, `executes_in_v1`). When
+  `scaffold=true`, an opt-in `scaffold` object is added with `language`,
+  `module`, `symbol`, `test_name`, `filename`, `code`, `honest`, and `notes`.
+- Scaffold honesty: the generated `code` imports the finding's target and leaves
+  TODO placeholders that `raise NotImplementedError` — it collects under pytest
+  but never reports a fake-green pass, so it must be filled in to pin current
+  behavior before refactoring. The field is omitted unless `scaffold=true`.
+- Bounds: source-read-only for analyzed files; bounded output by default
+  (one short skeleton, single test function); runtime no-network.
 - Example shape: `{"tool": "suggest_tests", "ok": true, "data": {...}}`
 
 ### `select_tests`

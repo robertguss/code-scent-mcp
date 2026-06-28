@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, NotRequired, TypedDict
 
 from codescent.services.refactor_planning import (
     FindingContext,
@@ -11,6 +11,10 @@ from codescent.services.refactor_planning import (
 from codescent.services.refactor_preflight import (
     RefactorPreflightBundle,
     RefactorPreflightService,
+)
+from codescent.services.scaffold import (
+    CharacterizationScaffold,
+    build_characterization_scaffold,
 )
 from codescent.services.verification import VerificationService
 from codescent.services.verify_refactor import VerifyRefactorService
@@ -55,11 +59,23 @@ class RefactorPlanToolPayload(TypedDict):
     verification_recommendations: tuple[str, ...]
 
 
+class ScaffoldToolPayload(TypedDict):
+    language: str
+    module: str
+    symbol: str
+    test_name: str
+    filename: str
+    code: str
+    honest: bool
+    notes: tuple[str, ...]
+
+
 class SuggestedTestsToolPayload(TypedDict):
     ok: bool
     commands: tuple[str, ...]
     likely_tests: tuple[str, ...]
     executes_in_v1: bool
+    scaffold: NotRequired[ScaffoldToolPayload]
 
 
 class SelectTestsToolPayload(TypedDict):
@@ -164,7 +180,10 @@ def register_planning_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
             "Use CodeScent to recommend likely tests and commands. This tool "
-            "does not execute target project tests in V1."
+            "does not execute target project tests in V1. Pass scaffold=True "
+            "to also get an honest, RED characterization-test skeleton that "
+            "imports the finding's target and leaves TODO placeholders (never "
+            "a fake-green assertion) to pin current behavior before refactoring."
         ),
     )(suggest_tests)
     _ = mcp.tool(
@@ -224,8 +243,20 @@ def plan_refactor(
 def suggest_tests(
     finding_id: str,
     repo: str = ".",
+    scaffold: bool = False,
 ) -> SuggestedTestsToolPayload:
-    return _tests_payload(RefactorPlanningService(repo).suggest_tests(finding_id))
+    service = RefactorPlanningService(repo)
+    payload = _tests_payload(service.suggest_tests(finding_id))
+    if scaffold:
+        context = service.get_finding_context(finding_id)
+        file_path = context.affected_files[0] if context.affected_files else ""
+        payload["scaffold"] = _scaffold_payload(
+            build_characterization_scaffold(
+                file_path=file_path,
+                qualified_symbols=context.relevant_symbols,
+            ),
+        )
+    return payload
 
 
 def select_tests(
@@ -325,6 +356,19 @@ def _tests_payload(suggested: SuggestedTests) -> SuggestedTestsToolPayload:
         "commands": suggested.commands,
         "likely_tests": suggested.likely_tests,
         "executes_in_v1": suggested.executes_in_v1,
+    }
+
+
+def _scaffold_payload(scaffold: CharacterizationScaffold) -> ScaffoldToolPayload:
+    return {
+        "language": scaffold.language,
+        "module": scaffold.module,
+        "symbol": scaffold.symbol,
+        "test_name": scaffold.test_name,
+        "filename": scaffold.filename,
+        "code": scaffold.code,
+        "honest": True,
+        "notes": scaffold.notes,
     }
 
 
