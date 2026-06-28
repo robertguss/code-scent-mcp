@@ -73,6 +73,7 @@ def _render_config(config: ProjectConfig) -> str:
         "framework_packs": list(config.framework_packs),
         "rule_packs": list(config.rule_packs),
         "coverage_path": config.coverage_path,
+        "auto_bootstrap": config.auto_bootstrap,
         "commands": _section(config.commands),
         "token_budgets": _section(config.token_budgets),
         "privacy": _section(config.privacy),

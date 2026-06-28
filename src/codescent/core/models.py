@@ -199,6 +199,7 @@ class ProjectConfig(BaseModel):
     framework_packs: tuple[str, ...] = ()
     rule_packs: tuple[str, ...] = ("python-maintainability", "ts-react-next")
     coverage_path: str = "coverage.xml"
+    auto_bootstrap: bool = True
     commands: CommandHints = Field(default_factory=CommandHints)
     token_budgets: TokenBudgets = Field(default_factory=TokenBudgets)
     privacy: PrivacySettings = Field(default_factory=PrivacySettings)

@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, Literal
 
+from codescent.core.paths import resolve_repo_root
 from codescent.services.code_health import CodeHealthService
+from codescent.services.config import ConfigService
 from codescent.services.status import RepoStatusService
 
 if TYPE_CHECKING:
@@ -13,6 +15,8 @@ type AdvisoryConfidence = Literal["high", "medium", "low"]
 
 CHANGED_FILE_LIMIT: Final = 20
 SCAN_RECOVERY_TOOL: Final = "scan_code_health"
+STATE_DIR_NAME: Final = ".codescent"
+DATABASE_NAME: Final = "index.sqlite"
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,10 +26,11 @@ class FreshnessMetadata:
     auto_refreshed: bool
     changed_files: tuple[str, ...]
     refresh_error: str | None = None
+    bootstrap_disabled: bool = False
 
     @property
     def confidence(self) -> AdvisoryConfidence:
-        if self.refresh_error is not None:
+        if self.refresh_error is not None or self.bootstrap_disabled:
             return "low"
         if self.index_was_stale:
             return "medium"
@@ -37,6 +42,10 @@ class FreshnessMetadata:
             prefix = "index stale; automatic refresh failed; run scan_code_health"
             suffix = "before trusting missing or low-confidence results"
             return (f"{prefix} {suffix}",)
+        if self.bootstrap_disabled:
+            disabled = "auto_bootstrap is disabled and CodeScent state is missing"
+            action = "or stale; run scan_code_health to initialize the index"
+            return (f"{disabled} {action}",)
         if self.index_was_stale:
             if self.auto_refreshed:
                 return (
@@ -47,7 +56,11 @@ class FreshnessMetadata:
 
 
 def ensure_fresh_index(repo_root: Path | str) -> FreshnessMetadata:
-    before = RepoStatusService(repo_root).get_status()
+    root = resolve_repo_root(repo_root)
+    if not ConfigService(root).load().auto_bootstrap:
+        return _bootstrap_disabled_freshness(root)
+
+    before = RepoStatusService(root).get_status()
     changed_files = before.changed_files[:CHANGED_FILE_LIMIT]
     if before.index_fresh:
         return FreshnessMetadata(
@@ -58,7 +71,7 @@ def ensure_fresh_index(repo_root: Path | str) -> FreshnessMetadata:
         )
 
     try:
-        _ = CodeHealthService(repo_root).scan()
+        _ = CodeHealthService(root).scan()
     except Exception as exc:  # noqa: BLE001 - tool UX must report refresh failure.
         return FreshnessMetadata(
             index_fresh=False,
@@ -68,7 +81,7 @@ def ensure_fresh_index(repo_root: Path | str) -> FreshnessMetadata:
             refresh_error=f"{type(exc).__name__}: {exc}",
         )
 
-    after = RepoStatusService(repo_root).get_status()
+    after = RepoStatusService(root).get_status()
     return FreshnessMetadata(
         index_fresh=after.index_fresh,
         index_was_stale=True,
@@ -77,11 +90,32 @@ def ensure_fresh_index(repo_root: Path | str) -> FreshnessMetadata:
     )
 
 
+def _bootstrap_disabled_freshness(root: Path) -> FreshnessMetadata:
+    # ponytail: opt-out path must never create .codescent/ — read existing state
+    # only, never initialize_storage when the index is absent.
+    if not (root / STATE_DIR_NAME / DATABASE_NAME).exists():
+        return FreshnessMetadata(
+            index_fresh=False,
+            index_was_stale=True,
+            auto_refreshed=False,
+            changed_files=(),
+            bootstrap_disabled=True,
+        )
+    status = RepoStatusService(root).get_status()
+    return FreshnessMetadata(
+        index_fresh=status.index_fresh,
+        index_was_stale=not status.index_fresh,
+        auto_refreshed=False,
+        changed_files=status.changed_files[:CHANGED_FILE_LIMIT],
+        bootstrap_disabled=not status.index_fresh,
+    )
+
+
 def next_tools_with_refresh_recovery(
     tools: tuple[str, ...],
     freshness: FreshnessMetadata,
 ) -> tuple[str, ...]:
-    if freshness.refresh_error is None:
+    if freshness.refresh_error is None and not freshness.bootstrap_disabled:
         return tools
     return _dedupe((SCAN_RECOVERY_TOOL, *tools))
 

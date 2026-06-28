@@ -7,6 +7,9 @@ from typing import TYPE_CHECKING, Final, TypedDict
 
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
+from codescent.services.bootstrap import (
+    BootstrapNote,  # noqa: TC001  (runtime: fastmcp builds the TypedDict schema)
+)
 from codescent.services.config import ConfigService
 from codescent.services.git import detect_git_state
 from codescent.services.task_brief import TaskBriefService
@@ -59,6 +62,7 @@ class StartTaskToolPayload(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    bootstrap: BootstrapNote
 
 
 def register_repo_tools(mcp: FastMCP) -> None:
@@ -66,7 +70,8 @@ def register_repo_tools(mcp: FastMCP) -> None:
         description=(
             "Use CodeScent FIRST when beginning a task. Returns a bounded "
             "brief: relevant files, key symbols, related tests, in-scope "
-            "findings, index freshness, auto-refresh metadata, warnings, "
+            "findings, index freshness, auto-refresh metadata, first-use "
+            "auto-bootstrap status, warnings, "
             "confidence, and the next tool calls to make so you avoid broad "
             "greps and many round trips. Read-only for analyzed source; "
             "bounded output."
@@ -138,6 +143,7 @@ def _task_brief_payload(brief: TaskBrief) -> StartTaskToolPayload:
         "warnings": brief.warnings,
         "confidence": brief.confidence,
         "next_tools": brief.next_tools,
+        "bootstrap": brief.bootstrap,
     }
 
 

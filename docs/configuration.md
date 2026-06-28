@@ -13,6 +13,42 @@ The database stores indexes, symbols, scan runs, findings, lifecycle events,
 suggested verification records, and telemetry. Runtime writes belong there;
 CodeScent does not edit analyzed source files.
 
+## Auto-Bootstrap
+
+The first-run sequence is `init -> index -> scan`. By default CodeScent runs it
+for you on the first tool call: when `.codescent/` state is missing or the index
+is clearly stale, the entry path (and `start_task`) lazily runs the minimal
+init -> index -> scan before answering, writing only under `.codescent/` and
+performing no network I/O. Present-and-fresh state is a no-op.
+
+`start_task` carries a bounded `bootstrap` note so callers see what happened:
+
+```json
+{
+  "bootstrap": {
+    "bootstrapped": true,
+    "ran": ["init", "index", "scan"],
+    "reason": "created",
+    "guidance": []
+  }
+}
+```
+
+`reason` is one of `created` (state was missing), `refreshed` (stale index was
+rebuilt), `fresh` (no-op), `disabled` (opt-out, see below), or `failed` (the
+refresh raised; `guidance` then points back to `scan_code_health`).
+
+Opt out by setting `auto_bootstrap = false` in `.codescent/config.toml`:
+
+```toml
+auto_bootstrap = false
+```
+
+With auto-bootstrap disabled, CodeScent never auto-creates or refreshes state.
+When state is missing or stale it leaves `.codescent/` untouched and returns
+clear "run `scan_code_health` to initialize" guidance (legacy behavior) in the
+tool warnings and the `bootstrap.guidance` note instead.
+
 ## Inspecting State
 
 ```bash
