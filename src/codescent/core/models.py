@@ -22,6 +22,9 @@ class FindingStatus(StrEnum):
     IGNORED = "ignored"
     REGRESSED = "regressed"
     NEEDS_REVIEW = "needs_review"
+    # Silenced by an inline `# codescent: ignore[...]` comment at the finding's
+    # location. Excluded from open counts and the CI ratchet, but still listed.
+    SUPPRESSED = "suppressed"
 
 
 class RepoConfig(BaseModel):
@@ -200,6 +203,9 @@ class ProjectConfig(BaseModel):
     rule_packs: tuple[str, ...] = ("python-maintainability", "ts-react-next")
     coverage_path: str = "coverage.xml"
     auto_bootstrap: bool = True
+    # Honor inline `# codescent: ignore[<rule_id>]` comments that silence a
+    # finding at its location. Disable to treat every finding as open.
+    inline_suppression: bool = True
     commands: CommandHints = Field(default_factory=CommandHints)
     token_budgets: TokenBudgets = Field(default_factory=TokenBudgets)
     privacy: PrivacySettings = Field(default_factory=PrivacySettings)

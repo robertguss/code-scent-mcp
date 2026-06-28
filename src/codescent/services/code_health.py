@@ -14,6 +14,10 @@ from codescent.engine.rules.model import (
     build_finding,
 )
 from codescent.engine.source_read import read_source_lines
+from codescent.engine.suppression import (
+    match_suppressions,
+    parse_ignore_directives,
+)
 from codescent.services.config import ConfigService
 from codescent.services.coverage import coverage_findings
 from codescent.services.repo_index import RepoIndexService
@@ -28,6 +32,8 @@ if TYPE_CHECKING:
     import sqlite3
     from pathlib import Path
 
+    from codescent.engine.suppression import IgnoreDirective, SuppressionMatch
+
 
 @dataclass(frozen=True, slots=True)
 class CodeHealthScanResult:
@@ -38,6 +44,18 @@ class CodeHealthScanResult:
     finding_ids: tuple[str, ...]
     rule_ids: tuple[str, ...]
     findings: tuple[CodeHealthFinding, ...]
+    suppressed_stable_keys: frozenset[str] = frozenset()
+
+    @property
+    def active_findings(self) -> tuple[CodeHealthFinding, ...]:
+        """Findings that are not inline-suppressed (drive counts + ratchet)."""
+        if not self.suppressed_stable_keys:
+            return self.findings
+        return tuple(
+            finding
+            for finding in self.findings
+            if finding.stable_key not in self.suppressed_stable_keys
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,8 +83,18 @@ class CodeHealthService:
 
         with storage.write_transaction() as connection:
             previous = _previous_lifecycle(connection)
+            suppressed_matches = (
+                _compute_suppressions(connection, state.repo_root, findings)
+                if config.inline_suppression
+                else {}
+            )
+            suppressed_keys = frozenset(suppressed_matches)
             resolved_ids = _resolved_absent_ids(previous, current_stable_keys)
-            regressed_ids = _regressed_ids(previous, current_stable_keys)
+            regressed_ids = _regressed_ids(
+                previous,
+                current_stable_keys,
+                suppressed_keys,
+            )
             _ = connection.execute(
                 """
                 insert into scan_runs (
@@ -97,6 +125,11 @@ class CodeHealthService:
                 connection.execute("select path, id from files").fetchall(),
             )
             for finding in findings:
+                status = (
+                    FindingStatus.SUPPRESSED.value
+                    if finding.stable_key in suppressed_keys
+                    else FindingStatus.OPEN.value
+                )
                 _ = connection.execute(
                     """
                     insert into findings (
@@ -129,6 +162,8 @@ class CodeHealthService:
                             else findings.resolved_at
                         end,
                         status = case
+                            when excluded.status = 'suppressed' then 'suppressed'
+                            when findings.status = 'suppressed' then 'open'
                             when findings.status = 'resolved' then 'regressed'
                             else findings.status
                         end
@@ -140,7 +175,7 @@ class CodeHealthService:
                         file_ids.get(finding.file_path),
                         finding.severity,
                         finding.confidence,
-                        "open",
+                        status,
                         finding.title,
                         finding.message,
                         json.dumps(finding.evidence, sort_keys=True),
@@ -153,6 +188,7 @@ class CodeHealthService:
                 )
             _record_resolved_absent(connection, resolved_ids, now)
             _record_regressed(connection, regressed_ids, now)
+            _record_suppressions(connection, suppressed_matches, previous, now)
 
         return CodeHealthScanResult(
             scan_id=scan_id,
@@ -162,6 +198,7 @@ class CodeHealthService:
             finding_ids=tuple(finding.id for finding in findings),
             rule_ids=tuple(sorted({finding.rule_id for finding in findings})),
             findings=findings,
+            suppressed_stable_keys=suppressed_keys,
         )
 
 
@@ -260,12 +297,83 @@ def _resolved_absent_ids(
 def _regressed_ids(
     previous: dict[str, tuple[str, FindingStatus]],
     current_stable_keys: set[str],
+    suppressed_keys: frozenset[str],
 ) -> tuple[str, ...]:
     return tuple(
         finding_id
         for stable_key, (finding_id, status) in previous.items()
-        if stable_key in current_stable_keys and status is FindingStatus.RESOLVED
+        if stable_key in current_stable_keys
+        and stable_key not in suppressed_keys
+        and status is FindingStatus.RESOLVED
     )
+
+
+def _compute_suppressions(
+    connection: sqlite3.Connection,
+    repo_root: Path,
+    findings: tuple[CodeHealthFinding, ...],
+) -> dict[str, SuppressionMatch]:
+    directives_by_file: dict[str, tuple[IgnoreDirective, ...]] = {}
+    for file_path in {finding.file_path for finding in findings}:
+        source = read_source_lines(repo_root / file_path)
+        if source.lines is None:
+            continue
+        directives = parse_ignore_directives(source.lines)
+        if directives:
+            directives_by_file[file_path] = directives
+    if not directives_by_file:
+        return {}
+    symbol_lines = _symbol_start_lines(connection)
+    return match_suppressions(findings, directives_by_file, symbol_lines)
+
+
+def _symbol_start_lines(
+    connection: sqlite3.Connection,
+) -> dict[tuple[str, str], int]:
+    rows: list[tuple[str, str, int]] = connection.execute(
+        """
+        select files.path, symbols.qualified_name, symbols.start_line
+        from symbols
+        join files on files.id = symbols.file_id
+        """,
+    ).fetchall()
+    return {(path, qualified_name): start for path, qualified_name, start in rows}
+
+
+def _record_suppressions(
+    connection: sqlite3.Connection,
+    matches: dict[str, SuppressionMatch],
+    previous: dict[str, tuple[str, FindingStatus]],
+    now: str,
+) -> None:
+    for stable_key, match in matches.items():
+        prior = previous.get(stable_key)
+        if prior is not None and prior[1] is FindingStatus.SUPPRESSED:
+            # Already suppressed on a prior scan; don't re-log the transition.
+            continue
+        _ = connection.execute(
+            """
+            insert into finding_events (
+                finding_id,
+                event_type,
+                created_at,
+                details_json
+            ) values (?, ?, ?, ?)
+            """,
+            (
+                stable_key,
+                "suppressed",
+                now,
+                json.dumps(
+                    {
+                        "status": FindingStatus.SUPPRESSED.value,
+                        "rule_id": match.rule_id,
+                        "comment": match.comment,
+                    },
+                    sort_keys=True,
+                ),
+            ),
+        )
 
 
 def _record_resolved_absent(

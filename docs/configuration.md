@@ -49,6 +49,51 @@ When state is missing or stale it leaves `.codescent/` untouched and returns
 clear "run `scan_code_health` to initialize" guidance (legacy behavior) in the
 tool warnings and the `bootstrap.guidance` note instead.
 
+## Inline Suppression
+
+Silence a specific finding at its location with an inline comment, the way most
+linters do. CodeScent reads the comment during a scan (it never edits source) and
+gives the matched finding a `suppressed` status instead of `open`.
+
+```python
+# codescent: ignore[python.dead_code_candidate]
+def _legacy_helper() -> int:
+    return 1
+```
+
+Grammar (Python `#` and TypeScript/Go `//` line comments):
+
+| Form | Effect |
+| --- | --- |
+| `# codescent: ignore[rule_id]` | silence one rule |
+| `# codescent: ignore[rule_a, rule_b]` | silence several rules |
+| `# codescent: ignore` | bare form: silence every rule on the line |
+| `// codescent: ignore[rule_id]` | same, for `//`-comment languages |
+
+A comment matches a finding when it sits **on the finding's own line or the line
+directly above it**. A finding's line comes from its `start_line`/`line` evidence,
+or from its resolved symbol's definition line; purely file-level findings (for
+example `python.large_file`) have no line and are not inline-suppressible — use a
+config-level exclusion or `mark_finding` for those.
+
+Suppressed findings are:
+
+- **excluded from open counts** (`get_smell_report`, `get_backlog`,
+  `get_next_improvement`) and from the **CI ratchet** baseline and new-debt gate;
+- **still inspectable** — they remain listed under the `suppressed` status with an
+  audit-trail `suppressed` event recording the exact comment text.
+
+Removing the comment and rescanning reopens the finding.
+
+Disable the feature entirely by setting `inline_suppression = false` in
+`.codescent/config.toml` (default `true`):
+
+```toml
+inline_suppression = false
+```
+
+With it disabled, ignore comments are ignored and every finding is `open`.
+
 ## Inspecting State
 
 ```bash
