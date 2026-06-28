@@ -8,12 +8,17 @@ from codescent.services.refactor_planning import (
     RefactorPlanningService,
     SafeRefactorPlan,
 )
+from codescent.services.refactor_preflight import (
+    RefactorPreflightBundle,
+    RefactorPreflightService,
+)
 from codescent.services.verification import VerificationService
 from codescent.services.verify_refactor import VerifyRefactorService
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
+    from codescent.services.risk import ChangedFileHealth, RiskFinding
     from codescent.services.verification import (
         SelectedTests,
         SuggestedTests,
@@ -84,6 +89,48 @@ class ImpactToolPayload(TypedDict):
     confidence: float
 
 
+class CoChangeEntryPayload(TypedDict):
+    path: str
+    commits: int
+
+
+# Mirrors risk_tools' changed-file-health payload so the preflight section is
+# byte-identical to get_changed_file_health; kept local to avoid importing a
+# sibling tool module's types at runtime for schema generation.
+class PreflightRiskFindingPayload(TypedDict):
+    finding_id: str
+    rule_id: str
+    file_path: str
+    severity: str
+    confidence: float
+    status: str
+
+
+class PreflightChangedFileHealthPayload(TypedDict):
+    ok: bool
+    path: str
+    risk_score: float
+    risk_level: str
+    finding_ids: tuple[str, ...]
+    findings: tuple[PreflightRiskFindingPayload, ...]
+    suggested_tests: tuple[str, ...]
+    recommended_commands: tuple[str, ...]
+    risk_notes: tuple[str, ...]
+
+
+class RefactorPreflightToolPayload(TypedDict):
+    ok: bool
+    target_type: str
+    target: str
+    file_path: str
+    impact: ImpactToolPayload
+    co_change: tuple[CoChangeEntryPayload, ...]
+    test_selection: SelectTestsToolPayload
+    changed_file_health: PreflightChangedFileHealthPayload
+    warnings: tuple[str, ...]
+    next_tools: tuple[str, ...]
+
+
 class VerifyRefactorToolPayload(TypedDict):
     ok: bool
     verifiable: bool
@@ -147,6 +194,15 @@ def register_planning_tools(mcp: FastMCP) -> None:
             "reports concrete violations."
         ),
     )(verify_refactor)
+    _ = mcp.tool(
+        description=(
+            "Use CodeScent to run a one-call refactor preflight before an edit: "
+            "a bounded, deduped blast-radius bundle that composes impact "
+            "(callers/refs), git co-change coupling, the minimal verification "
+            "test set, and changed-file health for a file, symbol, or finding. "
+            "Pure composition of existing analyses; read-only for source files."
+        ),
+    )(refactor_preflight)
 
 
 def get_finding_context(
@@ -216,6 +272,21 @@ def verify_change(finding_id: str, repo: str = ".") -> VerifyChangeToolPayload:
     )
 
 
+def refactor_preflight(
+    repo: str = ".",
+    target: str | None = None,
+    target_type: str = "file",
+    finding_id: str | None = None,
+) -> RefactorPreflightToolPayload:
+    return _preflight_payload(
+        RefactorPreflightService(repo).preflight(
+            target=target,
+            target_type=target_type,
+            finding_id=finding_id,
+        ),
+    )
+
+
 def _context_payload(context: FindingContext) -> FindingContextToolPayload:
     return {
         "ok": True,
@@ -276,6 +347,56 @@ def _impact_payload(impact: ImpactReport) -> ImpactToolPayload:
         "likely_tests": impact.likely_tests,
         "risk_notes": impact.risk_notes,
         "confidence": impact.confidence,
+    }
+
+
+def _preflight_payload(
+    bundle: RefactorPreflightBundle,
+) -> RefactorPreflightToolPayload:
+    return {
+        "ok": bundle.ok,
+        "target_type": bundle.target_type,
+        "target": bundle.target,
+        "file_path": bundle.file_path,
+        "impact": _impact_payload(bundle.impact),
+        "co_change": tuple(
+            {"path": entry.path, "commits": entry.commits} for entry in bundle.co_change
+        ),
+        "test_selection": _select_tests_payload(bundle.test_selection),
+        "changed_file_health": _changed_file_health_payload(
+            bundle.changed_file_health,
+        ),
+        "warnings": bundle.warnings,
+        "next_tools": bundle.next_tools,
+    }
+
+
+def _changed_file_health_payload(
+    health: ChangedFileHealth,
+) -> PreflightChangedFileHealthPayload:
+    return {
+        "ok": health.ok,
+        "path": health.path,
+        "risk_score": health.risk_score,
+        "risk_level": health.risk_level,
+        "finding_ids": tuple(finding.finding_id for finding in health.findings),
+        "findings": tuple(
+            _risk_finding_payload(finding) for finding in health.findings
+        ),
+        "suggested_tests": health.suggested_tests,
+        "recommended_commands": health.recommended_commands,
+        "risk_notes": health.risk_notes,
+    }
+
+
+def _risk_finding_payload(finding: RiskFinding) -> PreflightRiskFindingPayload:
+    return {
+        "finding_id": finding.finding_id,
+        "rule_id": finding.rule_id,
+        "file_path": finding.file_path,
+        "severity": finding.severity,
+        "confidence": finding.confidence,
+        "status": finding.status,
     }
 
 

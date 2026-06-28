@@ -52,6 +52,7 @@ by the service and contract tests.
 - `retrieve_result`
 - `context_stats`
 - `select_tests`
+- `refactor_preflight`
 - `start_task`
 - `record_verification`
 - `how_to_use`
@@ -108,7 +109,7 @@ Code health and finding lifecycle tools:
 Planning tools:
 
 `get_finding_context`, `plan_refactor`, `suggest_tests`, `get_impact`,
-`verify_change`, `verify_refactor`, `select_tests`
+`verify_change`, `verify_refactor`, `select_tests`, `refactor_preflight`
 
 Risk tools:
 
@@ -368,6 +369,31 @@ events, and telemetry.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network; recommend-only and does not execute pytest.
 - Example shape: `{"tool": "select_tests", "ok": true, "data": {...}}`
+
+### `refactor_preflight`
+
+- Group: `planning`
+- Purpose: Run a one-call refactor preflight before editing: a bounded, deduped
+  blast-radius bundle for a file, symbol, or finding that an agent would
+  otherwise have to assemble by chaining four tools. Pure composition of
+  already-shipped analyses — `get_impact` (callers/refs), git co-change
+  coupling, `select_tests` (the minimal verification set), and
+  `get_changed_file_health`. No new analysis is invented; each section equals
+  what its component tool returns when called directly.
+- Inputs: repository root, plus one of `target` (file path or symbol name with
+  `target_type` of `file` or `symbol`) or `finding_id`.
+- Outputs: `ok`, `target_type`, `target`, `file_path`, `impact` (same shape as
+  `get_impact`), `co_change` (a capped list of `{path, commits}` coupling
+  entries), `test_selection` (same shape as `select_tests`),
+  `changed_file_health` (same shape as `get_changed_file_health`), `warnings`,
+  and `next_tools`.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network. Every list section honors the most restrictive existing
+  component cap (git co-change tops out at 10) and no section carries source
+  ranges. Missing inputs (no shared git history, an unindexed target) degrade to
+  an empty section with a reason in `warnings` rather than failing.
+- Example shape:
+  `{"ok": true, "file_path": "src/pkg/core.py", "impact": {...}, "co_change": [{"path": "src/pkg/caller.py", "commits": 2}], "test_selection": {...}, "changed_file_health": {...}, "warnings": [], "next_tools": [...]}`
 
 ### `mark_finding`
 

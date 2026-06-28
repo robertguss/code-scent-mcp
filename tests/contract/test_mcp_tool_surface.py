@@ -58,6 +58,7 @@ MVP_TOOL_NAMES = {
     "retrieve_result",
     "context_stats",
     "how_to_use",
+    "refactor_preflight",
 }
 
 
