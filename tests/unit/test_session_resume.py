@@ -81,7 +81,7 @@ def _seed_finding(repo: Path, seed: SeedFinding) -> None:
 
 def _touch(repo: Path, finding_id: str, status: FindingStatus) -> None:
     """Record a status change so the finding shows real session activity."""
-    FindingRepository(RepositoryStorage(initialize_storage(repo))).update_status(
+    _ = FindingRepository(RepositoryStorage(initialize_storage(repo))).update_status(
         finding_id,
         status,
         note="resumed work",
@@ -89,7 +89,9 @@ def _touch(repo: Path, finding_id: str, status: FindingStatus) -> None:
 
 
 def _verify(repo: Path, finding_id: str, *, exit_code: int = 0) -> None:
-    FindingRepository(RepositoryStorage(initialize_storage(repo))).record_verification(
+    _ = FindingRepository(
+        RepositoryStorage(initialize_storage(repo))
+    ).record_verification(
         finding_id,
         command="uv run pytest tests/unit/test_x.py",
         exit_code=exit_code,
@@ -98,7 +100,9 @@ def _verify(repo: Path, finding_id: str, *, exit_code: int = 0) -> None:
 
 
 def _tool_event(repo: Path, tool_name: str, when: str) -> None:
-    SessionEventRepository(RepositoryStorage(initialize_storage(repo))).record_event(
+    _ = SessionEventRepository(
+        RepositoryStorage(initialize_storage(repo))
+    ).record_event(
         SessionEventWrite(
             project_id=PROJECT_ID,
             session_id=SESSION_ID,
