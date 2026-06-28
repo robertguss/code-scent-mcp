@@ -307,7 +307,9 @@ reset requires --dry-run or --yes.
 
 - Missing `.codescent/config.toml`: run `init`.
 - Missing `.codescent/index.sqlite`: run `init`, then `index`.
-- Invalid output format: use `--format json` or `--format markdown`.
+- Invalid output format: use `--format json` or `--format markdown`. The `ci` and
+  `review-diff` commands additionally accept `--format sarif` (SARIF 2.1.0 for
+  GitHub code scanning) and `--format github` (inline PR annotation lines).
 - Unexpected analyzed-source changes: inspect target repo git status; CodeScent
   runtime should only write `.codescent/`.
 

@@ -205,18 +205,37 @@ ratchet is a no-op that recommends re-running `--update-baseline` rather than
 failing. Defaults live in the `[ratchet]` config section; omitting `--ratchet`
 keeps the absolute threshold behavior.
 
+`ci` and `review-diff` also accept `--format sarif` and `--format github` to surface
+findings on pull requests. `sarif` emits a SARIF 2.1.0 log (one run, one tool) for
+upload to GitHub code scanning; each result maps `rule_id`, `severity` (→ SARIF
+`level`), `file_path`, the evidence line range, `message`, and `suggested_action`
+(in result `properties`), with the stable finding key as a `partialFingerprints`
+entry. `github` emits one workflow-command annotation line per finding —
+`::<level> file=<path>,line=<n>::<message>` — that GitHub renders inline on the
+diff. The `json` and `markdown` formats are unchanged. `ci` still exits nonzero
+when the gate fails regardless of format; use `review-diff --format sarif` for an
+always-zero upload step.
+
+```bash
+uv run codescent ci --repo "$repo" --format sarif > codescent.sarif
+uv run codescent review-diff --repo "$repo" --format github
+```
+
 ### `review-diff`
 
 Runs the diff review report without threshold failure semantics.
 
 ```bash
 uv run codescent review-diff --repo "$repo" --format markdown
+uv run codescent review-diff --repo "$repo" --format sarif
+uv run codescent review-diff --repo "$repo" --format github
 ```
 
 ## Common Errors
 
 - Missing state: run `init` before `doctor` or inspect the warning payload.
-- Invalid format: use `--format json` or `--format markdown`.
+- Invalid format: use `--format json` or `--format markdown` (also `sarif` or
+  `github` for `ci` and `review-diff`).
 - Reset without confirmation: use `reset --dry-run` to inspect targets or
   `reset --yes` to delete `.codescent/`.
 

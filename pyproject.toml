@@ -24,6 +24,7 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "basedpyright>=1.21",
+    "jsonschema>=4.0",
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.8",
@@ -88,6 +89,8 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
+# The SARIF e2e proof emits verbose per-assertion logging (expected vs found).
+"tests/integration/test_ci_sarif_e2e.py" = ["T201"]
 "src/codescent/services/git.py" = ["S603"]
 "scripts/smoke_lx_data_lake.py" = ["S603", "S607"]
 "scripts/smoke_dashboard.py" = ["S603", "S607"]

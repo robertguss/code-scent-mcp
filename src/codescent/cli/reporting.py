@@ -10,6 +10,8 @@ from codescent.services.ci import (
     ChangedFileSummary,
     CiReport,
     CiService,
+    ci_github_annotations,
+    ci_sarif_document,
 )
 from codescent.services.findings import FindingsService
 from codescent.services.precision import PrecisionReport, PrecisionService
@@ -23,6 +25,7 @@ if TYPE_CHECKING:
     from codescent.storage.repositories import FindingRow
 
 INVALID_FORMAT_MESSAGE = "format must be json or markdown"
+INVALID_CI_FORMAT_MESSAGE = "format must be json, markdown, sarif, or github"
 
 
 class CliReportPayload(TypedDict):
@@ -230,7 +233,10 @@ def ci(  # noqa: PLR0913 - CLI command exposes distinct options.
     repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
     format_name: Annotated[
         str,
-        typer.Option("--format", help="Output format: json or markdown."),
+        typer.Option(
+            "--format",
+            help="Output format: json, markdown, sarif, or github.",
+        ),
     ] = "json",
     threshold: Annotated[
         str,
@@ -274,7 +280,10 @@ def review_diff(
     repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
     format_name: Annotated[
         str,
-        typer.Option("--format", help="Output format: json or markdown."),
+        typer.Option(
+            "--format",
+            help="Output format: json, markdown, sarif, or github.",
+        ),
     ] = "json",
 ) -> None:
     report_data = CiService(repo).run(threshold="high")
@@ -382,6 +391,12 @@ def _precision_rule_line(rule: RulePrecisionPayload) -> str:
 
 
 def _emit_ci_report(report_data: CiReport, format_name: str) -> None:
+    if format_name == "sarif":
+        typer.echo(json.dumps(ci_sarif_document(report_data)))
+        return
+    if format_name == "github":
+        typer.echo(ci_github_annotations(report_data))
+        return
     payload = _ci_payload(report_data)
     if format_name == "json":
         typer.echo(json.dumps(payload))
@@ -389,7 +404,7 @@ def _emit_ci_report(report_data: CiReport, format_name: str) -> None:
     if format_name == "markdown":
         typer.echo(_ci_markdown(payload))
         return
-    raise typer.BadParameter(INVALID_FORMAT_MESSAGE)
+    raise typer.BadParameter(INVALID_CI_FORMAT_MESSAGE)
 
 
 def _ci_payload(report_data: CiReport) -> CiReportPayload:

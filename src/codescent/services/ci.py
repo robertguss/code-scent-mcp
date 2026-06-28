@@ -9,6 +9,11 @@ from codescent.services.code_health import CodeHealthService
 from codescent.services.config import ConfigService
 from codescent.services.git import git_changed_paths_since
 from codescent.services.risk import RiskService
+from codescent.services.sarif import (
+    SarifLog,
+    findings_to_github_annotations,
+    findings_to_sarif,
+)
 from codescent.storage import RepositoryStorage, initialize_storage
 
 if TYPE_CHECKING:
@@ -60,6 +65,9 @@ class CiReport:
     new_finding_count: int = 0
     resolved_count: int = 0
     net_health_delta: int = 0
+    # Full active findings, carried so the CLI can serialize SARIF / GitHub
+    # annotation output without re-scanning. Not part of the JSON/markdown payload.
+    findings: tuple[CodeHealthFinding, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,6 +167,7 @@ class CiService:
             new_finding_count=len(new_findings),
             resolved_count=resolved_count,
             net_health_delta=net_health_delta,
+            findings=active_findings,
         )
 
     def _new_and_resolved(
@@ -241,6 +250,16 @@ class CiService:
             files_recorded=len(file_rows),
             finding_count=sum(counts.values()),
         )
+
+
+def ci_sarif_document(report: CiReport) -> SarifLog:
+    """Serialize a CI report's active findings as a SARIF 2.1.0 log."""
+    return findings_to_sarif(report.findings)
+
+
+def ci_github_annotations(report: CiReport) -> str:
+    """Serialize a CI report's active findings as GitHub annotation lines."""
+    return findings_to_github_annotations(report.findings)
 
 
 def _passes(threshold: str, risk_level: str) -> bool:
