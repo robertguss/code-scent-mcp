@@ -34,6 +34,25 @@ TypeScript pack is regex-based, and resolving TS/JS import specifiers to files
 aliases) cannot currently be done at high enough confidence to avoid false or
 missing cycles. The rule id is reserved; Python ships first.
 
+### Go
+
+The Go pack covers symbol extraction and deterministic maintainability findings
+for `.go` files. Like the TypeScript pack it is **regex-heuristic** (no
+tree-sitter, no parser dependency): `engine/parsers/go.py` extracts `package`,
+`func`/method, `type` (struct/interface/alias), and single- and block-form
+`import` declarations into the shared `ParsedSymbol`/`ParsedImport` model, tagged
+`LOW_CONFIDENCE` because the parse is heuristic rather than an AST. Unreadable or
+undecodable files degrade gracefully to an empty parse with a recorded
+`parse_error`.
+
+The `go-maintainability` rule pack emits four smells: `go.large_file`,
+`go.large_function`, `go.missing_nearby_test` (an exported-function file with no
+`_test.go` in its package directory), and `go.duplicate_literal`. Findings are
+regex-derived, so they carry the `heuristic` confidence tier and `resolution:
+regex` provenance (language `go`). The Go language + rule packs are config-gated
+(enabled by default) and the language pack is registered as a *specific* pack
+keyed on `.go`, ahead of any generic fallback pack.
+
 ### Knowledge silo (bus factor)
 
 The cross-language `knowledge-silo` rule pack flags files that are both
@@ -55,14 +74,18 @@ history, so non-git and shallow trees stay clean.
 
 ## Parser Decision
 
-The TypeScript/JavaScript pack uses a local deterministic parser adapter backed
-by tree-sitter. The adapter must run from installed local dependencies, require
-no runtime network, and degrade gracefully when a grammar cannot produce
-high-confidence references.
+The non-Python packs use **local, dependency-free regex parsers** (corrected per
+code audit — there is no tree-sitter or any parser dependency in this project).
+Both the TypeScript/JavaScript pack (`engine/packs_ts.py`) and the Go pack
+(`engine/parsers/go.py`) extract symbols/imports with regexes and emit
+`LOW_CONFIDENCE` results, sharing the same `ParsedSymbol`/`ParsedImport` model the
+Python AST pack returns. The parsers run from local source only, require no
+runtime network, are source-read-only, and degrade gracefully when a file cannot
+be read or a construct cannot be matched at high confidence.
 
-This keeps parsing source-read-only and gives CodeScent one parser strategy for
-plain JavaScript, JSX, TypeScript, and TSX instead of separate ad hoc regex
-paths.
+Only the Python pack is AST-backed (via the standard-library `ast` module), which
+is why Python findings can be tagged `verified` while regex-derived findings are
+always `heuristic`.
 
 ## Future Packs
 

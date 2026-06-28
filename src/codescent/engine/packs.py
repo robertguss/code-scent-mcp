@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from codescent.core.models import ProjectConfig
+from codescent.engine.packs_go import GO_EXTENSIONS, parse_go_file, scan_go_health
 from codescent.engine.packs_ts import TS_EXTENSIONS, parse_typescript_file
 from codescent.engine.parsers.python import ParsedPythonFile, parse_python_file
 from codescent.engine.rules.architecture import scan_architecture
@@ -21,6 +22,8 @@ PYTHON_LANGUAGE_PACK = "python"
 PYTHON_RULE_PACK = "python-maintainability"
 TYPESCRIPT_LANGUAGE_PACK = "typescript"
 TYPESCRIPT_RULE_PACK = "ts-react-next"
+GO_LANGUAGE_PACK = "go"
+GO_RULE_PACK = "go-maintainability"
 ARCHITECTURE_RULE_PACK = "architecture"
 KNOWLEDGE_SILO_RULE_PACK = "knowledge-silo"
 
@@ -84,17 +87,19 @@ def build_pack_registry(config: ProjectConfig | None = None) -> PackRegistry:
 
 def _language_packs(enabled: tuple[str, ...]) -> tuple[LanguagePack, ...]:
     packs: list[LanguagePack] = []
-    if PYTHON_LANGUAGE_PACK not in enabled:
-        return _typescript_language_packs(enabled)
-    packs.append(
-        LanguagePack(
-            name=PYTHON_LANGUAGE_PACK,
-            languages=("python",),
-            suffixes=(".py", ".pyi"),
-            parse_file=parse_python_file,
-        ),
-    )
+    if PYTHON_LANGUAGE_PACK in enabled:
+        packs.append(
+            LanguagePack(
+                name=PYTHON_LANGUAGE_PACK,
+                languages=("python",),
+                suffixes=(".py", ".pyi"),
+                parse_file=parse_python_file,
+            ),
+        )
     packs.extend(_typescript_language_packs(enabled))
+    # Specific Go pack. It must stay ahead of any future generic-fallback pack so
+    # parser_for_language() resolves `.go` to this pack rather than the fallback.
+    packs.extend(_go_language_packs(enabled))
     return tuple(packs)
 
 
@@ -107,6 +112,19 @@ def _typescript_language_packs(enabled: tuple[str, ...]) -> tuple[LanguagePack, 
             languages=("javascript", "typescript"),
             suffixes=TS_EXTENSIONS,
             parse_file=parse_typescript_file,
+        ),
+    )
+
+
+def _go_language_packs(enabled: tuple[str, ...]) -> tuple[LanguagePack, ...]:
+    if GO_LANGUAGE_PACK not in enabled:
+        return ()
+    return (
+        LanguagePack(
+            name=GO_LANGUAGE_PACK,
+            languages=("go",),
+            suffixes=GO_EXTENSIONS,
+            parse_file=parse_go_file,
         ),
     )
 
@@ -146,6 +164,14 @@ def _rule_packs(enabled: tuple[str, ...]) -> tuple[RulePack, ...]:
                 scan=_scan_ts_react_next_health,
             ),
         )
+    if GO_RULE_PACK in enabled:
+        packs.append(
+            RulePack(
+                name=GO_RULE_PACK,
+                languages=("go",),
+                scan=_scan_go_health,
+            ),
+        )
     return tuple(packs)
 
 
@@ -181,3 +207,10 @@ def _scan_knowledge_silos(
     config: ProjectConfig,
 ) -> tuple[CodeHealthFinding, ...]:
     return scan_knowledge_silos(root, config=config)
+
+
+def _scan_go_health(
+    root: Path | str,
+    config: ProjectConfig,
+) -> tuple[CodeHealthFinding, ...]:
+    return scan_go_health(root, config=config)

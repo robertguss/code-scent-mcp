@@ -1,0 +1,30 @@
+{
+  "fixture_root": "tests/fixtures/go-module",
+  "language": "go",
+  "thresholds": {
+    "large_file_lines": 20,
+    "large_function_lines": 8,
+    "duplicate_literal_min_count": 2,
+    "duplicate_literal_min_length": 4
+  },
+  "symbols": [
+    {"file": "cmd/app/main.go", "qualified_name": "main.main", "kind": "function"},
+    {"file": "internal/cache/cache.go", "qualified_name": "cache.Cache", "kind": "struct"},
+    {"file": "internal/cache/cache.go", "qualified_name": "cache.Get", "kind": "function"},
+    {"file": "internal/store/store.go", "qualified_name": "store.Store", "kind": "struct"},
+    {"file": "internal/store/store.go", "qualified_name": "store.New", "kind": "function"},
+    {"file": "internal/store/store.go", "qualified_name": "store.Save", "kind": "method"}
+  ],
+  "imports": [
+    {"file": "cmd/app/main.go", "module": "fmt"},
+    {"file": "cmd/app/main.go", "module": "os"},
+    {"file": "internal/store/store.go", "module": "database/sql"},
+    {"file": "internal/store/store.go", "module": "fmt"}
+  ],
+  "findings": [
+    {"file": "internal/store/store.go", "rule_id": "go.large_file", "symbol": null},
+    {"file": "internal/store/store.go", "rule_id": "go.large_function", "symbol": "store.Save"},
+    {"file": "internal/store/store.go", "rule_id": "go.missing_nearby_test", "symbol": "store.New"},
+    {"file": "internal/store/store.go", "rule_id": "go.duplicate_literal", "symbol": null}
+  ]
+}

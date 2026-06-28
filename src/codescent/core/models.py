@@ -198,9 +198,13 @@ class ProjectConfig(BaseModel):
     generated: tuple[str, ...] = ()
     vendor: tuple[str, ...] = ()
     build: tuple[str, ...] = ()
-    language_packs: tuple[str, ...] = ("python", "typescript")
+    language_packs: tuple[str, ...] = ("python", "typescript", "go")
     framework_packs: tuple[str, ...] = ()
-    rule_packs: tuple[str, ...] = ("python-maintainability", "ts-react-next")
+    rule_packs: tuple[str, ...] = (
+        "python-maintainability",
+        "ts-react-next",
+        "go-maintainability",
+    )
     coverage_path: str = "coverage.xml"
     auto_bootstrap: bool = True
     # Honor inline `# codescent: ignore[<rule_id>]` comments that silence a
