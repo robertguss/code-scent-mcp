@@ -20,7 +20,7 @@ import logging
 import os
 import shutil
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
 from pydantic import TypeAdapter, ValidationError
@@ -149,11 +149,20 @@ class CbmGraphBackend:
 
     client: CbmClient
     native: NativeGraphBackend
+    _available_memo: list[bool] = field(default_factory=list, compare=False, repr=False)
 
     def name(self) -> str:
         return "cbm"
 
     def available(self) -> bool:
+        # Memoized for the backend's (per-scan) lifetime: _pull probes
+        # availability before every data method, so without this each scan would
+        # spawn a health subprocess 4x (symbols/complexity/call_edges/clusters).
+        if not self._available_memo:
+            self._available_memo.append(self._probe_available())
+        return self._available_memo[0]
+
+    def _probe_available(self) -> bool:
         try:
             return self.client.healthy()
         except CbmClientError:
