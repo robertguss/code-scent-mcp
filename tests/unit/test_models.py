@@ -144,11 +144,19 @@ def test_project_config_parses_full_prd_surface_with_precedence() -> None:
     assert merged.commands.test == ("pytest tests/test_config.py",)
 
 
-def test_project_config_defaults_enable_python_and_typescript_packs() -> None:
+def test_project_config_defaults_enable_python_typescript_and_go_packs() -> None:
     config = ProjectConfig()
 
-    assert config.language_packs == ("python", "typescript")
-    assert config.rule_packs == ("python-maintainability", "ts-react-next")
+    assert config.language_packs == ("python", "typescript", "go")
+    assert config.rule_packs == (
+        "python-maintainability",
+        "ts-react-next",
+        "go-maintainability",
+    )
+    # The generic text-only fallback is an always-applicable rule pack (like
+    # architecture/knowledge-silo), gated by its own flag rather than
+    # rule_packs membership; on by default, specific packs still win.
+    assert config.generic_fallback is True
     assert config.architecture.rules == ()
 
 

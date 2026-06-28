@@ -36,9 +36,10 @@ def test_fixture_contains_expected_ts_react_next_patterns() -> None:
     assert _contains("lib/tasks.js", "export async function loadTasks")
 
     decision = DECISION_DOC.read_text()
-    assert "tree-sitter" in decision
-    assert "local deterministic parser" in decision
-    assert "no runtime network" in decision
+    # Audit-corrected (U18): non-Python packs are regex-heuristic, not tree-sitter.
+    assert "regex" in decision
+    assert "no tree-sitter" in decision
+    assert "no-network" in decision
 
 
 def _contains(relative_path: str, needle: str) -> bool:

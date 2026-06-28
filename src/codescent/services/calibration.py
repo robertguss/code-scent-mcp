@@ -62,6 +62,27 @@ class CalibrationReport:
 
 
 @dataclass(frozen=True, slots=True)
+class RuleNoiseBaseline:
+    rule_id: str
+    firing_count: int
+    total_findings: int
+    firing_rate: float
+    noise_weight: float
+    normalized: bool
+
+
+@dataclass(frozen=True, slots=True)
+class NoiseBaselineReport:
+    rules: tuple[RuleNoiseBaseline, ...]
+    total_findings: int
+    normalized: bool
+    min_sample_size: int
+
+    def weight_map(self) -> dict[str, float]:
+        return {rule.rule_id: rule.noise_weight for rule in self.rules}
+
+
+@dataclass(frozen=True, slots=True)
 class CalibrationService:
     repo_root: Path | str
 
@@ -94,6 +115,16 @@ class CalibrationService:
         if not members:
             return None
         return _rule_calibration(rule_id, members, settings)
+
+    def get_noise_baseline(self) -> NoiseBaselineReport:
+        # Per-repo baseline noise: how often each rule fires across the repo. A
+        # rule that fires everywhere is down-weighted in ranking; a rare rule
+        # stands out. Pure, deterministic function of the stored findings (same
+        # findings in -> same baseline out); extends the adaptive system rather
+        # than adding a parallel one. No finding is hidden -- only re-ranked.
+        settings = ConfigService(self.repo_root).load().adaptive
+        findings = _repository(self.repo_root).list_findings()
+        return _noise_baseline(findings, settings)
 
 
 def _rule_calibrations(
@@ -149,6 +180,61 @@ def _adjust(
     # never below the floor: accept_rate 1.0 boosts, 0.0 reduces, 0.5 is neutral.
     shift = settings.max_confidence_delta * (2.0 * accept_rate - 1.0)
     return _clamp(base_confidence + shift, settings.confidence_floor, 1.0)
+
+
+def _noise_baseline(
+    findings: tuple[FindingRow, ...],
+    settings: AdaptiveSettings,
+) -> NoiseBaselineReport:
+    counts: dict[str, int] = defaultdict(int)
+    for finding in findings:
+        counts[finding.rule_id] += 1
+    total = len(findings)
+    # Cold start: a small repo lacks a stable baseline, so leave ranking
+    # untouched (weight 1.0) until enough findings exist -- the same guard the
+    # confidence recalibration uses, gated by the same master switch.
+    normalized = settings.confidence_recalibration and total >= settings.min_sample_size
+    baselines = [
+        _rule_noise(rule_id, count, total, settings, normalized=normalized)
+        for rule_id, count in counts.items()
+    ]
+    return NoiseBaselineReport(
+        rules=tuple(sorted(baselines, key=lambda item: item.rule_id)),
+        total_findings=total,
+        normalized=normalized,
+        min_sample_size=settings.min_sample_size,
+    )
+
+
+def _rule_noise(
+    rule_id: str,
+    count: int,
+    total: int,
+    settings: AdaptiveSettings,
+    *,
+    normalized: bool,
+) -> RuleNoiseBaseline:
+    firing_rate = count / total if total else 0.0
+    # Higher firing rate -> lower weight (noisier), bounded by the same delta and
+    # floor as confidence recalibration so the adjustment stays transparent and
+    # never zeroes a finding out (it is re-ranked, never hidden).
+    weight = (
+        _clamp(
+            1.0 - settings.max_confidence_delta * firing_rate,
+            settings.confidence_floor,
+            1.0,
+        )
+        if normalized
+        else 1.0
+    )
+    return RuleNoiseBaseline(
+        rule_id=rule_id,
+        firing_count=count,
+        total_findings=total,
+        firing_rate=round(firing_rate, 3),
+        noise_weight=round(weight, 3),
+        normalized=normalized,
+    )
 
 
 def _suppression_candidates(

@@ -32,6 +32,8 @@ class FindingRow:
     evidence_json: str
     suggested_action: str
     events: tuple[FindingEventRow, ...]
+    confidence_tier: str = "heuristic"
+    provenance_json: str = "{}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,7 +53,21 @@ class FindingRepository:
     def list_findings(self) -> tuple[FindingRow, ...]:
         with self.storage.read_connection() as connection:
             rows: list[
-                tuple[str, str, str, str | None, str, float, str, str, str, str, str]
+                tuple[
+                    str,
+                    str,
+                    str,
+                    str | None,
+                    str,
+                    float,
+                    str,
+                    str,
+                    str,
+                    str,
+                    str,
+                    str,
+                    str,
+                ]
             ] = connection.execute(
                 """
                 select
@@ -65,7 +81,9 @@ class FindingRepository:
                     findings.title,
                     findings.message,
                     findings.evidence_json,
-                    coalesce(findings.suggested_action, '')
+                    coalesce(findings.suggested_action, ''),
+                    coalesce(findings.confidence_tier, 'heuristic'),
+                    coalesce(findings.provenance_json, '{}')
                 from findings
                 left join files on files.id = findings.file_id
                 order by findings.status, findings.severity, findings.rule_id
@@ -86,6 +104,8 @@ class FindingRepository:
                 evidence_json=row[9],
                 suggested_action=row[10],
                 events=events_by_finding.get(row[0], ()),
+                confidence_tier=row[11],
+                provenance_json=row[12],
             )
             for row in rows
         )

@@ -56,7 +56,10 @@ def test_name_use_index_collects_used_names_and_candidates(tmp_path: Path) -> No
 
     index = build_name_use_index(repo)
 
-    assert {"used_fn", "tested_fn", "exported_fn"} <= index.used_names
+    assert {"used_fn", "tested_fn"} <= index.used_names
+    # __all__ exports are recognized as entry points (reachable from outside the
+    # internal call graph) rather than internal "used" names.
+    assert index.entry_points.is_entry_point("exported_fn")
     assert [candidate.name for candidate in index.candidates] == [
         "orphan_fn",
         "OrphanClass",

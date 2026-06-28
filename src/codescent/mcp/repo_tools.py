@@ -7,13 +7,18 @@ from typing import TYPE_CHECKING, Final, TypedDict
 
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
+from codescent.services.bootstrap import (
+    BootstrapNote,  # noqa: TC001  (runtime: fastmcp builds the TypedDict schema)
+)
 from codescent.services.config import ConfigService
 from codescent.services.git import detect_git_state
+from codescent.services.session_resume import RatchetStatus, SessionResumeService
 from codescent.services.task_brief import TaskBriefService
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
+    from codescent.services.session_resume import ResumeBrief
     from codescent.services.task_brief import TaskBrief
 
 SAMPLE_FILE_LIMIT: Final = 20
@@ -59,14 +64,40 @@ class StartTaskToolPayload(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    bootstrap: BootstrapNote
+
+
+class ResumeTaskToolPayload(TypedDict):
+    ok: bool
+    session_id: str
+    status: str
+    summary: str
+    active_findings: tuple[dict[str, str], ...]
+    verified_findings: tuple[dict[str, str], ...]
+    recently_touched_files: tuple[str, ...]
+    recent_tools: tuple[str, ...]
+    ratchet: RatchetStatus
+    next_tools: tuple[str, ...]
 
 
 def register_repo_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
+            "Use CodeScent to RESUME work after losing context (e.g. a "
+            "compaction). Reconstructs a bounded session brief purely from "
+            "persisted state: the active/last findings, what's already verified, "
+            "the health-ratchet baseline status, recently touched files, the "
+            "recent tool trail, and the recommended next tool call. "
+            "Deterministic; reads no analyzed source; bounded output."
+        ),
+    )(resume_task)
+
+    _ = mcp.tool(
+        description=(
             "Use CodeScent FIRST when beginning a task. Returns a bounded "
             "brief: relevant files, key symbols, related tests, in-scope "
-            "findings, index freshness, auto-refresh metadata, warnings, "
+            "findings, index freshness, auto-refresh metadata, first-use "
+            "auto-bootstrap status, warnings, "
             "confidence, and the next tool calls to make so you avoid broad "
             "greps and many round trips. Read-only for analyzed source; "
             "bounded output."
@@ -105,6 +136,35 @@ def start_task(
     )
 
 
+def resume_task(
+    repo: str = ".",
+    session_id: str = "default",
+    project_id: str | None = None,
+) -> ResumeTaskToolPayload:
+    resolved_project_id = project_id or f"repo:{resolve_repo_root(repo).as_posix()}"
+    return _resume_brief_payload(
+        SessionResumeService(repo).resume_task(
+            project_id=resolved_project_id,
+            session_id=session_id,
+        ),
+    )
+
+
+def _resume_brief_payload(brief: ResumeBrief) -> ResumeTaskToolPayload:
+    return {
+        "ok": True,
+        "session_id": brief.session_id,
+        "status": brief.status,
+        "summary": brief.summary,
+        "active_findings": brief.active_findings,
+        "verified_findings": brief.verified_findings,
+        "recently_touched_files": brief.recently_touched_files,
+        "recent_tools": brief.recent_tools,
+        "ratchet": brief.ratchet,
+        "next_tools": brief.next_tools,
+    }
+
+
 def get_repo_map(repo: str = ".") -> RepoMapToolPayload:
     repo_root = resolve_repo_root(repo)
     config = ConfigService(repo_root).load()
@@ -138,6 +198,7 @@ def _task_brief_payload(brief: TaskBrief) -> StartTaskToolPayload:
         "warnings": brief.warnings,
         "confidence": brief.confidence,
         "next_tools": brief.next_tools,
+        "bootstrap": brief.bootstrap,
     }
 
 

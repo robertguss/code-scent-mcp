@@ -10,8 +10,11 @@ from codescent.services.ci import (
     ChangedFileSummary,
     CiReport,
     CiService,
+    ci_github_annotations,
+    ci_sarif_document,
 )
 from codescent.services.findings import FindingsService
+from codescent.services.precision import PrecisionReport, PrecisionService
 from codescent.services.reports import ReportService
 from codescent.services.subjective_review import (
     SubjectiveReviewService,
@@ -22,6 +25,7 @@ if TYPE_CHECKING:
     from codescent.storage.repositories import FindingRow
 
 INVALID_FORMAT_MESSAGE = "format must be json or markdown"
+INVALID_CI_FORMAT_MESSAGE = "format must be json, markdown, sarif, or github"
 
 
 class CliReportPayload(TypedDict):
@@ -31,6 +35,31 @@ class CliReportPayload(TypedDict):
     subjective_findings: list[dict[str, str | float | bool]]
     subjective_provider: str | None
     privacy_notice: str | None
+
+
+class RulePrecisionPayload(TypedDict):
+    rule_id: str
+    accepted: int
+    dismissed: int
+    sample_size: int
+    acceptance_precision: float | None
+    suppression_candidates: int
+
+
+class HealthTrendPointPayload(TypedDict):
+    date: str
+    accepted: int
+    dismissed: int
+    acceptance_precision: float | None
+
+
+class PrecisionReportPayload(TypedDict):
+    accepted: int
+    dismissed: int
+    sample_size: int
+    acceptance_precision: float | None
+    rules: list[RulePrecisionPayload]
+    trend: list[HealthTrendPointPayload]
 
 
 class ChangedFileHealthPayload(TypedDict):
@@ -79,6 +108,7 @@ def register_reporting_commands(app: typer.Typer) -> None:
     _ = app.command()(findings)
     _ = app.command(name="next")(next_improvement)
     _ = app.command()(explain)
+    _ = app.command()(precision)
     _ = app.command()(ci)
     _ = app.command(name="review-diff")(review_diff)
 
@@ -188,11 +218,25 @@ def explain(
     typer.echo("\n".join(explanation.reasons))
 
 
-def ci(  # noqa: PLR0913 - CLI command exposes distinct options.
+def precision(
     repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
     format_name: Annotated[
         str,
         typer.Option("--format", help="Output format: json or markdown."),
+    ] = "json",
+) -> None:
+    report_data = PrecisionService(repo).get_precision()
+    _emit_precision_report(_precision_payload(report_data), format_name)
+
+
+def ci(  # noqa: PLR0913 - CLI command exposes distinct options.
+    repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    format_name: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            help="Output format: json, markdown, sarif, or github.",
+        ),
     ] = "json",
     threshold: Annotated[
         str,
@@ -236,7 +280,10 @@ def review_diff(
     repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
     format_name: Annotated[
         str,
-        typer.Option("--format", help="Output format: json or markdown."),
+        typer.Option(
+            "--format",
+            help="Output format: json, markdown, sarif, or github.",
+        ),
     ] = "json",
 ) -> None:
     report_data = CiService(repo).run(threshold="high")
@@ -276,7 +323,80 @@ def _markdown_report(payload: CliReportPayload) -> str:
     return "\n".join(lines)
 
 
+def _precision_payload(report_data: PrecisionReport) -> PrecisionReportPayload:
+    return {
+        "accepted": report_data.accepted,
+        "dismissed": report_data.dismissed,
+        "sample_size": report_data.sample_size,
+        "acceptance_precision": report_data.acceptance_precision,
+        "rules": [
+            {
+                "rule_id": rule.rule_id,
+                "accepted": rule.accepted,
+                "dismissed": rule.dismissed,
+                "sample_size": rule.sample_size,
+                "acceptance_precision": rule.acceptance_precision,
+                "suppression_candidates": rule.suppression_candidates,
+            }
+            for rule in report_data.rules
+        ],
+        "trend": [
+            {
+                "date": point.date,
+                "accepted": point.accepted,
+                "dismissed": point.dismissed,
+                "acceptance_precision": point.acceptance_precision,
+            }
+            for point in report_data.trend
+        ],
+    }
+
+
+def _emit_precision_report(
+    payload: PrecisionReportPayload,
+    format_name: str,
+) -> None:
+    if format_name == "json":
+        typer.echo(json.dumps(payload))
+        return
+    if format_name == "markdown":
+        typer.echo(_precision_markdown(payload))
+        return
+    raise typer.BadParameter(INVALID_FORMAT_MESSAGE)
+
+
+def _precision_markdown(payload: PrecisionReportPayload) -> str:
+    overall = payload["acceptance_precision"]
+    accepted = payload["accepted"]
+    dismissed = payload["dismissed"]
+    lines = [
+        "# CodeScent Acceptance Precision",
+        "",
+        f"Overall: {overall} ({accepted} accepted / {dismissed} dismissed)",
+        "",
+        "## Per-rule acceptance precision",
+    ]
+    lines.extend(_precision_rule_line(rule) for rule in payload["rules"])
+    lines.extend(("", "## Health trend"))
+    lines.extend(
+        f"- {point['date']}: {point['acceptance_precision']}"
+        for point in payload["trend"]
+    )
+    return "\n".join(lines)
+
+
+def _precision_rule_line(rule: RulePrecisionPayload) -> str:
+    ratio = f"{rule['accepted']}/{rule['sample_size']}"
+    return f"- {rule['rule_id']}: {rule['acceptance_precision']} ({ratio})"
+
+
 def _emit_ci_report(report_data: CiReport, format_name: str) -> None:
+    if format_name == "sarif":
+        typer.echo(json.dumps(ci_sarif_document(report_data)))
+        return
+    if format_name == "github":
+        typer.echo(ci_github_annotations(report_data))
+        return
     payload = _ci_payload(report_data)
     if format_name == "json":
         typer.echo(json.dumps(payload))
@@ -284,7 +404,7 @@ def _emit_ci_report(report_data: CiReport, format_name: str) -> None:
     if format_name == "markdown":
         typer.echo(_ci_markdown(payload))
         return
-    raise typer.BadParameter(INVALID_FORMAT_MESSAGE)
+    raise typer.BadParameter(INVALID_CI_FORMAT_MESSAGE)
 
 
 def _ci_payload(report_data: CiReport) -> CiReportPayload:

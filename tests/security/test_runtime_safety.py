@@ -5,7 +5,7 @@ import socket
 import subprocess
 import sys
 from pathlib import Path
-from typing import cast
+from typing import cast, final
 
 import pytest
 import scripts.prove_source_read_only as source_safety
@@ -26,10 +26,19 @@ from codescent.mcp.planning_tools import suggest_tests
 from codescent.mcp.result_tools import retrieve_result
 from codescent.mcp.search_tools import search_content, search_files
 from codescent.mcp.session_stats_tools import context_stats
+from codescent.services.cbm_backend import CbmGraphBackend, select_graph_backend
 from codescent.services.config import ConfigService
+from codescent.services.graph_backend import (
+    CallEdge,
+    Cluster,
+    ComplexityProps,
+    NativeGraphBackend,
+    SymbolNode,
+)
 from codescent.services.result_store import ResultStoreService
 from codescent.services.subjective_review import (
     FakeSubjectiveReviewProvider,
+    SamplingSubjectiveReviewProvider,
     SubjectiveReviewService,
 )
 from codescent.smoke.lx_data_lake_contract import JsonValue
@@ -225,6 +234,67 @@ def test_subjective_review_is_disabled_by_default_and_uses_fake_provider_in_test
     assert enabled.subjective_findings
     assert enabled.subjective_findings[0].subjective is True
     assert "CodeScent subjective review prompt" in enabled.prompt
+    assert attempts == []
+
+
+@final
+class _FakeSamplingReply:
+    def __init__(self, text: str) -> None:
+        self._text = text
+
+    @property
+    def text(self) -> str:
+        return self._text
+
+
+@final
+class _FakeSamplingChannel:
+    """In-process sampling stand-in: the client samples, never the network."""
+
+    def __init__(self, reply_text: str) -> None:
+        self._reply_text = reply_text
+
+    async def sample(self, messages: str) -> _FakeSamplingReply:
+        _ = messages
+        return _FakeSamplingReply(self._reply_text)
+
+
+@pytest.mark.anyio
+async def test_subjective_sampling_makes_no_network_and_labels_findings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts: list[str] = []
+
+    def blocked_socket(*args: object, **kwargs: object) -> socket.socket:
+        _ = args, kwargs
+        attempts.append("socket")
+        message = "network disabled"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(socket, "socket", blocked_socket)
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    channel = _FakeSamplingChannel(
+        '[{"file_path": "src/x.py", "title": "T", "message": "M", "confidence": 0.4}]',
+    )
+
+    provider = await SamplingSubjectiveReviewProvider.from_sampling(channel, "prompt")
+    result = SubjectiveReviewService(repo).review(
+        provider_name="sampling",
+        provider=provider,
+        allow_subjective=True,
+    )
+
+    assert provider.available is True
+    assert result.subjective_findings
+    finding = result.subjective_findings[0]
+    assert finding.subjective is True
+    assert finding.provider == "sampling"
+    # Distinct subjective provenance: never the deterministic verified/heuristic tiers.
+    assert finding.confidence_tier == "subjective"
+    assert finding.provenance == "subjective"
     assert attempts == []
 
 
@@ -491,3 +561,69 @@ def _session_events_json(repo: Path, *, project_id: str, session_id: str) -> str
     ).list_events(project_id=project_id, session_id=session_id)
     payloads = [event.payload for event in events]
     return json.dumps(cast("object", payloads), sort_keys=True, default=str)
+
+
+class _FakeCbmClient:
+    """In-process cbm stand-in: local data only, never touches the network."""
+
+    def healthy(self) -> bool:
+        return True
+
+    def symbols(self) -> tuple[SymbolNode, ...]:
+        return (
+            SymbolNode(
+                "pkg.handler",
+                "handler",
+                "function",
+                "src/pkg/mod.py",
+                1,
+                2,
+                1.0,
+                "python",
+            ),
+        )
+
+    def complexity(self) -> tuple[ComplexityProps, ...]:
+        return (ComplexityProps("pkg.handler", "src/pkg/mod.py", "python", 2, 3),)
+
+    def call_edges(self) -> tuple[CallEdge, ...]:
+        return (
+            CallEdge("src/pkg/mod.py", "helper", 2, 1.0, "python"),
+            CallEdge("src/legacy/store.exs", "get", 9, 1.0, "elixir"),
+        )
+
+    def clusters(self) -> tuple[Cluster, ...]:
+        return (
+            Cluster("pkg", "dir:pkg", ("pkg.handler",), ("python",)),
+            Cluster("legacy", "cross-lang", ("legacy.get",), ("elixir", "python")),
+        )
+
+
+def test_cbm_graph_backend_makes_no_network_requests(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    attempts: list[str] = []
+
+    def blocked_socket(*args: object, **kwargs: object) -> socket.socket:
+        _ = args, kwargs
+        attempts.append("socket")
+        message = "network disabled"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(socket, "socket", blocked_socket)
+
+    backend = CbmGraphBackend(
+        client=_FakeCbmClient(),
+        native=NativeGraphBackend(repo_root=repo),
+    )
+
+    assert backend.symbols()
+    assert backend.complexity()
+    assert all(edge.language == "python" for edge in backend.call_edges())
+    assert all(cluster.cluster_id != "legacy" for cluster in backend.clusters())
+    # cbm absent on this host -> detection stays local and selects native.
+    assert select_graph_backend(repo).name() == "native"
+    assert attempts == []

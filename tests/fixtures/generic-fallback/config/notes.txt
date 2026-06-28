@@ -1,0 +1,2 @@
+Deployment notes for the widget service.
+Nothing smelly lives here.

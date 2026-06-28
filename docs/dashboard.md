@@ -15,12 +15,74 @@ current verified path is the dashboard server used by integration tests and
 The dashboard shows:
 
 - repository status and health summary;
-- findings and progress;
+- findings and progress, with per-finding confidence/tier + precision badges;
+- per-rule acceptance precision and a health trend (`/api/precision`);
 - rule configuration updates;
 - JSON export data.
 
 Rule updates write CodeScent config under `.codescent/` and should preserve
 existing project config sections.
+
+## Acceptance Precision (`/api/precision`)
+
+`GET /api/precision` returns runtime **acceptance precision** — per-rule
+`accepted / (accepted + dismissed)` from the persisted finding status history,
+plus the calibration suppression-candidate count per rule and an ordered
+health-trend timeline. This is read-only and loopback-only like every other
+route; it adds no new network surface.
+
+A finding counts as *accepted* when resolved and *dismissed* when marked
+`wontfix`/`ignored` (mirrors calibration's accept rate). Open, deferred, and
+needs-review findings are not yet verdicts. This runtime metric is distinct from
+the labeled-corpus **eval precision** in [Evals](evals.md).
+
+Response shape:
+
+```json
+{
+  "read_only": true,
+  "accepted": 2,
+  "dismissed": 1,
+  "sample_size": 3,
+  "acceptance_precision": 0.667,
+  "rules": [
+    {
+      "rule_id": "python.duplicate_literal",
+      "accepted": 0,
+      "dismissed": 1,
+      "sample_size": 1,
+      "acceptance_precision": 0.0,
+      "suppression_candidates": 0
+    }
+  ],
+  "trend": [
+    {"date": "2026-06-28", "accepted": 2, "dismissed": 1, "acceptance_precision": 0.667}
+  ]
+}
+```
+
+`acceptance_precision` is `null` until a rule has at least one verdict. The trend
+is bounded to the most recent 90 daily points. The same data is available from
+the `codescent precision` CLI command (see the CLI reference).
+
+## Confidence & Precision Badges (`/api/findings`)
+
+Each finding in `GET /api/findings` carries the trust metadata the dashboard
+renders as badges next to the finding in the list and detail panels:
+
+- `confidence_tier` — `verified` (an AST pack resolved a concrete symbol) or
+  `heuristic` (regex/file-level finding);
+- `provenance` — a small bounded scalar dict (`rule_id`, `language`,
+  `resolution`, `symbol_resolved`); the `language` value drives the language
+  badge;
+- `acceptance_precision` — the finding's rule acceptance precision from
+  `/api/precision` (`null` until that rule has a verdict).
+
+The static UI renders three chips per finding: a confidence-tier chip
+(`verified` accent / `heuristic` warn), a language chip from provenance, and a
+precision chip (`precision NN%`, or `precision n/a` when `null`). This is the
+same read-only, loopback-only data as every other route — no new network
+surface.
 
 ## Smoke Verification
 

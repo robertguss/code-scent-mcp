@@ -58,13 +58,20 @@ def init(
 @app.command()
 def index(
     repo: Annotated[str, typer.Option("--repo", help="Repository root.")] = ".",
+    full: Annotated[
+        bool,
+        typer.Option(
+            "--full",
+            help="Force a full reindex instead of the default incremental delta.",
+        ),
+    ] = False,
     json_output: Annotated[
         bool,
         typer.Option("--json", help="Print JSON index result."),
     ] = False,
 ) -> None:
     try:
-        result = RepoIndexService(repo).index_repo()
+        result = RepoIndexService(repo).index_repo(full=full)
     except CodeScentError as error:
         _exit_with_error(error, json_output=json_output)
     if json_output:
@@ -72,14 +79,19 @@ def index(
             json.dumps(
                 {
                     "indexed_files": result.indexed_files,
+                    "reindexed_files": result.reindexed_files,
                     "changed_files": list(result.changed_files),
+                    "deleted_files": list(result.deleted_files),
+                    "full": result.full,
                     "git_available": result.git_available,
                     "git_status": result.git_status,
                 },
             ),
         )
         return
-    typer.echo(f"Indexed {result.indexed_files} files")
+    mode = "full" if result.full else "incremental"
+    reprocessed = f"{result.reindexed_files} reprocessed, {mode}"
+    typer.echo(f"Indexed {result.indexed_files} files ({reprocessed})")
 
 
 @app.command()

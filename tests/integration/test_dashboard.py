@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tests.integration.dashboard_http import JsonObject, get_json, get_text, post_json
-
 from codescent.dashboard.server import start_dashboard_server
 from codescent.services.code_health import CodeHealthService
 from codescent.storage.schema import SCHEMA_VERSION
+from tests.integration.dashboard_http import JsonObject, get_json, get_text, post_json
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -196,6 +195,55 @@ def test_dashboard_ui_renders_findings_trends_rules_and_exports(
     assert "marketing" not in combined
     assert "https://" not in combined
     assert "http://" not in combined
+
+
+def test_dashboard_findings_expose_confidence_tier_provenance_and_precision(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_finding(tmp_path)
+    _ = CodeHealthService(repo).scan()
+
+    server = start_dashboard_server(repo, port=0)
+    try:
+        findings = get_json(f"{server.base_url}/api/findings")
+    finally:
+        server.shutdown()
+
+    assert findings.status == 200
+    rows = findings.payload["findings"]
+    assert isinstance(rows, list)
+    assert len(rows) >= 1
+    for row in rows:
+        assert isinstance(row, dict)
+        assert row["confidence_tier"] in {"verified", "heuristic"}
+        provenance = row["provenance"]
+        assert isinstance(provenance, dict)
+        assert "language" in provenance
+        precision = row["acceptance_precision"]
+        assert precision is None or (
+            isinstance(precision, float) and 0.0 <= precision <= 1.0
+        )
+
+
+def test_dashboard_ui_renders_confidence_and_precision_badges(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_finding(tmp_path)
+    _ = CodeHealthService(repo).scan()
+
+    server = start_dashboard_server(repo, port=0)
+    try:
+        script = get_text(f"{server.base_url}/static/dashboard.js")
+        css = get_text(f"{server.base_url}/static/dashboard.css")
+    finally:
+        server.shutdown()
+
+    combined = f"{script.body}\n{css.body}"
+    assert "finding-badges" in combined
+    assert "confidence_tier" in combined
+    assert "acceptance_precision" in combined
+    assert "chip-tier" in combined
+    assert "chip-precision" in combined
 
 
 def _int_field(payload: JsonObject, key: str) -> int:

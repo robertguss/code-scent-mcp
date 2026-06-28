@@ -19,6 +19,7 @@ MVP_TOOL_NAMES = {
     "get_repo_map",
     "get_repo_status",
     "start_task",
+    "resume_task",
     "search_files",
     "search_content",
     "multi_search_content",
@@ -37,6 +38,7 @@ MVP_TOOL_NAMES = {
     "get_finding_context",
     "get_finding",
     "explain_score",
+    "explain_finding",
     "get_backlog",
     "get_improvement_plan",
     "get_calibration",
@@ -56,6 +58,9 @@ MVP_TOOL_NAMES = {
     "get_changed_file_health",
     "retrieve_result",
     "context_stats",
+    "how_to_use",
+    "refactor_preflight",
+    "subjective_review",
 }
 
 
@@ -67,7 +72,7 @@ class ToolScanPayload(BaseModel):
     finding_ids: tuple[str, ...]
     rule_ids: tuple[str, ...]
     total_count: int
-    items: tuple[dict[str, str | float], ...]
+    items: tuple[dict[str, object], ...]
     returned_count: int
     omitted_count: int
     retrieval_available: bool
@@ -79,7 +84,7 @@ class ToolReportPayload(BaseModel):
     ok: bool
     open_count: int
     total_count: int
-    items: tuple[dict[str, str | float], ...]
+    items: tuple[dict[str, object], ...]
     returned_count: int
     omitted_count: int
     result_id: str | None
@@ -163,6 +168,8 @@ async def test_tool_outputs_match_bounded_schema_snapshots() -> None:
         "file_path",
         "severity",
         "confidence",
+        "confidence_tier",
+        "provenance",
         "status",
         "suggested_action",
     }

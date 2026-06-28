@@ -24,6 +24,7 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "basedpyright>=1.21",
+    "jsonschema>=4.0",
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.8",
@@ -43,6 +44,11 @@ exclude = [
     "**/build",
     "**/dist",
     "tests/fixtures/python-basic",
+    "tests/fixtures/python-import-cycle",
+    "tests/fixtures/python-entrypoint",
+    "tests/fixtures/test-quality-flawed",
+    "tests/fixtures/test-quality-healthy",
+    "evals/precision_corpus",
 ]
 reportUnusedCallResult = "warning"
 reportUnnecessaryTypeIgnoreComment = "error"
@@ -54,7 +60,14 @@ reportPrivateUsage = "error"
 target-version = "py312"
 line-length = 88
 src = ["src", "tests"]
-extend-exclude = ["tests/fixtures/python-basic"]
+extend-exclude = [
+    "tests/fixtures/python-basic",
+    "tests/fixtures/python-import-cycle",
+    "tests/fixtures/python-entrypoint",
+    "tests/fixtures/test-quality-flawed",
+    "tests/fixtures/test-quality-healthy",
+    "evals/precision_corpus",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -80,6 +93,8 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
+# The SARIF e2e proof emits verbose per-assertion logging (expected vs found).
+"tests/integration/test_ci_sarif_e2e.py" = ["T201"]
 "src/codescent/services/git.py" = ["S603"]
 "scripts/smoke_lx_data_lake.py" = ["S603", "S607"]
 "scripts/smoke_dashboard.py" = ["S603", "S607"]

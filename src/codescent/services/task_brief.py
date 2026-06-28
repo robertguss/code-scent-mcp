@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, Final
 
 from codescent.core.models import FindingStatus
 from codescent.core.paths import normalize_repo_path, resolve_repo_root
+from codescent.services.bootstrap import ensure_bootstrapped
 from codescent.services.context import ContextService
 from codescent.services.findings import FindingsService
 from codescent.services.freshness import (
     AdvisoryConfidence,
     FreshnessMetadata,
     confidence_for_results,
-    ensure_fresh_index,
     next_tools_with_refresh_recovery,
     warnings_for_results,
 )
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
+    from codescent.services.bootstrap import BootstrapNote
     from codescent.storage.repositories import FindingRow
 
 RELEVANT_FILE_LIMIT: Final = 8
@@ -55,6 +56,7 @@ class TaskBrief:
     warnings: tuple[str, ...]
     confidence: AdvisoryConfidence
     next_tools: tuple[str, ...]
+    bootstrap: BootstrapNote
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,7 +78,8 @@ class TaskBriefService:
         focus_symbol: str | None = None,
     ) -> TaskBrief:
         repo_root = resolve_repo_root(self.repo_root)
-        freshness = ensure_fresh_index(repo_root)
+        bootstrap = ensure_bootstrapped(repo_root)
+        freshness = bootstrap.freshness
         context = ContextService(repo_root)
         search = SearchService(repo_root)
         request = StartTaskRequest(
@@ -150,6 +153,7 @@ class TaskBriefService:
                 freshness=freshness,
                 has_results=has_results,
             ),
+            bootstrap=bootstrap.note(),
         )
 
 

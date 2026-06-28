@@ -15,9 +15,11 @@ from codescent.dashboard.payloads import (
     JsonObject,
     asset_text,
     json_int_map,
+    provenance_object,
     string_list,
 )
 from codescent.services.findings import FindingsService
+from codescent.services.precision import PrecisionService
 from codescent.services.rules import RulesService
 from codescent.services.status import RepoStatusService
 
@@ -50,6 +52,7 @@ class DashboardApplication:
             "/api/status": self.status,
             "/api/findings": self.findings,
             "/api/progress": self.progress,
+            "/api/precision": self.precision,
             "/api/rules": self.rules,
             "/api/reports": self.report,
             "/api/exports": self.export,
@@ -98,6 +101,9 @@ class DashboardApplication:
 
     def findings(self) -> JsonObject:
         rows = FindingsService(self.repo_root).get_smell_report().findings
+        precision_by_rule = PrecisionService(
+            self.repo_root,
+        ).acceptance_precision_by_rule()
         return {
             "read_only": True,
             "findings": [
@@ -107,6 +113,9 @@ class DashboardApplication:
                     "file_path": row.file_path,
                     "severity": row.severity,
                     "confidence": row.confidence,
+                    "confidence_tier": row.confidence_tier,
+                    "provenance": provenance_object(row.provenance_json),
+                    "acceptance_precision": precision_by_rule.get(row.rule_id),
                     "status": row.status.value,
                     "suggested_action": row.suggested_action,
                 }
@@ -123,6 +132,36 @@ class DashboardApplication:
             "resolved_count": progress.resolved_count,
             "regressed_count": progress.regressed_count,
             "status_counts": json_int_map(progress.status_counts),
+        }
+
+    def precision(self) -> JsonObject:
+        report = PrecisionService(self.repo_root).get_precision()
+        return {
+            "read_only": True,
+            "accepted": report.accepted,
+            "dismissed": report.dismissed,
+            "sample_size": report.sample_size,
+            "acceptance_precision": report.acceptance_precision,
+            "rules": [
+                {
+                    "rule_id": rule.rule_id,
+                    "accepted": rule.accepted,
+                    "dismissed": rule.dismissed,
+                    "sample_size": rule.sample_size,
+                    "acceptance_precision": rule.acceptance_precision,
+                    "suppression_candidates": rule.suppression_candidates,
+                }
+                for rule in report.rules
+            ],
+            "trend": [
+                {
+                    "date": point.date,
+                    "accepted": point.accepted,
+                    "dismissed": point.dismissed,
+                    "acceptance_precision": point.acceptance_precision,
+                }
+                for point in report.trend
+            ],
         }
 
     def rules(self) -> JsonObject:

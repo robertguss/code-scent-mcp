@@ -1,0 +1,13 @@
+{
+  "fixture_root": "tests/fixtures/python-import-cycle",
+  "rule_id": "python.import_cycle",
+  "findings": [
+    {
+      "file": "src/acme_cycle/alpha.py",
+      "severity": "warning",
+      "cycle_size": 3,
+      "cycle_members": "src/acme_cycle/alpha.py, src/acme_cycle/beta.py, src/acme_cycle/gamma.py",
+      "cycle_path": "src/acme_cycle/alpha.py -> src/acme_cycle/beta.py -> src/acme_cycle/gamma.py -> src/acme_cycle/alpha.py"
+    }
+  ]
+}

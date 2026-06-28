@@ -9,6 +9,11 @@ from codescent.services.code_health import CodeHealthService
 from codescent.services.config import ConfigService
 from codescent.services.git import git_changed_paths_since
 from codescent.services.risk import RiskService
+from codescent.services.sarif import (
+    SarifLog,
+    findings_to_github_annotations,
+    findings_to_sarif,
+)
 from codescent.storage import RepositoryStorage, initialize_storage
 
 if TYPE_CHECKING:
@@ -60,6 +65,9 @@ class CiReport:
     new_finding_count: int = 0
     resolved_count: int = 0
     net_health_delta: int = 0
+    # Full active findings, carried so the CLI can serialize SARIF / GitHub
+    # annotation output without re-scanning. Not part of the JSON/markdown payload.
+    findings: tuple[CodeHealthFinding, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,12 +89,15 @@ class CiService:
     ) -> CiReport:
         scan = CodeHealthService(self.repo_root).scan()
         diff_risk = RiskService(self.repo_root).review_diff_risk()
+        # Inline-suppressed findings are silenced: excluded from the risk level,
+        # changed-file health, the new-debt gate, and the baseline.
+        active_findings = scan.active_findings
         risk_level = _scan_risk_level(
-            tuple(finding.severity for finding in scan.findings),
+            tuple(finding.severity for finding in active_findings),
         )
         baseline_counts = _baseline_counts(self.repo_root) if ratchet else None
         changed_file_health = _health_from_scan(
-            scan.findings,
+            active_findings,
             baseline_counts=baseline_counts,
         )
         ratchet_regressions = (
@@ -116,7 +127,7 @@ class CiService:
             if accepted:
                 stable_keys = _baseline_stable_keys(self.repo_root)
                 new_findings, resolved_count = self._new_and_resolved(
-                    scan.findings,
+                    active_findings,
                     base_ref=base_ref,
                     baseline_keys=stable_keys,
                 )
@@ -143,7 +154,7 @@ class CiService:
         return CiReport(
             ok=ok,
             risk_level=risk_level,
-            finding_count=scan.findings_created,
+            finding_count=len(active_findings),
             changed_file_health=changed_file_health,
             suggested_tests=diff_risk.suggested_tests or ("pytest",),
             recommended_commands=diff_risk.recommended_commands or ("pytest",),
@@ -156,6 +167,7 @@ class CiService:
             new_finding_count=len(new_findings),
             resolved_count=resolved_count,
             net_health_delta=net_health_delta,
+            findings=active_findings,
         )
 
     def _new_and_resolved(
@@ -183,8 +195,9 @@ class CiService:
 
     def update_baseline(self) -> BaselineUpdateResult:
         scan = CodeHealthService(self.repo_root).scan()
+        active_findings = scan.active_findings
         state = initialize_storage(self.repo_root)
-        counts = _finding_counts(scan.findings)
+        counts = _finding_counts(active_findings)
         now = datetime.now(UTC).isoformat()
         with RepositoryStorage(state).write_transaction() as connection:
             file_rows: list[tuple[str]] = connection.execute(
@@ -220,7 +233,7 @@ class CiService:
                         finding.severity,
                         now,
                     )
-                    for finding in _ratchet_findings(scan.findings)
+                    for finding in _ratchet_findings(active_findings)
                 ),
             )
             # Mark that a stable-key baseline has been accepted. This survives a
@@ -237,6 +250,16 @@ class CiService:
             files_recorded=len(file_rows),
             finding_count=sum(counts.values()),
         )
+
+
+def ci_sarif_document(report: CiReport) -> SarifLog:
+    """Serialize a CI report's active findings as a SARIF 2.1.0 log."""
+    return findings_to_sarif(report.findings)
+
+
+def ci_github_annotations(report: CiReport) -> str:
+    """Serialize a CI report's active findings as GitHub annotation lines."""
+    return findings_to_github_annotations(report.findings)
 
 
 def _passes(threshold: str, risk_level: str) -> bool:

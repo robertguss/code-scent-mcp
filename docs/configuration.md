@@ -13,6 +13,109 @@ The database stores indexes, symbols, scan runs, findings, lifecycle events,
 suggested verification records, and telemetry. Runtime writes belong there;
 CodeScent does not edit analyzed source files.
 
+## Auto-Bootstrap
+
+The first-run sequence is `init -> index -> scan`. By default CodeScent runs it
+for you on the first tool call: when `.codescent/` state is missing or the index
+is clearly stale, the entry path (and `start_task`) lazily runs the minimal
+init -> index -> scan before answering, writing only under `.codescent/` and
+performing no network I/O. Present-and-fresh state is a no-op.
+
+`start_task` carries a bounded `bootstrap` note so callers see what happened:
+
+```json
+{
+  "bootstrap": {
+    "bootstrapped": true,
+    "ran": ["init", "index", "scan"],
+    "reason": "created",
+    "guidance": []
+  }
+}
+```
+
+`reason` is one of `created` (state was missing), `refreshed` (stale index was
+rebuilt), `fresh` (no-op), `disabled` (opt-out, see below), or `failed` (the
+refresh raised; `guidance` then points back to `scan_code_health`).
+
+Opt out by setting `auto_bootstrap = false` in `.codescent/config.toml`:
+
+```toml
+auto_bootstrap = false
+```
+
+With auto-bootstrap disabled, CodeScent never auto-creates or refreshes state.
+When state is missing or stale it leaves `.codescent/` untouched and returns
+clear "run `scan_code_health` to initialize" guidance (legacy behavior) in the
+tool warnings and the `bootstrap.guidance` note instead.
+
+## Incremental Indexing
+
+Indexing is incremental by default. CodeScent compares each on-disk file's
+content hash against the hash persisted in `.codescent/index.sqlite` and only
+re-parses added or modified files; rows for modified or deleted files are
+removed through foreign-key cascade. Unchanged files are left untouched, so
+re-indexing a large repo after a small edit reprocesses only the delta. This
+applies everywhere indexing runs (the `index` command, `scan`, auto-bootstrap,
+and `watch`).
+
+The incremental index is always equivalent to a full rebuild for the same
+on-disk state. Force a full rebuild with `codescent index --full` if you ever
+need to rebuild from scratch (for example after manually editing the database).
+
+`codescent watch` reindexes incrementally on change, debounced so a burst of
+edits collapses into one pass:
+
+- `--interval` — seconds between change polls (default `1.0`).
+- `--debounce` — seconds a change set must stay stable before reindexing
+  (default `2.0`).
+- `--once` — run a single incremental pass and exit.
+
+## Inline Suppression
+
+Silence a specific finding at its location with an inline comment, the way most
+linters do. CodeScent reads the comment during a scan (it never edits source) and
+gives the matched finding a `suppressed` status instead of `open`.
+
+```python
+# codescent: ignore[python.dead_code_candidate]
+def _legacy_helper() -> int:
+    return 1
+```
+
+Grammar (Python `#` and TypeScript/Go `//` line comments):
+
+| Form | Effect |
+| --- | --- |
+| `# codescent: ignore[rule_id]` | silence one rule |
+| `# codescent: ignore[rule_a, rule_b]` | silence several rules |
+| `# codescent: ignore` | bare form: silence every rule on the line |
+| `// codescent: ignore[rule_id]` | same, for `//`-comment languages |
+
+A comment matches a finding when it sits **on the finding's own line or the line
+directly above it**. A finding's line comes from its `start_line`/`line` evidence,
+or from its resolved symbol's definition line; purely file-level findings (for
+example `python.large_file`) have no line and are not inline-suppressible — use a
+config-level exclusion or `mark_finding` for those.
+
+Suppressed findings are:
+
+- **excluded from open counts** (`get_smell_report`, `get_backlog`,
+  `get_next_improvement`) and from the **CI ratchet** baseline and new-debt gate;
+- **still inspectable** — they remain listed under the `suppressed` status with an
+  audit-trail `suppressed` event recording the exact comment text.
+
+Removing the comment and rescanning reopens the finding.
+
+Disable the feature entirely by setting `inline_suppression = false` in
+`.codescent/config.toml` (default `true`):
+
+```toml
+inline_suppression = false
+```
+
+With it disabled, ignore comments are ignored and every finding is `open`.
+
 ## Inspecting State
 
 ```bash
@@ -23,6 +126,27 @@ uv run codescent rules --repo "$repo" --json
 
 `doctor` reports database/config health and `routing_templates`. Templates are
 examples only and are not auto-written into analyzed repos.
+
+## Language Packs & Generic Fallback
+
+`language_packs` and `rule_packs` select the per-language packs (Python,
+TypeScript/React/Next, Go); remove an entry to disable that language's parser
+and rules. Defaults:
+
+```toml
+language_packs = ["python", "typescript", "go"]
+rule_packs = ["python-maintainability", "ts-react-next", "go-maintainability"]
+```
+
+On top of those, a **generic text-only fallback** covers files in any language
+that has no specific pack. It runs at lowest precedence (specific packs always
+win for their own suffixes) and emits only line/text heuristics --
+`generic.large_file`, `generic.todo_cluster`, `generic.duplicate_literal` -- with
+no symbol/structural claims. It is on by default; turn it off with:
+
+```toml
+generic_fallback = false
+```
 
 ## Architecture Rules
 
@@ -149,6 +273,33 @@ used unchanged, so new repositories see no change. Inspect it with the
 finding. The adjustment is a pure, deterministic function of `.codescent` state
 — same verdicts in, same calibration out.
 
+### Per-repo severity calibration (noise normalization)
+
+The same `[adaptive]` block also drives a per-repo *noise baseline* used when
+ranking diff-risk findings. CodeScent measures how often each rule fires across
+the repo's stored findings (its firing rate = a rule's finding count ÷ total
+findings) and turns that into a ranking weight: a rule that fires *everywhere*
+is down-weighted, while a *rare* rule stands out. This keeps the backlog
+signal-rich across very different repos — a TODO-heavy or large-file-heavy repo
+no longer drowns its own rare-but-important findings — without any manual
+threshold tuning.
+
+- **Derived, not stored.** The baseline is recomputed from the findings already
+  in `.codescent` (no new config key, no new table); the same findings always
+  produce the same baseline.
+- **Bounds reuse the existing knobs.** A rule's weight is
+  `clamp(1 - max_confidence_delta × firing_rate, confidence_floor, 1)`. With the
+  defaults a rule that is 100% of findings drops to `0.8`; a rare rule stays near
+  `1.0`. Normalization only kicks in once the repo has at least `min_sample_size`
+  findings and `confidence_recalibration` is enabled (below that, every weight is
+  `1.0`, so small/new repos see no change).
+- **Transparent, never hides findings.** The weight multiplies a finding's
+  confidence *only for ordering*; it sinks noisy-rule findings within their
+  severity/tier band rather than removing them. Severity stays the primary sort
+  key and verified findings still rank above heuristic ones at equal severity.
+  Inspect the baseline (per-rule firing count, rate, and weight) via
+  `CalibrationService.get_noise_baseline()`.
+
 ## Coverage Report
 
 Coverage ingestion reads an existing Cobertura XML report when present. By
@@ -161,6 +312,36 @@ coverage_path = "reports/coverage.xml"
 
 Paths outside the analyzed repository are ignored. CodeScent reads coverage
 reports only; it does not run tests or generate coverage files.
+
+## Subjective LLM Review (Privacy)
+
+Everything in CodeScent is deterministic and offline by default. The optional
+`subjective_review` MCP tool is the one exception, and it is **off unless you
+turn it on**. It is gated by a single key in `.codescent/config.toml`:
+
+```toml
+[privacy]
+allow_llm_review = false   # default
+runtime_network = false    # default
+```
+
+With `allow_llm_review = false` (the default), `subjective_review` is a clean
+no-op: no model is consulted, no data leaves, and no findings are produced.
+
+Set `allow_llm_review = true` only when you intend to let your MCP client's own
+LLM judge findings. Even then:
+
+- The **CodeScent server makes no network call.** The request is sent back
+  through the MCP session as an MCP **sampling** request, and your client's model
+  produces the judgment.
+- Only **finding metadata** (rule id, file path, severity, title, message) is
+  sent — never whole source files — and that metadata is run through a secret/PII
+  scrub first (per PRD 14.5 data minimization).
+- Results are stored separately and labeled `subjective`; they never merge into
+  or masquerade as the deterministic findings.
+
+If the client cannot sample, the tool returns a clear "sampling unavailable"
+result instead of failing.
 
 ## Reset
 
@@ -177,7 +358,9 @@ reset requires --dry-run or --yes.
 
 - Missing `.codescent/config.toml`: run `init`.
 - Missing `.codescent/index.sqlite`: run `init`, then `index`.
-- Invalid output format: use `--format json` or `--format markdown`.
+- Invalid output format: use `--format json` or `--format markdown`. The `ci` and
+  `review-diff` commands additionally accept `--format sarif` (SARIF 2.1.0 for
+  GitHub code scanning) and `--format github` (inline PR annotation lines).
 - Unexpected analyzed-source changes: inspect target repo git status; CodeScent
   runtime should only write `.codescent/`.
 

@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Final, TypeGuard, cast
+
+from codescent.core.paths import resolve_repo_root
+from codescent.engine.context import source_range
+from codescent.storage import RepositoryStorage, initialize_storage
+from codescent.storage.repositories import FindingRepository
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+JsonScalar = str | int | float | bool | None
+JsonObject = dict[str, JsonScalar]
+
+# Bounded snippet caps. A finding's source snippet is clipped to at most this
+# many lines (source_range) and this many characters (here) so an explanation is
+# always fix-ready but never an unbounded source dump.
+EXPLAIN_SNIPPET_LINE_CAP: Final = 40
+MAX_SNIPPET_CHARS: Final = 4000
+
+
+@dataclass(frozen=True, slots=True)
+class FindingExplanation:
+    finding_id: str
+    rule_id: str
+    file_path: str
+    severity: str
+    confidence_tier: str
+    provenance: JsonObject
+    why: str
+    evidence: JsonObject
+    fix: str
+    snippet: dict[str, str | int]
+    snippet_truncated: bool
+    next_tools: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ExplainService:
+    repo_root: Path | str
+
+    def explain_finding(
+        self,
+        finding_id: str,
+        *,
+        line_cap: int = EXPLAIN_SNIPPET_LINE_CAP,
+    ) -> FindingExplanation:
+        """Compose one bounded fix-ready explanation: why + fix + a snippet.
+
+        The snippet is read through ``source_range`` (which omits files beyond
+        the source-read byte budget) and clipped to ``line_cap`` lines and
+        ``MAX_SNIPPET_CHARS`` characters -- never an unbounded source dump.
+        """
+        finding = _repository(self.repo_root).get_finding(finding_id)
+        evidence = _json_object(finding.evidence_json)
+        start_line, end_line = _line_range(evidence)
+        snippet, truncated = _bounded_snippet(
+            resolve_repo_root(self.repo_root),
+            finding.file_path,
+            start_line=start_line,
+            end_line=end_line,
+            line_cap=line_cap,
+        )
+        return FindingExplanation(
+            finding_id=finding.id,
+            rule_id=finding.rule_id,
+            file_path=finding.file_path,
+            severity=finding.severity,
+            confidence_tier=finding.confidence_tier,
+            provenance=_json_object(finding.provenance_json),
+            why=finding.message,
+            evidence=evidence,
+            fix=finding.suggested_action,
+            snippet=snippet,
+            snippet_truncated=truncated,
+            next_tools=("get_finding_context", "plan_refactor", "suggest_tests"),
+        )
+
+
+def _bounded_snippet(
+    repo_root: Path,
+    file_path: str,
+    *,
+    start_line: int,
+    end_line: int,
+    line_cap: int,
+) -> tuple[dict[str, str | int], bool]:
+    payload = source_range(
+        repo_root,
+        file_path,
+        start_line=start_line,
+        end_line=end_line,
+        line_cap=line_cap,
+    ).to_payload()
+    source = payload["source"]
+    if isinstance(source, str) and len(source) > MAX_SNIPPET_CHARS:
+        return {**payload, "source": source[:MAX_SNIPPET_CHARS]}, True
+    return payload, False
+
+
+def _line_range(evidence: JsonObject) -> tuple[int, int]:
+    anchor = _int_value(evidence.get("start_line")) or _int_value(evidence.get("line"))
+    start_line = anchor if anchor and anchor > 0 else 1
+    end = _int_value(evidence.get("end_line"))
+    end_line = end if end and end >= start_line else start_line
+    return start_line, end_line
+
+
+def _int_value(value: JsonScalar) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value
+
+
+def _json_object(raw: str) -> JsonObject:
+    try:
+        decoded = cast("object", json.loads(raw))
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(decoded, dict):
+        return {}
+    items = cast("dict[object, object]", decoded)
+    return {str(key): value for key, value in items.items() if _is_json_scalar(value)}
+
+
+def _is_json_scalar(value: object) -> TypeGuard[JsonScalar]:
+    return isinstance(value, str | int | float | bool | type(None))
+
+
+def _repository(repo_root: Path | str) -> FindingRepository:
+    state = initialize_storage(repo_root)
+    return FindingRepository(RepositoryStorage(state))

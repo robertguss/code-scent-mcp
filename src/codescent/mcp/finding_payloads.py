@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Final, TypedDict, cast
 
 from codescent.core.models import FindingStatus
@@ -20,7 +21,10 @@ JsonScalar = str | int | float | bool | None
 JsonObject = dict[str, JsonScalar]
 
 # A single finding preview row, as returned inline by the list/aggregate tools.
-FindingItem = dict[str, str | float]
+# `provenance` is a small bounded dict (rule_id, language, resolution,
+# symbol_resolved); every other value is a scalar.
+ProvenanceItem = dict[str, str | bool]
+FindingItem = dict[str, str | float | ProvenanceItem]
 
 # Boundedness controls (see docs/ideas/boundedness-bug-fix.md). List/aggregate
 # tools never return more than INLINE_ITEM_LIMIT items inline; the remainder is
@@ -141,6 +145,8 @@ class FindingDetailToolPayload(TypedDict):
     file_path: str
     severity: str
     confidence: float
+    confidence_tier: str
+    provenance: JsonObject
     status: str
     title: str
     message: str
@@ -220,6 +226,8 @@ def finding_payload(finding: FindingRow) -> FindingItem:
         "file_path": finding.file_path,
         "severity": finding.severity,
         "confidence": finding.confidence,
+        "confidence_tier": finding.confidence_tier,
+        "provenance": decode_provenance(finding.provenance_json),
         "status": finding.status.value,
         "suggested_action": finding.suggested_action,
     }
@@ -232,8 +240,26 @@ def scan_finding_item(finding: CodeHealthFinding) -> FindingItem:
         "file_path": finding.file_path,
         "severity": finding.severity,
         "confidence": finding.confidence,
+        "confidence_tier": finding.confidence_tier,
+        "provenance": dict(finding.provenance),
         "suggested_action": finding.suggested_action,
     }
+
+
+def decode_provenance(raw: str) -> ProvenanceItem:
+    """Decode a stored provenance JSON blob to a small, bounded scalar dict."""
+    try:
+        decoded = cast("object", json.loads(raw))
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(decoded, dict):
+        return {}
+    items = cast("dict[object, object]", decoded)
+    result: ProvenanceItem = {}
+    for key, value in items.items():
+        if isinstance(value, str | bool):
+            result[str(key)] = value
+    return result
 
 
 def bounded_finding_list(  # noqa: PLR0913
@@ -471,6 +497,8 @@ def detail_payload(detail: FindingDetail) -> FindingDetailToolPayload:
         "file_path": detail.file_path,
         "severity": detail.severity,
         "confidence": detail.confidence,
+        "confidence_tier": detail.confidence_tier,
+        "provenance": detail.provenance,
         "status": detail.status,
         "title": detail.title,
         "message": detail.message,

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from codescent.core.paths import resolve_repo_root
+from codescent.services.calibration import CalibrationService
 from codescent.services.code_health import CodeHealthService
 from codescent.services.refactor_planning import RefactorPlanningService
 from codescent.services.search import SearchService
@@ -12,11 +14,16 @@ from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import FindingRepository, FindingRow
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_CHANGED_FILE_LIMIT: Final = 20
 HIGH_RISK_THRESHOLD: Final = 0.75
 MEDIUM_RISK_THRESHOLD: Final = 0.4
+_SEVERITY_ORDER: Final[dict[str, int]] = {"error": 0, "warning": 1, "info": 2}
+_TIER_ORDER: Final[dict[str, int]] = {"verified": 0, "heuristic": 1}
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +33,7 @@ class RiskFinding:
     file_path: str
     severity: str
     confidence: float
+    confidence_tier: str
     status: str
 
 
@@ -59,12 +67,25 @@ class RiskService:
     def review_diff_risk(self) -> DiffRiskReport:
         changed_files = _changed_files(self.repo_root)
         _ensure_findings(self.repo_root)
+        noise_weights = self._noise_weights()
         file_health = tuple(
-            self._get_file_health(path, changed_files=changed_files)
+            self._get_file_health(
+                path,
+                changed_files=changed_files,
+                noise_weights=noise_weights,
+            )
             for path in changed_files
         )
-        findings = _dedupe_findings(
-            tuple(finding for health in file_health for finding in health.findings),
+        findings = rank_findings(
+            _dedupe_findings(
+                tuple(finding for health in file_health for finding in health.findings),
+            ),
+            noise_weights=noise_weights,
+        )
+        logger.debug(
+            "diff risk per-repo noise baseline weights=%s adjusted_ranks=%s",
+            noise_weights,
+            tuple(finding.finding_id for finding in findings),
         )
         risk_score = _max_score(tuple(health.risk_score for health in file_health))
         return DiffRiskReport(
@@ -91,14 +112,19 @@ class RiskService:
         changed_files = _changed_files(self.repo_root)
         return self._get_file_health(path, changed_files=changed_files)
 
+    def _noise_weights(self) -> dict[str, float]:
+        return CalibrationService(self.repo_root).get_noise_baseline().weight_map()
+
     def _get_file_health(
         self,
         path: str,
         *,
         changed_files: tuple[str, ...],
+        noise_weights: Mapping[str, float] | None = None,
     ) -> ChangedFileHealth:
         is_changed = path in changed_files
         _ensure_findings(self.repo_root)
+        weights = noise_weights if noise_weights is not None else self._noise_weights()
         findings = tuple(
             finding
             for finding in _repository(self.repo_root).list_findings()
@@ -118,7 +144,10 @@ class RiskService:
             path=path,
             risk_score=risk_score,
             risk_level=_risk_level(risk_score),
-            findings=tuple(_risk_finding(finding) for finding in findings),
+            findings=rank_findings(
+                tuple(_risk_finding(finding) for finding in findings),
+                noise_weights=weights,
+            ),
             suggested_tests=suggested.likely_tests,
             recommended_commands=suggested.commands,
             risk_notes=(
@@ -158,7 +187,40 @@ def _risk_finding(finding: FindingRow) -> RiskFinding:
         file_path=finding.file_path,
         severity=finding.severity,
         confidence=finding.confidence,
+        confidence_tier=finding.confidence_tier,
         status=finding.status.value,
+    )
+
+
+def rank_findings(
+    findings: tuple[RiskFinding, ...],
+    *,
+    noise_weights: Mapping[str, float] | None = None,
+) -> tuple[RiskFinding, ...]:
+    """Order findings by severity, then tier, then noise-adjusted confidence, id.
+
+    Verified findings rank above heuristic ones at equal severity; the
+    confidence-desc and id tie-breaks keep the order deterministic.
+
+    ``noise_weights`` is the per-repo rule firing-frequency baseline from the
+    adaptive calibration service (``CalibrationService.get_noise_baseline``). A
+    rule that fires everywhere carries a lower weight, so its findings sink
+    within their severity/tier band while a rare rule stands out. Every finding
+    is preserved -- only its rank position changes (nothing is hidden). With no
+    weights the order is identical to the historical severity/tier/confidence
+    ordering, so the default behavior and tier precedence are unchanged.
+    """
+    weights = noise_weights or {}
+    return tuple(
+        sorted(
+            findings,
+            key=lambda finding: (
+                _SEVERITY_ORDER.get(finding.severity, len(_SEVERITY_ORDER)),
+                _TIER_ORDER.get(finding.confidence_tier, len(_TIER_ORDER)),
+                -finding.confidence * weights.get(finding.rule_id, 1.0),
+                finding.finding_id,
+            ),
+        ),
     )
 
 

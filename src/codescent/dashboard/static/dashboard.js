@@ -49,6 +49,35 @@ function renderStatus(status) {
   setText("gitState", status.git_status);
 }
 
+function precisionLabel(value) {
+  if (value === null || value === undefined) {
+    return "precision n/a";
+  }
+  return `precision ${Math.round(value * 100)}%`;
+}
+
+function findingBadges(finding) {
+  const badges = document.createElement("div");
+  badges.className = "finding-badges";
+  const tier = finding.confidence_tier || "heuristic";
+  const tierChip = document.createElement("span");
+  tierChip.className = `chip chip-tier chip-tier-${tier}`;
+  tierChip.textContent = tier;
+  badges.append(tierChip);
+  const language = finding.provenance && finding.provenance.language;
+  if (language) {
+    const langChip = document.createElement("span");
+    langChip.className = "chip chip-lang";
+    langChip.textContent = language;
+    badges.append(langChip);
+  }
+  const precisionChip = document.createElement("span");
+  precisionChip.className = "chip chip-precision";
+  precisionChip.textContent = precisionLabel(finding.acceptance_precision);
+  badges.append(precisionChip);
+  return badges;
+}
+
 function renderFindings(payload) {
   state.findings = payload.findings || [];
   const list = byId("findingsList");
@@ -71,7 +100,7 @@ function renderFindings(payload) {
     const meta = document.createElement("div");
     meta.className = "finding-meta";
     meta.textContent = `${finding.file_path} · ${finding.severity} · ${finding.status}`;
-    button.append(meta);
+    button.append(meta, findingBadges(finding));
     button.onclick = () => selectFinding(index);
     list.append(button);
   });
@@ -97,7 +126,7 @@ function selectFinding(index) {
   const meta = document.createElement("p");
   meta.className = "muted";
   meta.textContent = `Severity ${finding.severity}; confidence ${finding.confidence}`;
-  detail.append(title, file, action, meta);
+  detail.append(title, file, action, meta, findingBadges(finding));
 }
 
 function renderProgress(progress) {

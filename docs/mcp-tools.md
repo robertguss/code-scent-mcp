@@ -42,6 +42,7 @@ by the service and contract tests.
 - `verify_refactor`
 - `get_finding`
 - `explain_score`
+- `explain_finding`
 - `get_backlog`
 - `get_improvement_plan`
 - `get_calibration`
@@ -52,8 +53,12 @@ by the service and contract tests.
 - `retrieve_result`
 - `context_stats`
 - `select_tests`
+- `refactor_preflight`
+- `subjective_review`
 - `start_task`
 - `record_verification`
+- `how_to_use`
+- `resume_task`
 
 ## Locked Post-MVP MCP Tools
 
@@ -88,7 +93,7 @@ No CLI commands are locked in the current local PRD-remainder stage.
 
 Repository tools:
 
-`get_repo_map`, `get_repo_status`, `start_task`
+`get_repo_map`, `get_repo_status`, `start_task`, `resume_task`
 
 Search and context tools:
 
@@ -101,16 +106,21 @@ Code health and finding lifecycle tools:
 `scan_code_health`, `get_smell_report`, `get_next_improvement`, `mark_finding`,
 `record_verification`, `rescan`, `get_finding`, `explain_score`, `get_backlog`,
 `get_improvement_plan`, `get_calibration`, `get_progress`, `get_regressions`,
-`context_stats`
+`context_stats`, `subjective_review`
 
 Planning tools:
 
 `get_finding_context`, `plan_refactor`, `suggest_tests`, `get_impact`,
-`verify_change`, `verify_refactor`, `select_tests`
+`verify_change`, `verify_refactor`, `select_tests`, `refactor_preflight`,
+`explain_finding`
 
 Risk tools:
 
 `review_diff_risk`, `get_changed_file_health`
+
+Guidance tools:
+
+`how_to_use`
 
 All tools are local and source-read-only for analyzed source. Tools may create
 or update `.codescent` state for indexing, scan runs, findings, lifecycle
@@ -161,6 +171,28 @@ events, and telemetry.
   refreshes `.codescent` state before answering and reports that refresh in the
   advisory fields.
 - Example shape: `{"tool": "start_task", "ok": true, "data": {...}}`
+
+### `resume_task`
+
+- Group: `repository`
+- Purpose: Reconstruct a bounded "where was I, what's next" session brief after
+  context loss (e.g. a compaction), purely from persisted state. The mirror of
+  `start_task` for continuing in-flight work rather than starting fresh.
+- Inputs: repository root, optional `session_id` (enriches the recent tool
+  trail), and optional `project_id`.
+- Outputs: `status`, `summary`, `active_findings` (the in-flight/last findings),
+  `verified_findings` (what the verification ledger shows passing),
+  `recently_touched_files`, `recent_tools`, `ratchet` (baseline accepted state
+  and finding count), and `next_tools` (the recommended next call derived from
+  the top active finding plus the ledger).
+- Bounds: source-read-only for analyzed files; reads no analyzed source at all;
+  deterministic; bounded output by default; runtime no-network. All lists are
+  capped. Reconstructed entirely from findings, the verification ledger, the
+  ratchet baseline, and sanitized session events; adds no new storage. Session
+  events are sanitized, so the active finding and touched files come from the
+  findings/ledger tables, not from event payloads.
+- Example shape:
+  `{"ok": true, "status": "in_progress", "active_findings": [...], "next_tools": [...]}`
 
 ### `search_files`
 
@@ -245,7 +277,12 @@ events, and telemetry.
   symbol, finding id, status, or limit.
 - Outputs: a bounded scan envelope with aggregate counts (`total_count`,
   `severity_counts`, `rule_counts`, `rule_ids`), a capped `finding_ids`/`items`
-  preview, and `returned_count`/`omitted_count`.
+  preview, and `returned_count`/`omitted_count`. Each item carries a
+  `confidence_tier` (`verified` for AST-resolved Python findings anchored to a
+  symbol, `heuristic` for regex/TS-pack or file-level findings) and a small
+  `provenance` object (`rule_id`, `language`, `resolution` = `ast`|`regex`,
+  `symbol_resolved`). Tier and provenance are deterministically derived metadata,
+  not part of a finding's stable identity.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
   (default 25) items; when findings are omitted the envelope carries a
@@ -262,7 +299,8 @@ events, and telemetry.
   symbol, finding id, status, or limit.
 - Outputs: a bounded list envelope: `open_count`, `total_count`,
   `status_counts`, `severity_counts`, `rule_counts`, and a capped `items`
-  preview with `returned_count`/`omitted_count`.
+  preview with `returned_count`/`omitted_count`. Each item carries
+  `confidence_tier` and a bounded `provenance` object (see `scan_code_health`).
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
   (default 25) findings; when findings are omitted the envelope carries a
@@ -286,6 +324,47 @@ events, and telemetry.
   runtime no-network. If the index is stale, the tool refreshes `.codescent`
   state before answering.
 - Example shape: `{"tool": "get_finding_context", "ok": true, "data": {...}}`
+
+### `explain_finding`
+
+- Group: `planning`
+- Purpose: Return one bounded, fix-ready explanation of a finding: why it
+  matters (`why` message + structured `evidence`), the suggested `fix`
+  (`suggested_action`), confidence tier/provenance, and a bounded source
+  `snippet` anchored at the finding's lines.
+- Inputs: repository root plus the finding id.
+- Outputs: JSON-compatible structured payload with local evidence and a bounded
+  source snippet (`snippet.source`); no unbounded source dump. Carries
+  `confidence_tier`, `provenance`, `snippet_truncated`, and `next_tools`.
+- Bounds: source-read-only for analyzed files; the snippet is clipped to a line
+  cap and a character cap (and dropped for files beyond the source-read byte
+  budget) so output stays bounded by default; runtime no-network.
+- Example shape: `{"tool": "explain_finding", "ok": true, "data": {...}}`
+
+### `subjective_review`
+
+- Group: `health`
+- Purpose: Opt-in subjective second opinion on deterministic findings. CodeScent
+  asks the **client's own LLM** to judge findings via MCP **sampling** and
+  returns the model's notes as findings that are explicitly labeled subjective
+  (`confidence_tier: "subjective"`, `provenance: "subjective"`). They are
+  persisted separately and never merge into or masquerade as deterministic
+  findings.
+- Inputs: repository root only. There is no per-call enable flag — the feature is
+  gated solely by `privacy.allow_llm_review` (default `false`).
+- Outputs: JSON payload with `enabled`, `sampling_available`, `provider`, a
+  status `message`, a `privacy_notice`, and the labeled `subjective_findings`.
+- Data exposure (PRD 14.5): when enabled, the sampling prompt carries **only**
+  finding metadata (rule id, file path, severity, title, message) — never whole
+  source files — and that metadata is run through a secret/PII scrub before the
+  request leaves. The **CodeScent server makes no network call**: the sampling
+  request travels back through the MCP session and the client's model produces
+  the judgment.
+- Bounds: source-read-only for analyzed files; disabled by default (clean no-op);
+  degrades gracefully to a clear "sampling unavailable" result when the client
+  cannot sample; bounded output. The CodeScent process itself performs no
+  runtime network I/O.
+- Example shape: `{"tool": "subjective_review", "ok": true, "data": {...}}`
 
 ### `get_next_improvement`
 
@@ -320,13 +399,20 @@ events, and telemetry.
 ### `suggest_tests`
 
 - Group: `planning`
-- Purpose: Recommend verification commands for a finding or change.
-- Inputs: repository root plus tool-specific arguments such as query, path,
-  symbol, finding id, status, or limit.
+- Purpose: Recommend verification commands for a finding or change, and
+  optionally emit an honest characterization-test skeleton.
+- Inputs: repository root, a finding id, and an optional `scaffold` flag
+  (default `false`).
 - Outputs: JSON-compatible structured payload with local evidence and no
-  unbounded source dump.
-- Bounds: source-read-only for analyzed files; bounded output by default;
-  runtime no-network.
+  unbounded source dump (`commands`, `likely_tests`, `executes_in_v1`). When
+  `scaffold=true`, an opt-in `scaffold` object is added with `language`,
+  `module`, `symbol`, `test_name`, `filename`, `code`, `honest`, and `notes`.
+- Scaffold honesty: the generated `code` imports the finding's target and leaves
+  TODO placeholders that `raise NotImplementedError` — it collects under pytest
+  but never reports a fake-green pass, so it must be filled in to pin current
+  behavior before refactoring. The field is omitted unless `scaffold=true`.
+- Bounds: source-read-only for analyzed files; bounded output by default
+  (one short skeleton, single test function); runtime no-network.
 - Example shape: `{"tool": "suggest_tests", "ok": true, "data": {...}}`
 
 ### `select_tests`
@@ -340,6 +426,31 @@ events, and telemetry.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network; recommend-only and does not execute pytest.
 - Example shape: `{"tool": "select_tests", "ok": true, "data": {...}}`
+
+### `refactor_preflight`
+
+- Group: `planning`
+- Purpose: Run a one-call refactor preflight before editing: a bounded, deduped
+  blast-radius bundle for a file, symbol, or finding that an agent would
+  otherwise have to assemble by chaining four tools. Pure composition of
+  already-shipped analyses — `get_impact` (callers/refs), git co-change
+  coupling, `select_tests` (the minimal verification set), and
+  `get_changed_file_health`. No new analysis is invented; each section equals
+  what its component tool returns when called directly.
+- Inputs: repository root, plus one of `target` (file path or symbol name with
+  `target_type` of `file` or `symbol`) or `finding_id`.
+- Outputs: `ok`, `target_type`, `target`, `file_path`, `impact` (same shape as
+  `get_impact`), `co_change` (a capped list of `{path, commits}` coupling
+  entries), `test_selection` (same shape as `select_tests`),
+  `changed_file_health` (same shape as `get_changed_file_health`), `warnings`,
+  and `next_tools`.
+- Bounds: source-read-only for analyzed files; bounded output by default;
+  runtime no-network. Every list section honors the most restrictive existing
+  component cap (git co-change tops out at 10) and no section carries source
+  ranges. Missing inputs (no shared git history, an unindexed target) degrade to
+  an empty section with a reason in `warnings` rather than failing.
+- Example shape:
+  `{"ok": true, "file_path": "src/pkg/core.py", "impact": {...}, "co_change": [{"path": "src/pkg/caller.py", "commits": 2}], "test_selection": {...}, "changed_file_health": {...}, "warnings": [], "next_tools": [...]}`
 
 ### `mark_finding`
 
@@ -716,6 +827,24 @@ events, and telemetry.
 - Bounds: reads sanitized `.codescent` session events only; bounded output by
   default; runtime no-network.
 - Example shape: `{"session_id": "sess_123", "tool_calls": 0, "warnings": []}`
+
+### `how_to_use`
+
+- Group: `guidance`
+- Purpose: Return the CodeScent capability and workflow guide: the recommended
+  workflow, every registered tool grouped by job with a one-line "reach for this
+  when", and the runtime safety boundaries. Generated dynamically from the
+  registered surface so the documented tool set can never drift.
+- Inputs: none.
+- Outputs: a bounded guide payload with `server`, `summary`, `workflow`,
+  `tool_groups` (each with `group`, `reach_for_when`, a capped `tools` list, and
+  `omitted_count`), `safety_boundaries`, and `tool_count`. The same payload is
+  served as the `codescent://guide` MCP resource so resource-only clients can
+  read it too.
+- Bounds: source-read-only for analyzed files; reads no analyzed source at all;
+  bounded output by default; runtime no-network. Per-group tool lists are capped.
+- Example shape:
+  `{"ok": true, "server": "CodeScent", "workflow": [...], "tool_groups": [...], "safety_boundaries": [...], "tool_count": 41}`
 
 ## Reference Pattern
 

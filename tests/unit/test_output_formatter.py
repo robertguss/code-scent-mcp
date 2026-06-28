@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from tests.fixtures.headroom_influence_fixtures import build_test_output_fixtures
-
 from codescent.core.models import EnvelopeMode, ResponseEnvelope
 from codescent.core.output_formatter import format_test_output
+from tests.fixtures.headroom_influence_fixtures import build_test_output_fixtures
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

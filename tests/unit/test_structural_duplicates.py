@@ -236,6 +236,76 @@ def test_structural_duplicate_findings_cap_location_evidence(
     )
 
 
+def test_structural_findings_annotate_reachable_entry_point_members(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    _write(
+        repo / "src" / "alpha.py",
+        """
+        @app.command()
+        def summarize_orders(orders):
+            total = 0
+            for order in orders:
+                if order.active:
+                    total += order.amount * 2
+            return total
+        """,
+    )
+    _write(
+        repo / "src" / "beta.py",
+        """
+        def build_invoice_lines(records):
+            subtotal = 0
+            for record in records:
+                if record.enabled:
+                    subtotal += record.price * 7
+            return subtotal
+        """,
+    )
+
+    findings = structural_duplicate_findings(repo)
+
+    assert len(findings) == 1
+    finding = findings[0]
+    # The decorated member is reachable, so the message flags it; the duplicate
+    # is still reported (duplication is a smell regardless of reachability).
+    assert "Reachable via entry points: summarize_orders." in finding.message
+
+
+def test_structural_findings_omit_note_without_entry_point_members(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    _write(
+        repo / "src" / "alpha.py",
+        """
+        def summarize_orders(orders):
+            total = 0
+            for order in orders:
+                if order.active:
+                    total += order.amount * 2
+            return total
+        """,
+    )
+    _write(
+        repo / "src" / "beta.py",
+        """
+        def build_invoice_lines(records):
+            subtotal = 0
+            for record in records:
+                if record.enabled:
+                    subtotal += record.price * 7
+            return subtotal
+        """,
+    )
+
+    findings = structural_duplicate_findings(repo)
+
+    assert len(findings) == 1
+    assert "Reachable via entry points" not in findings[0].message
+
+
 def _function_fingerprint(source: str) -> str:
     records = structural_fingerprints(dedent(source))
     functions = [record for record in records if record.kind == "function"]

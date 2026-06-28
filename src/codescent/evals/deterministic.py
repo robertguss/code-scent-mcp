@@ -211,8 +211,14 @@ def _workflow_score(
 
 
 def _write_strict_thresholds(repo: Path) -> None:
+    # Pack-quality evals measure the specific language pack; disable the
+    # cross-cutting generic fallback so its findings on data/config files
+    # (e.g. package.json) do not pollute per-pack precision.
     ConfigService(repo).save(
-        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
+        ProjectConfig(
+            thresholds=MaintainabilityThresholds.strict(),
+            generic_fallback=False,
+        ),
     )
 
 

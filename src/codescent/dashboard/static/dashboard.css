@@ -186,6 +186,41 @@ h3 {
   padding: 12px;
 }
 
+.finding-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #f1f3f6;
+  color: var(--muted);
+  padding: 2px 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.chip-tier-verified {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+
+.chip-tier-heuristic {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.chip-precision {
+  text-transform: none;
+}
+
 .trend {
   display: grid;
   gap: 10px;

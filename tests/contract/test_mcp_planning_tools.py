@@ -40,6 +40,26 @@ class SuggestedTestsPayload(BaseModel):
     executes_in_v1: bool
 
 
+class ScaffoldFieldPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    language: str
+    module: str
+    symbol: str
+    test_name: str
+    filename: str
+    code: str
+    honest: bool
+    notes: tuple[str, ...]
+
+
+class SuggestedTestsWithScaffoldPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    scaffold: ScaffoldFieldPayload | None = None
+
+
 class SelectTestsPayload(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
@@ -224,6 +244,49 @@ async def test_verify_refactor_checks_public_surface(tmp_path: Path) -> None:
     assert payload.ok is True
     assert payload.language == "python"
     assert payload.preserved is True
+
+
+@pytest.mark.anyio
+async def test_suggest_tests_scaffold_field_is_opt_in_and_honest(
+    tmp_path: Path,
+) -> None:
+    repo = _repo_with_smell(tmp_path)
+    scan = CodeHealthService(repo).scan()
+    finding_id = next(
+        item for item in scan.finding_ids if item.startswith("python.todo_cluster")
+    )
+
+    async with Client(mcp) as client:
+        default_result = await client.call_tool(
+            "suggest_tests",
+            {"repo": str(repo), "finding_id": finding_id},
+        )
+        scaffold_result = await client.call_tool(
+            "suggest_tests",
+            {"repo": str(repo), "finding_id": finding_id, "scaffold": True},
+        )
+
+    # Opt-in: the scaffold field is absent unless requested.
+    default_json = _text_content(default_result.content)
+    assert '"scaffold"' not in default_json
+
+    payload = SuggestedTestsWithScaffoldPayload.model_validate_json(
+        _text_content(scaffold_result.content),
+    )
+    assert payload.ok is True
+    scaffold = payload.scaffold
+    assert scaffold is not None
+    assert scaffold.language == "python"
+    assert scaffold.honest is True
+    assert scaffold.filename.startswith("test_")
+    # Honest skeleton: imports the target, no fake-green assertion.
+    assert "from pkg.config import load_config" in scaffold.code
+    assert "raise NotImplementedError(" in scaffold.code
+    assert "assert True" not in scaffold.code
+    # Bounded: one short skeleton.
+    assert scaffold.code.count("def test_") == 1
+    assert "SECRET_SENTINEL" not in scaffold.code
+    assert not (repo / ".pytest_cache").exists()
 
 
 def _repo_with_smell(tmp_path: Path) -> Path:

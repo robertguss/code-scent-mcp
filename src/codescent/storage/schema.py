@@ -82,6 +82,8 @@ BASE_TABLE_STATEMENTS: Final[tuple[str, ...]] = (
         message text not null,
         evidence_json text not null,
         suggested_action text,
+        confidence_tier text not null default 'heuristic',
+        provenance_json text not null default '{}',
         first_seen_scan_id text references scan_runs(id),
         last_seen_scan_id text references scan_runs(id),
         resolved_at text
@@ -265,6 +267,12 @@ MIGRATION_STATEMENTS: Final[dict[int, tuple[str, ...]]] = {
 RECONCILED_COLUMNS: Final[tuple[tuple[str, str, str], ...]] = (
     ("stored_results", "project_id", "project_id text not null default ''"),
     ("session_events", "project_id", "project_id text not null default ''"),
+    (
+        "findings",
+        "confidence_tier",
+        "confidence_tier text not null default 'heuristic'",
+    ),
+    ("findings", "provenance_json", "provenance_json text not null default '{}'"),
 )
 
 

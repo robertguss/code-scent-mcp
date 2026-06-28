@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import cast
 
-from tests.fixtures.headroom_influence_fixtures import build_symbol_search_fixtures
-
 from codescent.core.models import EnvelopeMode
 from codescent.core.symbol_formatter import (
     SymbolGroupPayload,
     format_symbol_search_results,
 )
+from tests.fixtures.headroom_influence_fixtures import build_symbol_search_fixtures
 
 
 def test_empty_symbol_results_are_exact_without_retrieval_metadata() -> None:
