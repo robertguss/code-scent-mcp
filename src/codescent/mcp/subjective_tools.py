@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from codescent.services.subjective_review import SamplingReply
 
 _NEXT_TOOLS = ("get_backlog", "explain_finding")
-_PROMPT_FINDING_LIMIT = 25
 _UNAVAILABLE_MESSAGE = (
     "The MCP client does not support sampling, so no subjective review was "
     "performed. CodeScent never calls a model itself."
@@ -103,7 +102,7 @@ def _deterministic_metadata(repo: str) -> tuple[FindingMetadata, ...]:
             title=finding.title,
             message=finding.message,
         )
-        for finding in report.findings[:_PROMPT_FINDING_LIMIT]
+        for finding in report.findings
     )
 
 

@@ -30,6 +30,38 @@ class IndexResult:
     full: bool = False
 
 
+@dataclass(slots=True)
+class ReindexDebouncer:
+    """Coalesce a burst of file changes into a single incremental reindex.
+
+    Fed the current changed-file set on every poll, it fires (returns True)
+    only once the set has stayed identical for ``window_seconds`` -- so a
+    burst of edits collapses into one reindex instead of one per poll. An
+    empty set (index already fresh) resets the window.
+    """
+
+    window_seconds: float
+    _signature: tuple[str, ...] | None = None
+    _stable_since: float | None = None
+
+    def observe(self, changed: tuple[str, ...], now: float) -> bool:
+        if not changed:
+            self._signature = None
+            self._stable_since = None
+            return False
+        if changed != self._signature:
+            self._signature = changed
+            self._stable_since = now
+            return False
+        if self._stable_since is not None and now - self._stable_since >= (
+            self.window_seconds
+        ):
+            self._signature = None
+            self._stable_since = None
+            return True
+        return False
+
+
 class MissingRowIdError(RuntimeError):
     pass
 
