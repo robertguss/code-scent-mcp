@@ -12,7 +12,11 @@ from codescent.services.code_health import (
 )
 from codescent.services.config import ConfigService
 from codescent.services.repo_index import RepoIndexService
-from codescent.services.scan_cache import ScanCache, changed_paths
+from codescent.services.scan_cache import (
+    ScanCache,
+    changed_paths,
+    pack_input_hashes,
+)
 from codescent.storage import initialize_storage
 
 if TYPE_CHECKING:
@@ -156,3 +160,37 @@ def test_scan_warm_equals_cold_including_suppression(tmp_path: Path) -> None:
     assert warm.suppressed_stable_keys == cold.suppressed_stable_keys
     assert warm.rule_ids == cold.rule_ids
     assert warm.finding_ids == cold.finding_ids
+
+
+def test_pack_input_hashes_track_go_and_generic_content(tmp_path: Path) -> None:
+    # Regression: the language inventory hashes only .py/.ts/.js, so the cache
+    # fingerprint must hash Go and generic-fallback files itself or a stale scan
+    # is served when one of them changes while git status does not flip.
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    go_file = repo / "main.go"
+    _ = go_file.write_text("package main\n\nfunc A() {}\n")
+    data_file = repo / "data.rb"
+    _ = data_file.write_text("VALUE = 1\n")
+    config = ProjectConfig()
+
+    before = pack_input_hashes(repo, config)
+    assert "main.go" in before
+    assert "data.rb" in before
+
+    _ = go_file.write_text("package main\n\nfunc B() {}\n")
+    assert pack_input_hashes(repo, config) != before
+
+    after_go = pack_input_hashes(repo, config)
+    _ = data_file.write_text("VALUE = 2\n")
+    assert pack_input_hashes(repo, config) != after_go
+
+
+def test_pack_input_hashes_respect_disabled_packs(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _ = (repo / "main.go").write_text("package main\n")
+    _ = (repo / "data.rb").write_text("VALUE = 1\n")
+    config = ProjectConfig(language_packs=("python",), generic_fallback=False)
+
+    assert pack_input_hashes(repo, config) == {}
