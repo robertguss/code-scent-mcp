@@ -12,6 +12,10 @@ from codescent.engine.rules.architecture import scan_architecture
 from codescent.engine.rules.import_cycles import scan_import_cycles
 from codescent.engine.rules.knowledge_silo import scan_knowledge_silos
 from codescent.engine.rules.python import scan_python_health
+from codescent.engine.rules.test_quality import (
+    scan_python_test_quality,
+    scan_typescript_test_quality,
+)
 from codescent.engine.rules.ts_react_next import scan_ts_react_next_health
 
 if TYPE_CHECKING:
@@ -215,6 +219,7 @@ def _scan_python_health(
     return (
         *scan_python_health(root, config=config),
         *scan_import_cycles(root, config=config),
+        *scan_python_test_quality(root, config=config),
     )
 
 
@@ -222,7 +227,10 @@ def _scan_ts_react_next_health(
     root: Path | str,
     config: ProjectConfig,
 ) -> tuple[CodeHealthFinding, ...]:
-    return scan_ts_react_next_health(root, config=config)
+    return (
+        *scan_ts_react_next_health(root, config=config),
+        *scan_typescript_test_quality(root, config=config),
+    )
 
 
 def _scan_knowledge_silos(

@@ -46,6 +46,8 @@ exclude = [
     "tests/fixtures/python-basic",
     "tests/fixtures/python-import-cycle",
     "tests/fixtures/python-entrypoint",
+    "tests/fixtures/test-quality-flawed",
+    "tests/fixtures/test-quality-healthy",
     "evals/precision_corpus",
 ]
 reportUnusedCallResult = "warning"
@@ -62,6 +64,8 @@ extend-exclude = [
     "tests/fixtures/python-basic",
     "tests/fixtures/python-import-cycle",
     "tests/fixtures/python-entrypoint",
+    "tests/fixtures/test-quality-flawed",
+    "tests/fixtures/test-quality-healthy",
     "evals/precision_corpus",
 ]
 
