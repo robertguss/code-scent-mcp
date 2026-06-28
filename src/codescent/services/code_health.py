@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
+import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 from uuid import uuid4
 
 from codescent.core.models import FindingStatus
@@ -21,18 +25,35 @@ from codescent.engine.suppression import (
 from codescent.services.config import ConfigService
 from codescent.services.coverage import coverage_findings
 from codescent.services.repo_index import RepoIndexService
+from codescent.services.scan_cache import (
+    CACHE_VERSION,
+    ScanCache,
+    changed_paths,
+    compute_fingerprint,
+)
 from codescent.services.search_queries import (
     is_test_path,
     rank_test_file,
     split_test_terms,
 )
 from codescent.storage import RepositoryStorage, initialize_storage
+from codescent.storage.schema import SCHEMA_VERSION
 
 if TYPE_CHECKING:
     import sqlite3
     from pathlib import Path
 
+    from codescent.engine.packs import PackRegistry
     from codescent.engine.suppression import IgnoreDirective, SuppressionMatch
+    from codescent.services.repo_index import IndexResult
+    from codescent.storage import StorageState
+
+logger = logging.getLogger(__name__)
+
+# Rule-logic version tag folded into the scan-cache fingerprint so a rule change
+# that ships under a new tag invalidates stale cached findings. Mirrors the
+# ``rule_version`` persisted on scan_runs.
+RULE_VERSION: Final = "python-mvp-1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,13 +83,29 @@ class CodeHealthScanResult:
 class CodeHealthService:
     repo_root: Path | str
 
-    def scan(self) -> CodeHealthScanResult:
+    def scan(
+        self,
+        *,
+        workers: int | None = None,
+        use_cache: bool = True,
+    ) -> CodeHealthScanResult:
         index_result = RepoIndexService(self.repo_root).index_repo()
         state = initialize_storage(self.repo_root)
         config = ConfigService(state.repo_root).load()
         registry = build_pack_registry(config)
+        pack_scan = scan_rule_packs_cached(
+            state,
+            registry,
+            index_result,
+            workers=workers,
+            use_cache=use_cache,
+        )
+        # Coverage + changed-source are recomputed every scan (cheap; coverage
+        # reads an out-of-tree file and changed-source is empty on a no-op scan),
+        # so only the rule packs ride the content-hash cache. Order is identical
+        # to the serial path: packs first, then changed-source, then coverage.
         findings = (
-            *registry.scan_rule_packs(state.repo_root),
+            *pack_scan.findings,
             *_changed_source_without_related_tests(
                 state.repo_root,
                 index_result.changed_files,
@@ -114,7 +151,7 @@ class CodeHealthService:
                     now,
                     now,
                     1,
-                    "python-mvp-1",
+                    RULE_VERSION,
                     index_result.indexed_files,
                     len(findings),
                     len(resolved_ids),
@@ -200,6 +237,118 @@ class CodeHealthService:
             findings=findings,
             suppressed_stable_keys=suppressed_keys,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class RulePackScan:
+    """Result of running (or restoring from cache) the rule packs."""
+
+    findings: tuple[CodeHealthFinding, ...]
+    cache_hit: bool
+    reprocessed_files: tuple[str, ...]
+    total_files: int
+    elapsed_seconds: float
+
+
+def run_rule_packs(
+    registry: PackRegistry,
+    root: Path,
+    *,
+    workers: int,
+) -> tuple[CodeHealthFinding, ...]:
+    """Run every rule pack and concatenate results in fixed pack order.
+
+    With ``workers > 1`` the packs run in a bounded thread pool, but results are
+    gathered in submission (pack) order, so the merged tuple is byte-identical to
+    the serial loop -- parallel == serial by construction.
+    """
+    packs = registry.rule_packs
+    if workers <= 1 or len(packs) <= 1:
+        results = [tuple(pack.scan(root, registry.config)) for pack in packs]
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [
+                executor.submit(pack.scan, root, registry.config) for pack in packs
+            ]
+            results = [tuple(future.result()) for future in futures]
+    return tuple(finding for result in results for finding in result)
+
+
+def scan_rule_packs_cached(
+    state: StorageState,
+    registry: PackRegistry,
+    index_result: IndexResult,
+    *,
+    workers: int | None,
+    use_cache: bool,
+) -> RulePackScan:
+    """Return rule-pack findings, reusing the content-hash cache when valid.
+
+    A cache hit (same per-file hashes, git status, config, and engine version as
+    the stored scan) reuses the cached findings verbatim and runs no rules. A
+    miss re-runs the packs in parallel and refreshes the cache.
+    """
+    start = time.perf_counter()
+    config = registry.config
+    file_hashes = index_result.file_hashes
+    fingerprint = compute_fingerprint(
+        file_hashes,
+        git_status=index_result.git_status,
+        config_repr=repr(config),
+        engine_version=f"{CACHE_VERSION}.{SCHEMA_VERSION}.{RULE_VERSION}",
+    )
+    cache = ScanCache(state.state_dir)
+    cached = cache.load() if use_cache else None
+    if cached is not None and cached.fingerprint == fingerprint:
+        elapsed = time.perf_counter() - start
+        logger.info(
+            "scan cache hit: reused %d findings, 0/%d files reprocessed (%.3fs)",
+            len(cached.findings),
+            len(file_hashes),
+            elapsed,
+        )
+        return RulePackScan(
+            findings=cached.findings,
+            cache_hit=True,
+            reprocessed_files=(),
+            total_files=len(file_hashes),
+            elapsed_seconds=elapsed,
+        )
+
+    reprocessed = (
+        changed_paths(cached.file_hashes, file_hashes)
+        if cached is not None
+        else tuple(sorted(file_hashes))
+    )
+    pack_count = len(registry.rule_packs)
+    resolved_workers = (
+        max(1, workers)
+        if workers is not None
+        else max(1, min((os.cpu_count() or 1) - 1, pack_count))
+    )
+    findings = run_rule_packs(registry, state.repo_root, workers=resolved_workers)
+    if use_cache:
+        cache.store(
+            fingerprint=fingerprint,
+            file_hashes=file_hashes,
+            findings=findings,
+        )
+    elapsed = time.perf_counter() - start
+    logger.info(
+        "scan cache miss: %d findings, %d/%d reprocessed, workers=%d (%.3fs)",
+        len(findings),
+        len(reprocessed),
+        len(file_hashes),
+        resolved_workers,
+        elapsed,
+    )
+    return RulePackScan(
+        findings=findings,
+        cache_hit=False,
+        reprocessed_files=reprocessed,
+        total_files=len(file_hashes),
+        elapsed_seconds=elapsed,
+    )
 
 
 def _changed_source_without_related_tests(
