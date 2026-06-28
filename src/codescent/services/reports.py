@@ -24,6 +24,8 @@ class FindingDetail:
     file_path: str
     severity: str
     confidence: float
+    confidence_tier: str
+    provenance: JsonObject
     status: str
     title: str
     message: str
@@ -56,6 +58,8 @@ class ReportService:
             file_path=finding.file_path,
             severity=finding.severity,
             confidence=finding.confidence,
+            confidence_tier=finding.confidence_tier,
+            provenance=_json_object(finding.provenance_json),
             status=finding.status.value,
             title=finding.title,
             message=finding.message,

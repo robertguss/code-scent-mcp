@@ -70,7 +70,7 @@ class ToolScanPayload(BaseModel):
     finding_ids: tuple[str, ...]
     rule_ids: tuple[str, ...]
     total_count: int
-    items: tuple[dict[str, str | float], ...]
+    items: tuple[dict[str, object], ...]
     returned_count: int
     omitted_count: int
     retrieval_available: bool
@@ -82,7 +82,7 @@ class ToolReportPayload(BaseModel):
     ok: bool
     open_count: int
     total_count: int
-    items: tuple[dict[str, str | float], ...]
+    items: tuple[dict[str, object], ...]
     returned_count: int
     omitted_count: int
     result_id: str | None
@@ -166,6 +166,8 @@ async def test_tool_outputs_match_bounded_schema_snapshots() -> None:
         "file_path",
         "severity",
         "confidence",
+        "confidence_tier",
+        "provenance",
         "status",
         "suggested_action",
     }

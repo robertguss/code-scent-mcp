@@ -274,7 +274,12 @@ events, and telemetry.
   symbol, finding id, status, or limit.
 - Outputs: a bounded scan envelope with aggregate counts (`total_count`,
   `severity_counts`, `rule_counts`, `rule_ids`), a capped `finding_ids`/`items`
-  preview, and `returned_count`/`omitted_count`.
+  preview, and `returned_count`/`omitted_count`. Each item carries a
+  `confidence_tier` (`verified` for AST-resolved Python findings anchored to a
+  symbol, `heuristic` for regex/TS-pack or file-level findings) and a small
+  `provenance` object (`rule_id`, `language`, `resolution` = `ast`|`regex`,
+  `symbol_resolved`). Tier and provenance are deterministically derived metadata,
+  not part of a finding's stable identity.
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
   (default 25) items; when findings are omitted the envelope carries a
@@ -291,7 +296,8 @@ events, and telemetry.
   symbol, finding id, status, or limit.
 - Outputs: a bounded list envelope: `open_count`, `total_count`,
   `status_counts`, `severity_counts`, `rule_counts`, and a capped `items`
-  preview with `returned_count`/`omitted_count`.
+  preview with `returned_count`/`omitted_count`. Each item carries
+  `confidence_tier` and a bounded `provenance` object (see `scan_code_health`).
 - Bounds: source-read-only for analyzed files; bounded output by default;
   runtime no-network. The inline preview holds at most `INLINE_ITEM_LIMIT`
   (default 25) findings; when findings are omitted the envelope carries a

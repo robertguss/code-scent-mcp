@@ -112,14 +112,18 @@ class CodeHealthService:
                         message,
                         evidence_json,
                         suggested_action,
+                        confidence_tier,
+                        provenance_json,
                         first_seen_scan_id,
                         last_seen_scan_id
-                    ) values (?, ?, ?, ?, null, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) values (?, ?, ?, ?, null, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     on conflict(stable_key) do update set
                         file_id = excluded.file_id,
                         last_seen_scan_id = excluded.last_seen_scan_id,
                         evidence_json = excluded.evidence_json,
                         confidence = excluded.confidence,
+                        confidence_tier = excluded.confidence_tier,
+                        provenance_json = excluded.provenance_json,
                         resolved_at = case
                             when findings.status = 'resolved' then null
                             else findings.resolved_at
@@ -141,6 +145,8 @@ class CodeHealthService:
                         finding.message,
                         json.dumps(finding.evidence, sort_keys=True),
                         finding.suggested_action,
+                        finding.confidence_tier,
+                        json.dumps(finding.provenance, sort_keys=True),
                         scan_id,
                         scan_id,
                     ),

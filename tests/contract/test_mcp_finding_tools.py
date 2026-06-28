@@ -12,7 +12,11 @@ from codescent.mcp.server import mcp
 from codescent.services.config import ConfigService
 from codescent.services.result_store import MAX_RETRIEVE_LIMIT
 
-MAX_BOUNDED_PAYLOAD_CHARS = 8192
+# Each inline item now carries confidence_tier + a small provenance object, so a
+# capped (<=25 item) preview is a few KB larger than before. Boundedness is still
+# enforced by the item-count cap + retrieval handle, not by raw byte size; this
+# guard just asserts the preview stays small (a few KB, not the 338 KB dump bug).
+MAX_BOUNDED_PAYLOAD_CHARS = 12288
 # Tiny fixtures need the strict (historical) thresholds to produce findings.
 STRICT_CONFIG = ProjectConfig(thresholds=MaintainabilityThresholds.strict())
 
@@ -87,7 +91,7 @@ class BoundedScanPayload(BaseModel):
     ok: bool
     total_count: int
     finding_ids: tuple[str, ...]
-    items: tuple[dict[str, str | float], ...]
+    items: tuple[dict[str, object], ...]
 
 
 class BoundedReportPayload(BaseModel):
@@ -95,7 +99,7 @@ class BoundedReportPayload(BaseModel):
 
     ok: bool
     total_count: int
-    items: tuple[dict[str, str | float], ...]
+    items: tuple[dict[str, object], ...]
     returned_count: int
     omitted_count: int
     result_id: str | None
@@ -106,7 +110,7 @@ class BoundedReportPayload(BaseModel):
 class RetrievedItemsPayload(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
-    items: tuple[dict[str, str | float], ...]
+    items: tuple[dict[str, object], ...]
 
 
 class MarkToolPayload(BaseModel):
@@ -514,6 +518,78 @@ async def test_get_improvement_plan_returns_roi_ordered_clusters(
     assert rois == sorted(rois, reverse=True)
     assert all(cluster.effort in {"S", "M", "L"} for cluster in plan.clusters)
     assert all(cluster.size >= 1 for cluster in plan.clusters)
+
+
+class ProvenanceModel(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
+
+    rule_id: str
+    language: str
+    resolution: str
+    symbol_resolved: bool
+
+
+class TieredItemModel(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
+
+    finding_id: str
+    rule_id: str
+    confidence_tier: str
+    provenance: ProvenanceModel
+
+
+class TieredListPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    ok: bool
+    items: tuple[TieredItemModel, ...]
+
+
+class TieredDetailPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
+
+    ok: bool
+    finding_id: str
+    confidence_tier: str
+    provenance: ProvenanceModel
+
+
+@pytest.mark.anyio
+async def test_finding_payloads_expose_confidence_tier_and_provenance(
+    tmp_path: Path,
+) -> None:
+    # The many-findings fixture yields python.large_function findings anchored to
+    # a resolved symbol, so at least one finding is `verified`.
+    repo = _repo_with_many_findings(tmp_path, 3)
+
+    async with Client(mcp) as client:
+        scan_raw = await client.call_tool("scan_code_health", {"repo": str(repo)})
+        report_raw = await client.call_tool("get_smell_report", {"repo": str(repo)})
+        scan = ScanToolPayload.model_validate_json(_text_content(scan_raw.content))
+        detail_raw = await client.call_tool(
+            "get_finding",
+            {"repo": str(repo), "finding_id": scan.finding_ids[0]},
+        )
+
+    scan_items = TieredListPayload.model_validate_json(_text_content(scan_raw.content))
+    report_items = TieredListPayload.model_validate_json(
+        _text_content(report_raw.content),
+    )
+    detail = TieredDetailPayload.model_validate_json(_text_content(detail_raw.content))
+
+    assert scan_items.items
+    assert report_items.items
+    for item in (*scan_items.items, *report_items.items):
+        assert item.confidence_tier in {"verified", "heuristic"}
+        assert item.provenance.rule_id == item.rule_id
+        assert item.provenance.language == "python"
+        assert item.provenance.resolution == "ast"
+    # A symbol-anchored python finding is verified; the field is not always
+    # heuristic.
+    assert any(item.confidence_tier == "verified" for item in scan_items.items)
+    assert detail.confidence_tier in {"verified", "heuristic"}
+    assert detail.provenance.rule_id
+    assert detail.provenance.resolution == "ast"
 
 
 async def _scan_repo(repo: Path) -> ScanToolPayload:

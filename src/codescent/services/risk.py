@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 DEFAULT_CHANGED_FILE_LIMIT: Final = 20
 HIGH_RISK_THRESHOLD: Final = 0.75
 MEDIUM_RISK_THRESHOLD: Final = 0.4
+_SEVERITY_ORDER: Final[dict[str, int]] = {"error": 0, "warning": 1, "info": 2}
+_TIER_ORDER: Final[dict[str, int]] = {"verified": 0, "heuristic": 1}
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +28,7 @@ class RiskFinding:
     file_path: str
     severity: str
     confidence: float
+    confidence_tier: str
     status: str
 
 
@@ -63,8 +66,10 @@ class RiskService:
             self._get_file_health(path, changed_files=changed_files)
             for path in changed_files
         )
-        findings = _dedupe_findings(
-            tuple(finding for health in file_health for finding in health.findings),
+        findings = rank_findings(
+            _dedupe_findings(
+                tuple(finding for health in file_health for finding in health.findings),
+            ),
         )
         risk_score = _max_score(tuple(health.risk_score for health in file_health))
         return DiffRiskReport(
@@ -118,7 +123,9 @@ class RiskService:
             path=path,
             risk_score=risk_score,
             risk_level=_risk_level(risk_score),
-            findings=tuple(_risk_finding(finding) for finding in findings),
+            findings=rank_findings(
+                tuple(_risk_finding(finding) for finding in findings),
+            ),
             suggested_tests=suggested.likely_tests,
             recommended_commands=suggested.commands,
             risk_notes=(
@@ -158,7 +165,27 @@ def _risk_finding(finding: FindingRow) -> RiskFinding:
         file_path=finding.file_path,
         severity=finding.severity,
         confidence=finding.confidence,
+        confidence_tier=finding.confidence_tier,
         status=finding.status.value,
+    )
+
+
+def rank_findings(findings: tuple[RiskFinding, ...]) -> tuple[RiskFinding, ...]:
+    """Order findings by severity, then tier, then confidence, then id.
+
+    Verified findings rank above heuristic ones at equal severity; the
+    confidence-desc and id tie-breaks keep the order deterministic.
+    """
+    return tuple(
+        sorted(
+            findings,
+            key=lambda finding: (
+                _SEVERITY_ORDER.get(finding.severity, len(_SEVERITY_ORDER)),
+                _TIER_ORDER.get(finding.confidence_tier, len(_TIER_ORDER)),
+                -finding.confidence,
+                finding.finding_id,
+            ),
+        ),
     )
 
 

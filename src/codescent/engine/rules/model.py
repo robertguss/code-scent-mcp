@@ -2,8 +2,20 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from typing import Final
 
 type EvidenceValue = int | float | str | bool
+type ProvenanceValue = str | bool
+type Provenance = dict[str, ProvenanceValue]
+
+CONFIDENCE_TIER_VERIFIED: Final = "verified"
+CONFIDENCE_TIER_HEURISTIC: Final = "heuristic"
+
+# Rule-id prefixes whose findings come from the Python AST packs, which resolve
+# concrete symbols. Everything else (typescript./react./next.) is regex-derived
+# and can therefore only ever be heuristic (the TS pack is regex, not
+# tree-sitter — corrected per code audit).
+_AST_RULE_PREFIXES: Final = ("python.", "architecture.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,6 +31,8 @@ class CodeHealthFinding:
     confidence: float
     evidence: dict[str, EvidenceValue]
     suggested_action: str
+    confidence_tier: str
+    provenance: Provenance
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,10 +46,21 @@ class FindingSpec:
     confidence: float
     evidence: dict[str, EvidenceValue]
     suggested_action: str
+    # Optional overrides; left None so every existing rule call site is unchanged
+    # and build_finding() derives a deterministic default.
+    confidence_tier: str | None = None
+    provenance: Provenance | None = None
 
 
 def build_finding(spec: FindingSpec) -> CodeHealthFinding:
     stable_key = _stable_key(spec.rule_id, spec.file_path, spec.symbol, spec.evidence)
+    # tier/provenance are derived metadata, deliberately NOT folded into
+    # stable_key (identity must not depend on them).
+    confidence_tier = spec.confidence_tier or derive_confidence_tier(
+        spec.rule_id,
+        spec.symbol,
+    )
+    provenance = spec.provenance or derive_provenance(spec.rule_id, spec.symbol)
     return CodeHealthFinding(
         id=stable_key,
         stable_key=stable_key,
@@ -48,7 +73,36 @@ def build_finding(spec: FindingSpec) -> CodeHealthFinding:
         confidence=spec.confidence,
         evidence=spec.evidence,
         suggested_action=spec.suggested_action,
+        confidence_tier=confidence_tier,
+        provenance=provenance,
     )
+
+
+def derive_confidence_tier(rule_id: str, symbol: str | None) -> str:
+    """Return ``verified`` only when an AST pack resolved a concrete symbol.
+
+    Regex/TS-pack findings and symbol-less (file-level) findings are heuristic.
+    """
+    if _resolution_source(rule_id) == "ast" and symbol is not None:
+        return CONFIDENCE_TIER_VERIFIED
+    return CONFIDENCE_TIER_HEURISTIC
+
+
+def derive_provenance(rule_id: str, symbol: str | None) -> Provenance:
+    return {
+        "rule_id": rule_id,
+        "language": _provenance_language(rule_id),
+        "resolution": _resolution_source(rule_id),
+        "symbol_resolved": symbol is not None,
+    }
+
+
+def _resolution_source(rule_id: str) -> str:
+    return "ast" if rule_id.startswith(_AST_RULE_PREFIXES) else "regex"
+
+
+def _provenance_language(rule_id: str) -> str:
+    return "python" if rule_id.startswith(_AST_RULE_PREFIXES) else "typescript"
 
 
 def _stable_key(
