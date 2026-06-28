@@ -56,6 +56,7 @@ MVP_TOOL_NAMES = {
     "get_changed_file_health",
     "retrieve_result",
     "context_stats",
+    "how_to_use",
 }
 
 

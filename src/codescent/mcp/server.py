@@ -2,6 +2,7 @@ from fastmcp import FastMCP
 
 from codescent.mcp.context_tools import register_context_tools
 from codescent.mcp.finding_tools import register_finding_tools
+from codescent.mcp.guide_tools import register_guide_tools
 from codescent.mcp.planning_tools import register_planning_tools
 from codescent.mcp.prompts import register_prompts
 from codescent.mcp.repo_tools import register_repo_tools
@@ -19,6 +20,7 @@ register_finding_tools(mcp)
 register_planning_tools(mcp)
 register_risk_tools(mcp)
 register_session_stats_tools(mcp)
+register_guide_tools(mcp)
 register_prompts(mcp)
 
 

@@ -54,6 +54,7 @@ by the service and contract tests.
 - `select_tests`
 - `start_task`
 - `record_verification`
+- `how_to_use`
 
 ## Locked Post-MVP MCP Tools
 
@@ -111,6 +112,10 @@ Planning tools:
 Risk tools:
 
 `review_diff_risk`, `get_changed_file_health`
+
+Guidance tools:
+
+`how_to_use`
 
 All tools are local and source-read-only for analyzed source. Tools may create
 or update `.codescent` state for indexing, scan runs, findings, lifecycle
@@ -716,6 +721,24 @@ events, and telemetry.
 - Bounds: reads sanitized `.codescent` session events only; bounded output by
   default; runtime no-network.
 - Example shape: `{"session_id": "sess_123", "tool_calls": 0, "warnings": []}`
+
+### `how_to_use`
+
+- Group: `guidance`
+- Purpose: Return the CodeScent capability and workflow guide: the recommended
+  workflow, every registered tool grouped by job with a one-line "reach for this
+  when", and the runtime safety boundaries. Generated dynamically from the
+  registered surface so the documented tool set can never drift.
+- Inputs: none.
+- Outputs: a bounded guide payload with `server`, `summary`, `workflow`,
+  `tool_groups` (each with `group`, `reach_for_when`, a capped `tools` list, and
+  `omitted_count`), `safety_boundaries`, and `tool_count`. The same payload is
+  served as the `codescent://guide` MCP resource so resource-only clients can
+  read it too.
+- Bounds: source-read-only for analyzed files; reads no analyzed source at all;
+  bounded output by default; runtime no-network. Per-group tool lists are capped.
+- Example shape:
+  `{"ok": true, "server": "CodeScent", "workflow": [...], "tool_groups": [...], "safety_boundaries": [...], "tool_count": 41}`
 
 ## Reference Pattern
 
