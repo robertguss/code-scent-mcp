@@ -9,10 +9,10 @@
       "scenario": "find_symbol"
     },
     {
-      "codescent_tokens": 530,
-      "delta": 1370,
+      "codescent_tokens": 881,
+      "delta": 1019,
       "naive_tokens": 1900,
-      "ratio": 0.278947,
+      "ratio": 0.463684,
       "scenario": "search_content"
     },
     {
@@ -24,9 +24,9 @@
     }
   ],
   "summary": {
-    "codescent_tokens": 1639,
-    "delta": 2526,
+    "codescent_tokens": 1990,
+    "delta": 2175,
     "naive_tokens": 4165,
-    "ratio": 0.393517
+    "ratio": 0.477791
   }
 }

@@ -4,18 +4,12 @@ from typing import TYPE_CHECKING, Final, TypedDict
 
 from codescent.services.freshness import confidence_for_results, warnings_for_results
 from codescent.services.search import SearchService
+from codescent.services.search_support import SearchResultPayload  # noqa: TC001
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
 SAMPLE_FILE_LIMIT: Final = 20
-
-
-class SearchResultPayload(TypedDict):
-    path: str
-    score: float
-    reasons: tuple[str, ...]
-    snippet: str | None
 
 
 class TodoSearchResultPayload(TypedDict):
@@ -96,9 +90,10 @@ def register_search_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
             "Use CodeScent before broad grep or large reads to search content "
-            "with bounded snippets and ranking reasons. This read-only tool "
-            "returns capped snippets, confidence, and warnings instead of full "
-            "source files."
+            "with bounded results and ranking reasons. This read-only tool "
+            "collapses each match to its enclosing function/class signature "
+            "(confidence exact for Python, heuristic for TS/JS) instead of raw "
+            "lines; pass expand=True for the full per-line snippets."
         ),
     )(search_content)
 
@@ -158,12 +153,14 @@ def search_content(
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: str | None = None,
+    expand: bool = False,
 ) -> SearchToolPayload:
     page = SearchService(repo).search_content_page(
         query,
         limit=limit,
         cursor=cursor,
         line_budget=1,
+        expand=expand,
     )
     return {
         "ok": True,
@@ -183,11 +180,13 @@ def multi_search_content(
     queries: tuple[str, ...],
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
+    expand: bool = False,
 ) -> MultiSearchToolPayload:
     results = SearchService(repo).multi_search_content(
         queries,
         limit=limit,
         line_budget=1,
+        expand=expand,
     )
     return {
         "ok": True,

@@ -7,7 +7,9 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final, TypedDict
 
 from codescent.core.models import PageOptions
+from codescent.core.symbol_formatter import CollapsedSymbol  # noqa: TC001
 from codescent.engine.inventory import build_file_inventory
+from codescent.engine.source_read import read_source_lines
 from codescent.services.config import ConfigService
 from codescent.services.git import detect_git_state, git_changed_paths
 from codescent.storage import RepositoryStorage, initialize_storage
@@ -28,6 +30,9 @@ class SearchResultPayload(TypedDict):
     score: float
     reasons: tuple[str, ...]
     snippet: str | None
+    # Enclosing function/class for content/grep hits (U4 collapse-to-symbol).
+    # None for path-only results and module-level matches.
+    symbol: CollapsedSymbol | None
 
 
 class TodoSearchResultPayload(TypedDict):
@@ -49,6 +54,11 @@ class TestSearchResultPayload(TypedDict):
 class SearchPagePayload(TypedDict):
     results: tuple[SearchResultPayload, ...]
     next_cursor: str | None
+
+
+def searchable_lines(repo_root: Path, relative_path: str) -> list[str]:
+    source = read_source_lines(repo_root / relative_path)
+    return list(source.lines or ())
 
 
 def sort_results(

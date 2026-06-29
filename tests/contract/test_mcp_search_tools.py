@@ -16,6 +16,7 @@ class ToolSearchResult(BaseModel):
     score: float = Field(ge=0)
     reasons: tuple[str, ...]
     snippet: str | None = None
+    symbol: dict[str, object] | None = None
 
 
 class SearchToolPayload(BaseModel):
@@ -148,7 +149,14 @@ async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     assert content_payload.warnings == ()
     assert content_payload.results[0].path == "src/app.py"
     assert "content_match" in content_payload.results[0].reasons
-    assert content_payload.results[0].snippet == "# TODO: handle billing"
+    # The match is the in-body marker comment; collapse-to-symbol (U4) returns
+    # the enclosing function signature instead of the bare line.
+    assert "collapsed_to_symbol" in content_payload.results[0].reasons
+    assert content_payload.results[0].snippet == "def run() -> None:"
+    symbol = content_payload.results[0].symbol
+    assert symbol is not None
+    assert symbol["name"] == "run"
+    assert symbol["confidence"] == "exact"
 
 
 @pytest.mark.anyio
