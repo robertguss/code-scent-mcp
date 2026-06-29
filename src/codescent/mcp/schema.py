@@ -41,6 +41,7 @@ _TOOL_MODULES: Final[tuple[str, ...]] = (
     "search_tools",
     "context_tools",
     "answer_pack_tools",
+    "architecture_tools",
     "result_tools",
     "finding_tools",
     "planning_tools",
