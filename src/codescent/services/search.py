@@ -8,6 +8,7 @@ from codescent.core.paths import resolve_repo_root
 from codescent.core.symbol_formatter import CollapsedSymbol, collapse_line
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.search import rank_path
+from codescent.engine.search.multi_grep import multi_grep
 from codescent.services.config import ConfigService
 from codescent.services.fff_backend import select_search_backend
 from codescent.services.search_collapse import (
@@ -38,7 +39,6 @@ from codescent.services.search_support import (
     changed_files,
     cursor_to_offset,
     frecency_scores,
-    match_text,
     merge_reasons,
     page_results,
     record_frecency,
@@ -175,12 +175,13 @@ class SearchService:
             if allow is not None and not allow(item.path):
                 continue
             lines = searchable_lines(repo_root, item.path)
+            line_matches = multi_grep(queries, lines)
+            if not any(line_matches.values()):
+                continue
             spans, confidence = file_spans(repo_root, item, expand=expand)
             score, base_reasons = content_signals(item.path, changed, frecency)
             for query in queries:
-                for index, line in enumerate(lines):
-                    if match_text(line, query) is None:
-                        continue
+                for index in line_matches.get(query, ()):
                     if expand:
                         hit_snippet = snippet(lines, index, line_budget)
                         hit_symbol: CollapsedSymbol | None = None
