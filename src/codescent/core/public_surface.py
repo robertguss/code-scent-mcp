@@ -123,6 +123,7 @@ POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "refactor_preflight",
         "explain_finding",
         "subjective_review",
+        "answer_pack",
     },
 )
 
@@ -158,6 +159,7 @@ REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "refactor_preflight",
         "explain_finding",
         "subjective_review",
+        "answer_pack",
     },
 )
 
@@ -236,6 +238,7 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _registered_post_mvp_entry("refactor_preflight", "planning"),
         _registered_post_mvp_entry("explain_finding", "planning"),
         _registered_post_mvp_entry("subjective_review", "health"),
+        _registered_post_mvp_entry("answer_pack", "repository"),
     ),
     cli_commands=(
         _mvp_entry("init", "repository"),

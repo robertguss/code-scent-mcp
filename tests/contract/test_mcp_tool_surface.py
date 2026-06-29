@@ -61,6 +61,7 @@ MVP_TOOL_NAMES = {
     "how_to_use",
     "refactor_preflight",
     "subjective_review",
+    "answer_pack",
 }
 
 
