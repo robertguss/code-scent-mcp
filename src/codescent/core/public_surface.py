@@ -1,6 +1,28 @@
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Final
+from typing import Final, Literal, cast, get_args
+
+# Output shape requested from the bounded search/grep tools (plan unit U5).
+# `content` is the collapse-aware default; the others trade content for a
+# cheaper shape (paths, a tally, or minimal match sites). Part of the tool
+# contract, so it lives in the public surface registry.
+OutputMode = Literal["content", "files", "count", "usage"]
+SEARCH_OUTPUT_MODES: Final[frozenset[str]] = frozenset(get_args(OutputMode))
+
+
+def normalize_output_mode(value: str) -> OutputMode:
+    """Map a requested output mode to a known mode, degrading unknowns.
+
+    Args:
+        value: The requested output mode (possibly an unrecognized string).
+
+    Returns:
+        The matching :data:`OutputMode`, or ``"content"`` when ``value`` is not
+        a recognized mode (defensive parsing rather than a hard failure).
+    """
+    if value in SEARCH_OUTPUT_MODES:
+        return cast("OutputMode", value)
+    return "content"
 
 
 class SurfaceStage(StrEnum):

@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, TypedDict
 
+from codescent.core.public_surface import normalize_output_mode
 from codescent.services.freshness import confidence_for_results, warnings_for_results
 from codescent.services.search import SearchService
-from codescent.services.search_support import SearchResultPayload  # noqa: TC001
+from codescent.services.search_support import SearchResultPayload
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
+
+    from codescent.core.public_surface import OutputMode
 
 SAMPLE_FILE_LIMIT: Final = 20
 
@@ -34,12 +37,36 @@ class AdvisoryToolFields(TypedDict):
     next_tools: tuple[str, ...]
 
 
+class FileResultPayload(TypedDict):
+    # output_mode="files": distinct locations only, no snippets/symbols.
+    path: str
+
+
+class UsageResultPayload(TypedDict):
+    # output_mode="usage": minimal reference-style match sites for impact scans.
+    path: str
+    line: int | None
+    symbol: str | None
+
+
+class MatchCountPayload(TypedDict):
+    # output_mode="count": a tally instead of content.
+    total_matches: int
+    file_count: int
+
+
+# One result field across every output mode; each mode emits a homogeneous tuple.
+SearchResultItem = SearchResultPayload | FileResultPayload | UsageResultPayload
+
+
 class SearchToolPayload(TypedDict):
     ok: bool
     query: str
     limit: int
+    output_mode: str
     next_cursor: str | None
-    results: tuple[SearchResultPayload, ...]
+    results: tuple[SearchResultItem, ...]
+    count: MatchCountPayload | None
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
@@ -49,7 +76,9 @@ class MultiSearchToolPayload(TypedDict):
     ok: bool
     queries: tuple[str, ...]
     limit: int
-    results: tuple[SearchResultPayload, ...]
+    output_mode: str
+    results: tuple[SearchResultItem, ...]
+    count: MatchCountPayload | None
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
@@ -90,17 +119,18 @@ def register_search_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
             "Use CodeScent before broad grep or large reads to search content "
-            "with bounded results and ranking reasons. This read-only tool "
-            "collapses each match to its enclosing function/class signature "
-            "(confidence exact for Python, heuristic for TS/JS) instead of raw "
-            "lines; pass expand=True for the full per-line snippets."
+            "with bounded results and ranking reasons. Collapses each match to "
+            "its enclosing function/class signature (exact for Python, heuristic "
+            "for TS/JS); pass expand=True for full lines. output_mode picks the "
+            "shape: content (default), files, count, or usage."
         ),
     )(search_content)
 
     _ = mcp.tool(
         description=(
             "Use CodeScent to search multiple content queries with bounded, "
-            "deduped snippets and query-level ranking reasons."
+            "deduped snippets and query-level ranking reasons. output_mode picks "
+            "the shape: content, files, count, or usage."
         ),
     )(multi_search_content)
 
@@ -132,29 +162,41 @@ def search_files(
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: str | None = None,
+    output_mode: str = "content",
 ) -> SearchToolPayload:
+    mode = normalize_output_mode(output_mode)
+    # ponytail: file results carry no symbol/line, so usage has nothing to show;
+    # degrade it to content rather than emit null-filled usage sites.
+    if mode == "usage":
+        mode = "content"
     page = SearchService(repo).search_files_page(query, limit=limit, cursor=cursor)
+    matches = page["results"]
+    results, count = _shape_results(matches, mode)
     return {
         "ok": True,
         "query": query,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
+        "output_mode": mode,
         "next_cursor": page["next_cursor"],
-        "results": page["results"],
+        "results": results,
+        "count": count,
         **_advisory_fields(
-            has_results=bool(page["results"]),
+            has_results=bool(matches),
             result_kind="file paths",
             next_tools=("search_content", "get_repo_map"),
         ),
     }
 
 
-def search_content(
+def search_content(  # noqa: PLR0913 - MCP tool exposes orthogonal shape toggles.
     query: str,
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: str | None = None,
     expand: bool = False,
+    output_mode: str = "content",
 ) -> SearchToolPayload:
+    mode = normalize_output_mode(output_mode)
     page = SearchService(repo).search_content_page(
         query,
         limit=limit,
@@ -162,14 +204,18 @@ def search_content(
         line_budget=1,
         expand=expand,
     )
+    matches = page["results"]
+    results, count = _shape_results(matches, mode)
     return {
         "ok": True,
         "query": query,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
+        "output_mode": mode,
         "next_cursor": page["next_cursor"],
-        "results": page["results"],
+        "results": results,
+        "count": count,
         **_advisory_fields(
-            has_results=bool(page["results"]),
+            has_results=bool(matches),
             result_kind="content matches",
             next_tools=("search_files", "get_repo_map"),
         ),
@@ -181,20 +227,25 @@ def multi_search_content(
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
     expand: bool = False,
+    output_mode: str = "content",
 ) -> MultiSearchToolPayload:
-    results = SearchService(repo).multi_search_content(
+    mode = normalize_output_mode(output_mode)
+    matches = SearchService(repo).multi_search_content(
         queries,
         limit=limit,
         line_budget=1,
         expand=expand,
     )
+    results, count = _shape_results(matches, mode)
     return {
         "ok": True,
         "queries": queries,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
+        "output_mode": mode,
         "results": results,
+        "count": count,
         **_advisory_fields(
-            has_results=bool(results),
+            has_results=bool(matches),
             result_kind="content matches",
             next_tools=("search_files", "search_content", "get_repo_map"),
         ),
@@ -211,8 +262,10 @@ def search_changed_files(
         "ok": True,
         "query": query,
         "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
+        "output_mode": "content",
         "next_cursor": None,
         "results": results,
+        "count": None,
         **_advisory_fields(
             has_results=bool(results),
             result_kind="changed files",
@@ -269,6 +322,68 @@ def search_tests(  # noqa: PLR0913 - MCP tool exposes distinct target inputs.
             next_tools=("select_tests", "search_files", "search_content"),
         ),
     }
+
+
+def _shape_results(
+    matches: tuple[SearchResultPayload, ...],
+    mode: OutputMode,
+) -> tuple[tuple[SearchResultItem, ...], MatchCountPayload | None]:
+    """Reshape collapse-aware content matches into the requested output mode.
+
+    Args:
+        matches: The bounded, collapse-aware content results from the service.
+        mode: The normalized output mode controlling the payload shape.
+
+    Returns:
+        A ``(results, count)`` pair: ``count`` is populated only for the
+        ``count`` mode, and ``results`` is empty there.
+    """
+    if mode == "files":
+        return _distinct_files(matches), None
+    if mode == "count":
+        return (), _match_count(matches)
+    if mode == "usage":
+        return _usage_sites(matches), None
+    return matches, None
+
+
+def _distinct_files(
+    matches: tuple[SearchResultPayload, ...],
+) -> tuple[FileResultPayload, ...]:
+    paths = dict.fromkeys(match["path"] for match in matches)
+    return tuple({"path": path} for path in paths)
+
+
+def _usage_sites(
+    matches: tuple[SearchResultPayload, ...],
+) -> tuple[UsageResultPayload, ...]:
+    sites: list[UsageResultPayload] = []
+    for match in matches:
+        symbol = match["symbol"]
+        if symbol is None:
+            sites.append({"path": match["path"], "line": None, "symbol": None})
+            continue
+        sites.append(
+            {
+                "path": match["path"],
+                "line": symbol["start_line"],
+                "symbol": symbol["name"],
+            },
+        )
+    return tuple(sites)
+
+
+def _match_count(matches: tuple[SearchResultPayload, ...]) -> MatchCountPayload:
+    # ponytail: bounded to the top-N page (MAX_LIMIT=20); the tally reflects the
+    # returned window, not the whole repo. Raise the service cap if true totals
+    # are needed. Collapsed hits carry match_count; module-level hits count as 1.
+    total = 0
+    files: set[str] = set()
+    for match in matches:
+        files.add(match["path"])
+        symbol = match["symbol"]
+        total += symbol["match_count"] if symbol is not None else 1
+    return {"total_matches": total, "file_count": len(files)}
 
 
 def _advisory_fields(
