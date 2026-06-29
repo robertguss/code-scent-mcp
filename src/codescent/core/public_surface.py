@@ -124,6 +124,7 @@ POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "explain_finding",
         "subjective_review",
         "answer_pack",
+        "get_schema",
     },
 )
 
@@ -160,6 +161,7 @@ REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
         "explain_finding",
         "subjective_review",
         "answer_pack",
+        "get_schema",
     },
 )
 
@@ -239,6 +241,7 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
         _registered_post_mvp_entry("explain_finding", "planning"),
         _registered_post_mvp_entry("subjective_review", "health"),
         _registered_post_mvp_entry("answer_pack", "repository"),
+        _registered_post_mvp_entry("get_schema", "guidance"),
     ),
     cli_commands=(
         _mvp_entry("init", "repository"),

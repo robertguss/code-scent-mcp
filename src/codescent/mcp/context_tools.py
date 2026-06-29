@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, TypedDict, cast
 
+from codescent.core.defensive import coerce_int, resolve_query
 from codescent.core.paths import resolve_repo_root
 from codescent.core.preservation import estimate_token_usage
 from codescent.core.symbol_formatter import format_symbol_search_results
@@ -197,13 +198,16 @@ def get_file_context(path: str, repo: str = ".") -> FileContextToolPayload:
     }
 
 
-def find_symbol(
-    query: str,
+def find_symbol(  # noqa: PLR0913 - additive defensive alias for sloppy inputs.
+    query: str = "",
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
     project_id: str | None = None,
     session_id: str | None = None,
+    pattern: str | None = None,
 ) -> FindSymbolToolPayload:
+    query = resolve_query(query, pattern)
+    limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
     repo_root = resolve_repo_root(repo)
     freshness = ensure_fresh_index(repo_root)
     results = ContextService(repo_root).find_symbol(query, limit=limit)
@@ -422,6 +426,8 @@ def find_references(
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: int = 0,
 ) -> GraphToolPayload:
+    limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
+    cursor = coerce_int(cursor, default=0)
     payload = ContextService(repo).find_references(
         query,
         limit=limit,
@@ -449,6 +455,8 @@ def find_callers(
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: int = 0,
 ) -> GraphToolPayload:
+    limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
+    cursor = coerce_int(cursor, default=0)
     payload = ContextService(repo).find_callers(query, limit=limit, cursor=cursor)
     return {
         "ok": True,
@@ -472,6 +480,8 @@ def find_callees(
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: int = 0,
 ) -> GraphToolPayload:
+    limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
+    cursor = coerce_int(cursor, default=0)
     payload = ContextService(repo).find_callees(query, limit=limit, cursor=cursor)
     return {
         "ok": True,
@@ -495,6 +505,8 @@ def get_related_files(
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: int = 0,
 ) -> RelatedFilesToolPayload:
+    limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
+    cursor = coerce_int(cursor, default=0)
     payload = ContextService(repo).get_related_files(
         path,
         limit=limit,

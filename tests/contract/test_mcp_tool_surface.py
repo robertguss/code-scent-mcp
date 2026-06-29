@@ -62,6 +62,7 @@ MVP_TOOL_NAMES = {
     "refactor_preflight",
     "subjective_review",
     "answer_pack",
+    "get_schema",
 }
 
 

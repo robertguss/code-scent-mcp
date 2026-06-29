@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, TypedDict
 
+from codescent.core.defensive import coerce_int, or_empty, resolve_query
 from codescent.core.public_surface import normalize_output_mode
 from codescent.services.freshness import confidence_for_results, warnings_for_results
 from codescent.services.search import SearchService
-from codescent.services.search_support import SearchResultPayload
+from codescent.services.search_support import SearchPagePayload, SearchResultPayload
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -13,6 +14,10 @@ if TYPE_CHECKING:
     from codescent.core.public_surface import OutputMode
 
 SAMPLE_FILE_LIMIT: Final = 20
+
+# A well-formed empty page for the graceful 0-result fallback: a malformed search
+# input degrades to this bounded result instead of raising.
+_EMPTY_PAGE: Final[SearchPagePayload] = {"results": (), "next_cursor": None}
 
 
 class TodoSearchResultPayload(TypedDict):
@@ -157,19 +162,27 @@ def register_search_tools(mcp: FastMCP) -> None:
     )(search_tests)
 
 
-def search_files(
-    query: str,
+def search_files(  # noqa: PLR0913 - additive defensive alias for sloppy inputs.
+    query: str = "",
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: str | None = None,
     output_mode: str = "content",
+    pattern: str | None = None,
 ) -> SearchToolPayload:
+    query = resolve_query(query, pattern)
+    limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
     mode = normalize_output_mode(output_mode)
     # ponytail: file results carry no symbol/line, so usage has nothing to show;
     # degrade it to content rather than emit null-filled usage sites.
     if mode == "usage":
         mode = "content"
-    page = SearchService(repo).search_files_page(query, limit=limit, cursor=cursor)
+    page = or_empty(
+        lambda: SearchService(repo).search_files_page(
+            query, limit=limit, cursor=cursor
+        ),
+        _EMPTY_PAGE,
+    )
     matches = page["results"]
     results, count = _shape_results(matches, mode)
     return {
@@ -189,20 +202,26 @@ def search_files(
 
 
 def search_content(  # noqa: PLR0913 - MCP tool exposes orthogonal shape toggles.
-    query: str,
+    query: str = "",
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
     cursor: str | None = None,
     expand: bool = False,
     output_mode: str = "content",
+    pattern: str | None = None,
 ) -> SearchToolPayload:
+    query = resolve_query(query, pattern)
+    limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
     mode = normalize_output_mode(output_mode)
-    page = SearchService(repo).search_content_page(
-        query,
-        limit=limit,
-        cursor=cursor,
-        line_budget=1,
-        expand=expand,
+    page = or_empty(
+        lambda: SearchService(repo).search_content_page(
+            query,
+            limit=limit,
+            cursor=cursor,
+            line_budget=1,
+            expand=expand,
+        ),
+        _EMPTY_PAGE,
     )
     matches = page["results"]
     results, count = _shape_results(matches, mode)
@@ -229,12 +248,16 @@ def multi_search_content(
     expand: bool = False,
     output_mode: str = "content",
 ) -> MultiSearchToolPayload:
+    limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
     mode = normalize_output_mode(output_mode)
-    matches = SearchService(repo).multi_search_content(
-        queries,
-        limit=limit,
-        line_budget=1,
-        expand=expand,
+    matches = or_empty(
+        lambda: SearchService(repo).multi_search_content(
+            queries,
+            limit=limit,
+            line_budget=1,
+            expand=expand,
+        ),
+        (),
     )
     results, count = _shape_results(matches, mode)
     return {
