@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeScent — The Quality-Aware Navigator (Roadmap v2)</title>
+<style>
+  :root{
+    --bg:#fbfcfe; --surface:#ffffff; --surface-2:#f4f6fb; --text:#1b2230;
+    --muted:#5b6676; --border:#e6e9f0; --accent:#7c3aed; --accent-2:#0d9488;
+    --strong:#16a34a; --moderate:#d97706; --minor:#aab3c0;
+    --cbm:#4f46e5; --cbm-bg:#ecebff; --fff:#ea580c; --fff-bg:#fdeee3; --both:#0d9488; --both-bg:#e3f6f2;
+    --llm:#db2777; --llm-bg:#fde7f1;
+    --eS:#16a34a; --eM:#d97706; --eL:#ea580c; --eXL:#dc2626;
+    --shadow:0 1px 2px rgba(20,30,50,.06),0 8px 24px rgba(20,30,50,.06);
+    --radius:14px; --maxw:920px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e1117; --surface:#161b22; --surface-2:#1b222c; --text:#e6edf3;
+      --muted:#9aa7b6; --border:#28313d; --accent:#a78bfa; --accent-2:#2dd4bf;
+      --strong:#34d399; --moderate:#fbbf24; --minor:#5b6676;
+      --cbm:#818cf8; --cbm-bg:#1e1b3a; --fff:#fb923c; --fff-bg:#33210f; --both:#2dd4bf; --both-bg:#103029;
+      --llm:#f472b6; --llm-bg:#3a1226;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e1117; --surface:#161b22; --surface-2:#1b222c; --text:#e6edf3;
+    --muted:#9aa7b6; --border:#28313d; --accent:#a78bfa; --accent-2:#2dd4bf;
+    --strong:#34d399; --moderate:#fbbf24; --minor:#5b6676;
+    --cbm:#818cf8; --cbm-bg:#1e1b3a; --fff:#fb923c; --fff-bg:#33210f; --both:#2dd4bf; --both-bg:#103029;
+    --llm:#f472b6; --llm-bg:#3a1226;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+    line-height:1.65;font-size:16.5px;-webkit-font-smoothing:antialiased}
+  code,kbd,.mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+  code{background:var(--surface-2);border:1px solid var(--border);padding:.06em .4em;border-radius:6px;white-space:nowrap}
+  .topbar{position:sticky;top:0;z-index:50;backdrop-filter:saturate(1.4) blur(8px);
+    background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom:1px solid var(--border)}
+  .topbar-in{max-width:var(--maxw);margin:0 auto;padding:.6rem 1.25rem;display:flex;align-items:center;gap:.9rem}
+  .brand{font-weight:700;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:center;gap:.55rem}
+  .brand .pip{width:11px;height:11px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+  .navlinks{display:flex;gap:.25rem;flex-wrap:wrap}
+  .navlinks a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:.3rem .55rem;border-radius:8px}
+  .navlinks a:hover{color:var(--text);background:var(--surface-2)}
+  .toggle{cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);
+    width:34px;height:34px;border-radius:9px;font-size:1rem;display:grid;place-items:center}
+  .toggle:hover{border-color:var(--accent)}
+  @media(max-width:820px){.navlinks{display:none}}
+  main{max-width:var(--maxw);margin:0 auto;padding:0 1.25rem 5rem}
+  .hero{padding:3rem 0 1.4rem;border-bottom:1px solid var(--border);margin-bottom:2rem}
+  .eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:2.3rem;line-height:1.12;letter-spacing:-.025em;margin:.5rem 0 .6rem}
+  .lede{font-size:1.16rem;color:var(--muted);max-width:60ch;margin:0}
+  .meta{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1.3rem}
+  .chip{font-size:.76rem;font-weight:600;color:var(--muted);background:var(--surface);
+    border:1px solid var(--border);padding:.32rem .7rem;border-radius:999px}
+  .chip b{color:var(--text)}
+  h2{font-size:1.5rem;letter-spacing:-.02em;margin:2.8rem 0 .3rem;padding-top:.6rem;scroll-margin-top:72px}
+  h2 .sec{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:.5rem;font-weight:800}
+  p{margin:.7rem 0}
+  a{color:var(--accent)}
+  .northstar{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface));
+    border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:14px;padding:1.2rem 1.4rem;margin:1.4rem 0;box-shadow:var(--shadow)}
+  .northstar .k{font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+  .northstar p{font-size:1.18rem;margin:.3rem 0 0;line-height:1.45}
+  .callout{border:1px solid var(--border);border-left:4px solid var(--accent);background:var(--surface);
+    border-radius:12px;padding:1.05rem 1.2rem;margin:1.3rem 0;box-shadow:var(--shadow)}
+  .callout.key{border-left-color:var(--accent-2)}
+  .callout.warn{border-left-color:var(--llm)}
+  .callout h4{margin:0 0 .35rem;font-size:.98rem;display:flex;align-items:center;gap:.5rem}
+  .callout p{margin:.4rem 0}.callout .ic{font-size:1.05rem}
+  .tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin:1.2rem 0}
+  table{border-collapse:collapse;width:100%;font-size:.9rem;background:var(--surface)}
+  th,td{padding:.6rem .8rem;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+  thead th{position:sticky;top:0;background:var(--surface-2);font-size:.76rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);font-weight:700;z-index:1}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--surface-2)}
+  td.c,th.c{text-align:center;white-space:nowrap}
+  .eff{font-size:.72rem;font-weight:800;padding:.14rem .46rem;border-radius:7px;color:#fff}
+  .e-S{background:var(--eS)}.e-M{background:var(--eM)}.e-L{background:var(--eL)}.e-XL{background:var(--eXL)}
+  ul.tight{margin:.6rem 0;padding-left:1.2rem}ul.tight li{margin:.3rem 0}
+  .calls{display:grid;gap:.7rem;margin:1.2rem 0}
+  .call{display:flex;gap:.9rem;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1.1rem;box-shadow:var(--shadow)}
+  .call .cn{flex:0 0 auto;width:1.9rem;height:1.9rem;border-radius:8px;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-2));font-size:.9rem}
+  .call .ct{margin:0;font-size:.95rem}.call .ct b{color:var(--text)}
+  .arch{display:grid;gap:.6rem;margin:1.2rem 0}
+  .arch .engines{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem}
+  @media(max-width:680px){.arch .engines{grid-template-columns:1fr 1fr}}
+  .box{border:1px solid var(--border);border-radius:12px;padding:.85rem .95rem;background:var(--surface);box-shadow:var(--shadow)}
+  .box .t{font-weight:800;font-size:.92rem;margin:0 0 .15rem}
+  .box .d{margin:0;font-size:.8rem;color:var(--muted)}
+  .box.brain{border-left:4px solid var(--accent);text-align:center}
+  .box.eng{border-top:3px solid var(--both)}
+  .box.eng.native{border-top-color:var(--muted)}.box.eng.cbm{border-top-color:var(--cbm)}
+  .box.eng.fff{border-top-color:var(--fff)}.box.eng.llm{border-top-color:var(--llm)}
+  .arrow{text-align:center;color:var(--muted);font-size:1rem;line-height:1}
+  .box.out{border-left:4px solid var(--accent-2);text-align:center;background:var(--surface-2)}
+  .box.signal{border-left:4px solid var(--moderate);background:color-mix(in srgb,var(--moderate) 7%,var(--surface))}
+  .timeline{margin:1.6rem 0 0}
+  .phase{position:relative;padding:0 0 1.5rem 3.4rem;border-left:2px solid var(--border);margin-left:1.1rem}
+  .phase:last-child{border-left:2px solid transparent}
+  .phase .num{position:absolute;left:-1.15rem;top:-.1rem;width:2.3rem;height:2.3rem;border-radius:50%;
+    display:grid;place-items:center;font-weight:800;color:#fff;font-size:.92rem;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:var(--shadow);border:3px solid var(--bg)}
+  .phase.moon .num{background:linear-gradient(135deg,#db2777,#f59e0b)}
+  .phase .body{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.2rem;box-shadow:var(--shadow)}
+  .phase h3{margin:0 0 .15rem;font-size:1.12rem}
+  .phase .pmeta{display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0 .3rem}
+  .pill{font-size:.71rem;font-weight:700;padding:.16rem .55rem;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
+  .phase ul{margin:.5rem 0 0;padding-left:0;list-style:none}
+  .phase li{margin:.4rem 0;padding-left:0;font-size:.92rem}
+  .src{font-size:.66rem;font-weight:800;padding:.1rem .42rem;border-radius:6px;margin-right:.5rem;letter-spacing:.03em;vertical-align:.06em}
+  .s-cbm{color:var(--cbm);background:var(--cbm-bg)}.s-fff{color:var(--fff);background:var(--fff-bg)}
+  .s-both{color:var(--both);background:var(--both-bg)}.s-llm{color:var(--llm);background:var(--llm-bg)}
+  .legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin:.2rem 0 0}
+  .legend span{display:inline-flex;align-items:center;gap:.35rem}
+  hr{border:0;border-top:1px solid var(--border);margin:2.4rem 0}
+  footer{color:var(--muted);font-size:.85rem;text-align:center;padding-top:2rem}
+  .totop{position:fixed;right:1rem;bottom:1rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.5rem .7rem;text-decoration:none;color:var(--muted);box-shadow:var(--shadow);font-size:.85rem}
+  .totop:hover{color:var(--text);border-color:var(--accent)}
+</style>
+</head>
+<body id="top">
+
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="brand"><span class="pip"></span>CodeScent Roadmap v2</span>
+    <nav class="navlinks">
+      <a href="#settled">What's settled</a>
+      <a href="#arch">Architecture</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#order">Why this order</a>
+      <a href="#monday">Monday</a>
+      <a href="#next">Next</a>
+    </nav>
+    <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
+  </div>
+</div>
+
+<main>
+  <header class="hero">
+    <div class="eyebrow">Unified roadmap · v2 · navigator-first</div>
+    <h1>CodeScent — the quality-aware navigator</h1>
+    <p class="lede">Hand the model the smallest, most relevant, most trustworthy slice of your codebase — so its
+      tokens go to thinking, not searching.</p>
+    <div class="meta">
+      <span class="chip">Heart: <b>Quality-aware navigator</b></span>
+      <span class="chip">Rule: <b>Trustworthy facts + optional smart layer</b></span>
+      <span class="chip">Network: <b>open</b></span>
+      <span class="chip">Sources: <b>fff · cbm · LLM</b></span>
+      <span class="chip">Date: <b>2026-06-29</b></span>
+    </div>
+  </header>
+
+  <section id="settled">
+    <h2><span class="sec">1</span>What's settled</h2>
+    <div class="northstar">
+      <div class="k">North star</div>
+      <p><b>CodeScent is the LLM's navigator for your codebase.</b> It finds the right code, knows which code
+        is healthy or risky, and feeds the model a tight, trustworthy bundle — fewer tokens, sharper focus.</p>
+    </div>
+
+    <p>One scarce resource sits under everything: <b>the model's context window.</b> Tokens cost money, junk
+      dilutes attention, and compaction erases memory. Every decision below serves that one truth.</p>
+
+    <div class="calls">
+      <div class="call"><div class="cn">1</div><p class="ct"><b>A navigator, not an engine.</b> CodeScent doesn't out-search fff or out-graph cbm — it <i>drives</i> them, plus a native floor and an LLM layer, and bounds the result. Orchestration is the product.</p></div>
+      <div class="call"><div class="cn">2</div><p class="ct"><b>Quality-awareness is the moat.</b> fff and cbm find code; neither knows if it's any good. CodeScent's smell/health work stops being a separate product and becomes the <i>ranking + safety signal</i> that makes the navigator smarter than either. <b>Inspector serves Navigator.</b></p></div>
+      <div class="call"><div class="cn">3</div><p class="ct"><b>Trustworthy facts vs probabilistic judgment.</b> Facts (where is X, who calls Y, what's the smell, the CI gate) stay <b>deterministic — always the floor and the fallback</b>. Judgment (rank, summarize, suggest, understand vague asks) can use the LLM: <b>opt-in, cached, labeled.</b> This replaces "offline" — network is fine; just don't let guesses poison the facts.</p></div>
+      <div class="call"><div class="cn">4</div><p class="ct"><b>One yardstick for every decision.</b> <i>Does it get the right code into the model with fewer tokens and tighter focus?</i> Yes → build it. No → cut it. Borrow-mode, API-vs-sampling, every "should we?" answers to this ruler.</p></div>
+      <div class="call"><div class="cn">5</div><p class="ct"><b>Cheap token wins before engines.</b> Tighten the answers we already give (native, no deps) before wiring fff, cbm, or the LLM layer. Instant payoff, zero risk.</p></div>
+    </div>
+
+    <div class="callout">
+      <h4><span class="ic">↺</span> What this demotes (not deletes)</h4>
+      <p>The heavy Inspector apparatus — full findings lifecycle, calibration, SARIF, the CI health ratchet —
+        stays as an <b>optional module</b> and a source of ranking signal. It just stops <i>driving</i> the
+        roadmap. The navigation mission leads; quality feeds it.</p>
+    </div>
+  </section>
+
+  <section id="arch">
+    <h2><span class="sec">2</span>The architecture</h2>
+    <div class="arch">
+      <div class="box brain"><p class="t">CodeScent — the navigator brain</p><p class="d">Picks the right engine · ranks by relevance + quality · bounds output · result-handles · keeps facts trustworthy</p></div>
+      <div class="arrow">▲ drives &amp; bounds ▲</div>
+      <div class="engines">
+        <div class="box eng native"><p class="t">Native</p><p class="d">stdlib <code>ast</code>, health, import graph. The always-on floor.</p></div>
+        <div class="box eng fff"><p class="t">fff <span style="font-weight:400;color:var(--muted)">· opt</span></p><p class="d">Fuzzy path, grep, frecency, git. Fast finder.</p></div>
+        <div class="box eng cbm"><p class="t">cbm <span style="font-weight:400;color:var(--muted)">· opt</span></p><p class="d">Graph, type-accurate calls, clusters, complexity.</p></div>
+        <div class="box eng llm"><p class="t">LLM <span style="font-weight:400;color:var(--muted)">· opt</span></p><p class="d">Semantic, rerank, query understanding, judgment.</p></div>
+      </div>
+      <div class="box signal"><p class="t">⚑ Quality / health — the cross-cutting signal (your moat)</p><p class="d">Smells, hotspots, dead code, duplication, churn — annotate &amp; rank every result so the navigator spends tokens on code worth reading and flags the traps.</p></div>
+      <div class="arrow">▼ one bounded, trustworthy, LLM-shaped answer ▼</div>
+      <div class="box out"><p class="t">Tight context for the model</p><p class="d">The right code, ranked by what matters, with risk flagged — the fewest tokens that answer the task.</p></div>
+    </div>
+    <p>Native is the floor and never fails. fff, cbm, and the LLM layer are optional accelerators — present, they
+      upgrade the answer; absent, the navigator still works. Quality-awareness threads through all of it.</p>
+  </section>
+
+  <section id="roadmap">
+    <h2><span class="sec">3</span>The roadmap</h2>
+    <div class="legend">
+      <span>Source:</span>
+      <span><span class="src s-fff">FFF</span></span>
+      <span><span class="src s-cbm">CBM</span></span>
+      <span><span class="src s-llm">LLM</span></span>
+      <span><span class="src s-both">BOTH</span> synthesis</span>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="c">Phase</th><th>Theme</th><th class="c">Deps</th><th>Serves the yardstick by…</th><th class="c">Effort</th></tr></thead>
+        <tbody>
+          <tr><td class="c"><b>0</b></td><td>Frame &amp; measure</td><td class="c">none</td><td>making token savings visible</td><td class="c"><span class="eff e-S">S</span></td></tr>
+          <tr><td class="c"><b>1</b></td><td>Tighten the answers (native)</td><td class="c">none</td><td>every existing reply gets leaner</td><td class="c"><span class="eff e-M">M</span></td></tr>
+          <tr><td class="c"><b>2</b></td><td>Find fast &amp; forgiving</td><td class="c">opt fff</td><td>right file in fewer round-trips</td><td class="c"><span class="eff e-M">M</span></td></tr>
+          <tr><td class="c"><b>3</b></td><td>Quality-aware ranking <span style="color:var(--accent)">(the moat)</span></td><td class="c">opt cbm/fff</td><td>rank by what matters, flag traps</td><td class="c"><span class="eff e-L">L</span></td></tr>
+          <tr><td class="c"><b>4</b></td><td>The intelligent layer</td><td class="c">network</td><td>understand vague asks, semantic recall</td><td class="c"><span class="eff e-L">L</span></td></tr>
+          <tr><td class="c"><b>5</b></td><td>Reach &amp; proof</td><td class="c">opt</td><td>meets your swarms, guards bloat</td><td class="c"><span class="eff e-M">M</span></td></tr>
+          <tr><td class="c"><b>M</b></td><td>Moonshots</td><td class="c">2·3·4</td><td>the autonomous navigator</td><td class="c"><span class="eff e-XL">XL</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="timeline">
+      <div class="phase">
+        <div class="num">0</div>
+        <div class="body">
+          <h3>Frame &amp; measure</h3>
+          <div class="pmeta"><span class="pill">no deps</span><span class="pill">effort: S</span><span class="pill">days</span></div>
+          <ul>
+            <li><span class="src s-both">BOTH</span> Write the north star into <code>AGENTS.md</code>: <i>CodeScent is the quality-aware navigator; native is the floor; fff/cbm/LLM are optional accelerators; facts stay deterministic.</i></li>
+            <li><span class="src s-both">BOTH</span> Build the <b>token-efficiency benchmark</b> (CodeScent vs naive grep/read) — the scoreboard for the yardstick. Every later phase reports against it.</li>
+            <li><span class="src s-fff">FFF</span> Stub <code>fff_backend</code> (detect + graceful fallback), mirroring <code>cbm_backend</code>.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="num">1</div>
+        <div class="body">
+          <h3>Tighten the answers — native, no deps <span style="font-size:.8rem;color:var(--accent);font-weight:700">· ship first</span></h3>
+          <div class="pmeta"><span class="pill">no deps</span><span class="pill">effort: M</span><span class="pill">best ROI</span></div>
+          <ul>
+            <li><span class="src s-fff">FFF</span> <b><code>auto_expand_defs</code> / collapse-to-symbol</b> — search &amp; grep return the enclosing definition + signature, skip import-only lines, truncate fat lines. (One feature, merges the fff + cbm idea.)</li>
+            <li><span class="src s-fff">FFF</span> <b>Output modes</b>: content / files / count / usage — the agent picks payload shape.</li>
+            <li><span class="src s-cbm">CBM</span> <b>Answer-pack + universal <code>budget</code> / <code>max_tokens</code></b> — generalize <code>start_task</code> + result-handles to any query.</li>
+            <li><span class="src s-both">BOTH</span> <b><code>get_schema</code> self-describe</b> + LLM-defensive API (param aliases, float numbers, 0-result fallbacks).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="num">2</div>
+        <div class="body">
+          <h3>Find fast &amp; forgiving — the fff engine</h3>
+          <div class="pmeta"><span class="pill">optional fff</span><span class="pill">effort: M</span></div>
+          <ul>
+            <li><span class="src s-fff">FFF</span> Route <code>find_symbol</code> / search / grep through fff when present; fall back to <code>rapidfuzz</code>. Typo-resistant, sub-10 ms, tokenizer for free.</li>
+            <li><span class="src s-fff">FFF</span> <b>Constraints DSL</b>: <code>git:modified</code>, <code>*.rs</code>, <code>!test/</code>, <code>src/</code>, size, time — one compact prefilter param.</li>
+            <li><span class="src s-fff">FFF</span> <b>aho-corasick multi-grep</b> — "find every usage of these 8 identifiers in one call."</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="num">3</div>
+        <div class="body">
+          <h3>Quality-aware ranking — the moat</h3>
+          <div class="pmeta"><span class="pill">optional cbm/fff</span><span class="pill">effort: L</span><span class="pill">the differentiator</span></div>
+          <ul>
+            <li><span class="src s-fff">FFF</span> <b>Frecency</b> (what you actually touch) + <b>git-status</b> + query-history as ranking signals on every result.</li>
+            <li><span class="src s-both">BOTH</span> <b>Fold the Inspector in</b> — hotspots, dead-code, duplication, complexity become inline <b>annotations + rank adjustments</b> on retrieval. ("Here's the code; this one's a hotspot with a twin nearby.")</li>
+            <li><span class="src s-cbm">CBM</span> <b>One-call <code>get_architecture</code> + module view</b> — surface the clusters the cbm adapter already fetches; native Louvain fallback.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="num">4</div>
+        <div class="body">
+          <h3>The intelligent layer — network open, opt-in, cached</h3>
+          <div class="pmeta"><span class="pill">network</span><span class="pill">effort: L</span><span class="pill">deterministic fallback always</span></div>
+          <ul>
+            <li><span class="src s-llm">LLM</span> <b>Semantic search</b> (embeddings) — find <code>publish</code> when you typed <code>send</code>. The one true gap fuzzy can't close.</li>
+            <li><span class="src s-llm">LLM</span> <b>Rerank + NL→query understanding</b> — a cheap model reorders top hits and turns "where's the auth retry logic" into the right grep/graph queries.</li>
+            <li><span class="src s-llm">LLM</span> <b>Smart answer-pack</b> — the model picks what goes in the bounded brief; <b>server-side judged findings + fix suggestions</b> (upgrades the opt-in subjective review).</li>
+            <li><span class="src s-both">BOTH</span> <b>Provider abstraction</b>: completions via MCP sampling (no key) or direct API; embeddings via API or bundled model; native fallback always. Cache + label everything "subjective."</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="num">5</div>
+        <div class="body">
+          <h3>Reach &amp; proof</h3>
+          <div class="pmeta"><span class="pill">optional</span><span class="pill">effort: M</span></div>
+          <ul>
+            <li><span class="src s-both">BOTH</span> <b>PreToolUse Grep/Glob hook</b> — inject fff results + cbm symbols + quality annotations into the agent's normal grep. Zero behavior change; meets your swarms where they live.</li>
+            <li><span class="src s-both">BOTH</span> <b>Benchmark → public artifact + CI gate</b> — guard token bloat forever; the OSS wow-stat.</li>
+            <li><span class="src s-cbm">CBM</span> <b><code>query_graph</code> bounded passthrough</b> for power structural questions.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase moon">
+        <div class="num">M</div>
+        <div class="body">
+          <h3>Moonshots — after the core proves out</h3>
+          <div class="pmeta"><span class="pill">depends on 2·3·4</span><span class="pill">effort: XL</span></div>
+          <ul>
+            <li><span class="src s-llm">LLM</span> <b>Autonomous retrieval planner</b> — one <code>navigate</code> entrypoint; the model routes each ask to fff / cbm / native / semantic and assembles the bounded answer.</li>
+            <li><span class="src s-both">BOTH</span> <b>Frecency × graph-centrality × quality</b> — the compound rank that knows "what matters to <i>this</i> work on <i>this</i> repo," driving context budgeting.</li>
+            <li><span class="src s-fff">FFF</span> <b>Cross-session navigation memory</b> — persist what you search/open/edit. Scoped tight: a session signal, not a second graph.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="order">
+    <h2><span class="sec">4</span>Why this order</h2>
+    <ul class="tight">
+      <li><b>Measure first (0).</b> You can't manage token spend you don't see; the benchmark makes every later win provable.</li>
+      <li><b>Cheapest wins next (1).</b> Native, zero-dep payload tightening touches every tool — instant payoff before any engine risk.</li>
+      <li><b>Fix finding before ranking (2 → 3).</b> Fast, forgiving retrieval is the floor; quality-aware ranking is the layer that makes it <i>smart</i> — and it's your moat, so it gets its own phase.</li>
+      <li><b>Intelligence rides on top (4).</b> Semantic + LLM rerank are most valuable once retrieval and quality signals exist to rank and fall back to. Network opens here, deliberately and contained.</li>
+      <li><b>Prove, then dream (5 → M).</b> The benchmark must show the core paying off before XL effort on the autonomous planner or compound ranking.</li>
+    </ul>
+  </section>
+
+  <section id="monday">
+    <h2><span class="sec">5</span>Monday move &amp; guardrails</h2>
+    <div class="callout key">
+      <h4><span class="ic">▶</span> What to do first</h4>
+      <p><b>Benchmark harness + Phase 1 <code>auto_expand_defs</code>.</b> Capture the token baseline, ship the
+        def-expansion, watch the count drop on a real session. Proof and momentum in one move.</p>
+    </div>
+    <div class="callout warn">
+      <h4><span class="ic">⚠</span> Guardrails (the kernel that survived "offline")</h4>
+      <ul class="tight">
+        <li><b>Facts stay deterministic.</b> Never let an LLM call into <code>scan_code_health</code> or the CI gate — that breaks reproducibility and calibration. LLM augments, never replaces, the fact layer.</li>
+        <li><b>LLM layer is opt-in, cached, labeled.</b> Every probabilistic result is marked "subjective" and falls back to deterministic when the call is off or fails.</li>
+        <li><b>Stay bounded.</b> Every answer keeps its bound + result-handle. The moment CodeScent returns unbounded payloads, it's just another engine.</li>
+        <li><b>Engines stay optional.</b> Remove fff, cbm, or the network and the navigator still works on native alone.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2><span class="sec">6</span>Next step</h2>
+    <p>Approve this and I'll convert it into a granular, self-documenting bead tree (via <code>br</code>):
+      Phases 0–5 + the moonshot epic, dependencies overlaid, unit + e2e tests per item, detailed comments so the
+      beads stand alone. The two mining reports remain the deep-dive backing for each item.</p>
+    <p>Tell me: bead the full Phase 0–5 set, or start with Phases 0–1 to get wins on the board fast? And do the
+      moonshots go in now or stay parked?</p>
+  </section>
+
+  <hr>
+  <footer>
+    CodeScent unified roadmap v2 · the quality-aware navigator · fff + cbm + LLM · generated 2026-06-29 ·
+    backing: <code>CBM_MINING_REPORT.html</code> · <code>FFF_MINING_REPORT.html</code>
+  </footer>
+</main>
+
+<a href="#top" class="totop">↑ Top</a>
+
+<script>
+  (function(){
+    var root=document.documentElement, btn=document.getElementById('themeBtn');
+    var saved=null; try{saved=localStorage.getItem('cbm-theme');}catch(e){}
+    if(saved){root.setAttribute('data-theme',saved);}
+    function sync(){
+      var cur=root.getAttribute('data-theme');
+      var dark = cur==='dark' || (!cur && window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches);
+      btn.textContent = dark ? '☀' : '☾';
+    }
+    btn.addEventListener('click',function(){
+      var cur=root.getAttribute('data-theme');
+      var dark = cur==='dark' || (!cur && window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches);
+      var next = dark ? 'light' : 'dark';
+      root.setAttribute('data-theme',next);
+      try{localStorage.setItem('cbm-theme',next);}catch(e){}
+      sync();
+    });
+    sync();
+  })();
+</script>
+</body>
+</html>
