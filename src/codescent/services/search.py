@@ -59,7 +59,7 @@ def _annotate_quality(
     results: tuple[SearchResultPayload, ...],
     quality: Mapping[str, PathQuality],
 ) -> tuple[SearchResultPayload, ...]:
-    """Attach the bounded inline quality annotation to each result (U13)."""
+    """Attach the bounded inline quality annotation to each result."""
     for result in results:
         annotation = quality_annotation_for(result["path"], quality)
         if annotation is not None:
@@ -70,7 +70,7 @@ def _annotate_quality(
 @dataclass(frozen=True, slots=True)
 class SearchService:
     repo_root: Path | str
-    # Optional pre-built fff engine (tests / U8 wiring). Routed through
+    # Optional pre-built fff engine (tests). Routed through
     # ``select_search_backend`` so an unhealthy client falls back to native; the
     # default (``None``) detects fff and returns native when it is absent.
     fff_client: FffClient | None = None

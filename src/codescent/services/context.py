@@ -626,7 +626,7 @@ def _persisted_risk_notes(repo_root: Path, path: str) -> tuple[str, ...]:
 
 
 def _apply_personal_signals(repo_root: Path, reasons: dict[str, set[str]]) -> None:
-    """Float up already-related files THIS developer is touching (U12).
+    """Float up already-related files THIS developer is touching.
 
     Adds the frecency / query-history / git-status reasons to existing related
     paths so a recently or frequently touched (or git-modified) related file

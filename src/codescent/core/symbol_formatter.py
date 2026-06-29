@@ -357,7 +357,7 @@ def _float_field(result: Mapping[str, object], key: str) -> float:
     return 0.0
 
 
-# --- Collapse-to-symbol engine (plan unit U4) ---------------------------------
+# --- Collapse-to-symbol engine ------------------------------------------------
 #
 # Map a content/grep match line to its enclosing function/class and return that
 # symbol's signature instead of the bare line. Python ranges come from the AST

@@ -21,7 +21,6 @@ from codescent.services.quality_signals import QualityAnnotation, quality_signal
 from codescent.storage import RepositoryStorage, initialize_storage
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
     from pathlib import Path
 
 DEFAULT_LIMIT: Final = 20
@@ -40,10 +39,10 @@ class SearchResultPayload(TypedDict):
     score: float
     reasons: tuple[str, ...]
     snippet: str | None
-    # Enclosing function/class for content/grep hits (U4 collapse-to-symbol).
+    # Enclosing function/class for content/grep hits (collapse-to-symbol).
     # None for path-only results and module-level matches.
     symbol: CollapsedSymbol | None
-    # Inline code-quality annotation (U13): hotspot/dead/duplicate/complex flags
+    # Inline code-quality annotation: hotspot/dead/duplicate/complex flags
     # plus the duplicate's twin. Absent when the path carries no quality signal.
     quality: NotRequired[QualityAnnotation | None]
 
@@ -132,11 +131,12 @@ def ranking_signals_for(repo_root: Path) -> RankingSignals:
     Shared by search, ``get_related_files`` and the task brief so every surface
     floats the same recently/frequently-touched and git-modified files.
     """
+    frecency, recent_queries = _frecency_pass(repo_root, datetime.now(UTC))
     return RankingSignals(
         changed=changed_files(repo_root),
         git_modified=git_changed_paths(repo_root),
-        frecency=frecency_scores(repo_root),
-        recent_queries=recent_query_paths(repo_root),
+        frecency=frecency,
+        recent_queries=recent_queries,
         quality=quality_signals_for(repo_root),
     )
 
@@ -150,10 +150,7 @@ def frecency_scores(
 
     A missing or corrupt store yields ``{}`` (neutral ranking), never a crash.
     """
-    reference = now or datetime.now(UTC)
-    scores: dict[str, float] = {}
-    for path, weight, age_seconds in _aged_frecency_rows(repo_root, reference):
-        scores[path] = scores.get(path, 0.0) + _decayed_weight(weight, age_seconds)
+    scores, _ = _frecency_pass(repo_root, now or datetime.now(UTC))
     return scores
 
 
@@ -163,12 +160,8 @@ def recent_query_paths(
     now: datetime | None = None,
 ) -> frozenset[str]:
     """Paths a query surfaced within the recency window (query-history signal)."""
-    reference = now or datetime.now(UTC)
-    return frozenset(
-        path
-        for path, _weight, age_seconds in _aged_frecency_rows(repo_root, reference)
-        if age_seconds <= RECENT_QUERY_WINDOW_SECONDS
-    )
+    _, recent = _frecency_pass(repo_root, now or datetime.now(UTC))
+    return recent
 
 
 def record_frecency(
@@ -194,15 +187,22 @@ def record_frecency(
             )
 
 
-def _aged_frecency_rows(
+def _frecency_pass(
     repo_root: Path,
     reference: datetime,
-) -> Iterator[tuple[str, float, float]]:
+) -> tuple[dict[str, float], frozenset[str]]:
+    # One aged-rows pass feeding both the frecency map and the recent-query set.
+    scores: dict[str, float] = {}
+    recent: set[str] = set()
     for path, weight, updated_at in _frecency_rows(repo_root):
         recorded = _parse_timestamp(updated_at)
         if recorded is None:
             continue
-        yield path, weight, (reference - recorded).total_seconds()
+        age_seconds = (reference - recorded).total_seconds()
+        scores[path] = scores.get(path, 0.0) + _decayed_weight(weight, age_seconds)
+        if age_seconds <= RECENT_QUERY_WINDOW_SECONDS:
+            recent.add(path)
+    return scores, frozenset(recent)
 
 
 def _frecency_rows(repo_root: Path) -> list[tuple[str, float, str]]:

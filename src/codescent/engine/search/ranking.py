@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Literal
 
 from rapidfuzz import fuzz
 
@@ -15,7 +15,7 @@ GIT_MODIFIED_BONUS: Final = 20.0
 FRECENCY_BONUS_MULTIPLIER: Final = 30.0
 FRECENCY_CAP: Final = 5.0
 RECENT_QUERY_BONUS: Final = 15.0
-# Code-quality rank deltas (U13): deliberately small tie-breakers/flags, kept
+# Code-quality rank deltas: deliberately small tie-breakers/flags, kept
 # well below the personal-first bonuses so quality NEVER dominates text
 # relevance -- it only nudges and flags. Dead/duplicate code is down-weighted;
 # risky hotspot/complex code gets a modest surfacing nudge plus a risk flag.
@@ -23,7 +23,7 @@ HOTSPOT_BOOST: Final = 3.0
 COMPLEX_BOOST: Final = 2.0
 DEAD_CODE_PENALTY: Final = 5.0
 DUPLICATE_PENALTY: Final = 3.0
-_QUALITY_DELTAS: Final[dict[str, float]] = {
+_QUALITY_DELTAS: Final[dict[QualityFlag, float]] = {
     "hotspot": HOTSPOT_BOOST,
     "complex": COMPLEX_BOOST,
     "dead_code": -DEAD_CODE_PENALTY,
@@ -39,16 +39,19 @@ def _empty_quality() -> dict[str, PathQuality]:
     return {}
 
 
+QualityFlag = Literal["hotspot", "dead_code", "complex", "duplicate"]
+
+
 @dataclass(frozen=True, slots=True)
 class PathQuality:
-    """Derived code-quality for one path, read from persisted findings (U13).
+    """Derived code-quality for one path, read from persisted findings.
 
     ``flags`` is the bounded set of quality reasons (``hotspot``/``dead_code``/
     ``duplicate``/``complex``); ``duplicate_twin`` names the other location of a
     structural duplicate when known. Empty flags means neutral (no annotation).
     """
 
-    flags: tuple[str, ...] = ()
+    flags: tuple[QualityFlag, ...] = ()
     duplicate_twin: str | None = None
 
 
@@ -66,7 +69,7 @@ class RankingSignals:
     ``changed_file``; ``git_modified`` is the narrower git working-tree dirty
     set; ``frecency`` is the decayed access score per path; ``recent_queries``
     is the set of paths a recent query surfaced (query-history); ``quality`` is
-    the derived code-quality per path (U13). Each maps to an explainable reason
+    the derived code-quality per path. Each maps to an explainable reason
     string in :func:`apply_signals`.
     """
 

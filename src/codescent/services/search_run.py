@@ -48,7 +48,7 @@ class RetrievalContext:
     config: ProjectConfig
     # Personal-first ranking signals (frecency, git-status, query-history).
     signals: RankingSignals
-    # Constraints DSL prefilter (U9): keep(path) gate applied to candidates
+    # Constraints DSL prefilter: keep(path) gate applied to candidates
     # BEFORE ranking/collapse and the result bound. None means no constraint.
     allow: Callable[[str], bool] | None = None
 
@@ -121,6 +121,20 @@ def content_results(
     )
 
 
+def _path_result(
+    path: str,
+    score: float,
+    reasons: tuple[str, ...],
+) -> SearchResultPayload:
+    return {
+        "path": path,
+        "score": score,
+        "reasons": reasons,
+        "snippet": None,
+        "symbol": None,
+    }
+
+
 def _native_file_results(
     context: RetrievalContext,
     query: str,
@@ -138,15 +152,7 @@ def _native_file_results(
             rank.reasons,
             context.signals,
         )
-        results.append(
-            {
-                "path": item.path,
-                "score": score,
-                "reasons": reasons,
-                "snippet": None,
-                "symbol": None,
-            },
-        )
+        results.append(_path_result(item.path, score, reasons))
     return results
 
 
@@ -204,15 +210,7 @@ def _fff_path_results(
             ("fff_path",),
             context.signals,
         )
-        results.append(
-            {
-                "path": path,
-                "score": score,
-                "reasons": reasons,
-                "snippet": None,
-                "symbol": None,
-            },
-        )
+        results.append(_path_result(path, score, reasons))
     return results
 
 

@@ -1,4 +1,4 @@
-"""Constraints DSL data model + parser (plan unit U9 / bead P2.2).
+"""Constraints DSL data model + parser.
 
 A space-separated mini-language scopes path + content search BEFORE ranking and
 before the result bound, so the agent trades many narrowing tool calls for one
@@ -55,7 +55,7 @@ class ConstraintKind:
     description: str
 
 
-# Single source of truth for the kinds ``get_schema`` advertises (U7 surface).
+# Single source of truth for the kinds ``get_schema`` advertises.
 CONSTRAINT_KINDS: Final[tuple[ConstraintKind, ...]] = (
     ConstraintKind(
         "git:modified",

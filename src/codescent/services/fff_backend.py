@@ -5,8 +5,8 @@ fff wheel or `fff` binary is reachable on this machine, the navigator routes
 retrieval through it for sub-10ms, typo-resistant results; otherwise CodeScent
 falls back to its native rapidfuzz path and behaves exactly as it does today.
 
-This module is the U3 STUB: it only builds the detect + capability-probe +
-selection seam. The actual retrieval routing lands in U8, which consumes the
+This module is the detection STUB: it only builds the detect + capability-probe +
+selection seam. The actual retrieval routing lands later and consumes the
 ``FffClient`` capabilities declared here. There is ZERO behaviour change when
 fff is absent (the common case): detection returns ``None`` and the caller uses
 the native floor.
@@ -58,7 +58,7 @@ class ContentHit:
 class FffClient(Protocol):
     """Minimal contract the navigator needs from an optional local fff engine.
 
-    U8 consumes these capabilities and re-applies CodeScent bounding /
+    The router consumes these capabilities and re-applies CodeScent bounding /
     confidence / freshness on the way out, so a present-but-partial fff engine
     (missing one capability) degrades per-capability rather than crashing -- see
     ``probe_capabilities``.
@@ -88,10 +88,10 @@ def _validate[T](adapter: TypeAdapter[list[T]], payload: object) -> tuple[T, ...
 class FffCliClient:
     """Talk to a local fff engine over an injectable JSON contract (no network).
 
-    A ``runner`` may be injected for testing (and for U8 wiring) so no real fff
+    A ``runner`` may be injected for testing so no real fff
     transport is spawned. ``command`` is the resolved binary path when detected
     via PATH / env override, or ``None`` when only the ``fff-search`` wheel was
-    found. The concrete request/response shapes are finalised in U8; this stub
+    found. The concrete request/response shapes are finalised later; this stub
     is constructible and forwards through the ``runner``.
     """
 
@@ -101,8 +101,8 @@ class FffCliClient:
 
     def healthy(self) -> bool:
         if self.runner is None:
-            # Detection already succeeded; the live reachability probe lands in
-            # U8 alongside the real transport. Assume usable until then.
+            # Detection already succeeded; the live reachability probe lands
+            # later alongside the real transport. Assume usable until then.
             return True
         try:
             payload = self._invoke("health")
@@ -130,7 +130,7 @@ class FffCliClient:
             raise FffClientError(message) from exc
 
     def _invoke(self, subcommand: str, /, *args: object) -> object:
-        # ponytail: real fff argv/transport contract lands in U8; the stub only
+        # ponytail: real fff argv/transport contract lands later; the stub only
         # forwards through an injected runner so the detection seam is testable.
         if self.runner is None:
             message = f"fff retrieval is not wired until U8: {subcommand}"
@@ -142,7 +142,7 @@ def probe_capabilities(client: object) -> frozenset[str]:
     """Return the ``FffClient`` capabilities a detected client actually exposes.
 
     Never raises: a partial or stubbed fff engine missing a capability simply
-    omits it from the returned set, so the caller (U8) can degrade to the native
+    omits it from the returned set, so the caller can degrade to the native
     path per capability gap instead of crashing.
 
     Args:
@@ -181,8 +181,8 @@ def detect_fff(
 
     Args:
         repo_root: Repository root the engine should search.
-        runner: Optional transport seam injected for tests / U8 wiring; when
-            ``None`` the stub client raises until U8 supplies the real transport.
+        runner: Optional transport seam injected for tests; when ``None`` the
+            stub client raises until the real transport is supplied.
 
     Returns:
         An ``FffClient`` when an fff engine is detected, else ``None``.
@@ -217,12 +217,12 @@ def select_search_backend(
     The return contract differs from ``select_graph_backend`` on purpose: there
     is no fff "backend object" wrapping a native fallback in this unit. A return
     value of ``None`` means **use the native rapidfuzz retrieval path** (the
-    always-on floor). U8 treats ``None`` as native and a non-``None`` result as
+    always-on floor). A ``None`` result means native; a non-``None`` result is
     the fff engine to route through.
 
     Args:
         repo_root: Repository root the engine should search.
-        client: A pre-built client to use instead of detection (tests / U8).
+        client: A pre-built client to use instead of detection (tests).
         runner: Optional transport seam forwarded to ``detect_fff``.
 
     Returns:

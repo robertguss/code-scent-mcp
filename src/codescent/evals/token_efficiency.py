@@ -1,11 +1,11 @@
-"""Token-efficiency benchmark (plan unit U2 / bead P0.2).
+"""Token-efficiency benchmark.
 
 The scoreboard for the navigator roadmap: it proves the token savings of the
 CodeScent tools over the naive ``grep + read the whole matching file`` workflow
 an agent falls back to without them. Three scenarios -- find a symbol, locate a
 content string, and gather task context -- are each run two ways and counted
-with the local :func:`codescent.core.token_estimate.estimate_tokens` helper
-(KTD-4). The per-scenario and overall deltas are written by
+with the local :func:`codescent.core.token_estimate.estimate_tokens` helper.
+The per-scenario and overall deltas are written by
 ``evals/run_token_efficiency.py`` to a committed baseline JSON so every later
 phase can report its token drop against this reference.
 

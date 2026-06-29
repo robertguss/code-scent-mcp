@@ -1,4 +1,4 @@
-"""Collapse-to-symbol wiring for content search (plan unit U4 / bead P1.1).
+"""Collapse-to-symbol wiring for content search.
 
 Maps each content match line to its enclosing function/class via the language
 parsers, then renders that symbol's signature instead of the bare line. This is

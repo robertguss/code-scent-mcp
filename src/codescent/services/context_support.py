@@ -30,7 +30,7 @@ RELATED_REASON_WEIGHTS = {
     "co_change": 0.62,
     "directory_proximity": 0.35,
     "search_similarity": 0.3,
-    # Personal-first signals (U12): float up files THIS developer is touching.
+    # Personal-first signals: float up files THIS developer is touching.
     "git_modified": 0.5,
     "recent_query": 0.45,
     "frecency": 0.4,

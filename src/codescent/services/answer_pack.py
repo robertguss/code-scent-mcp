@@ -53,9 +53,15 @@ class AnswerPackService:
         full_tokens = estimate_tokens(serialize_contributors(query, parts))
         if budget is not None and full_tokens > budget:
             result_id = store_full(repo_root, query, parts, full_tokens)
-            fit_budget(query, parts, budget)
+            fit_budget(query, parts, budget, full_tokens=full_tokens)
             return to_pack(query, parts, result_id=result_id, truncated=True)
-        return to_pack(query, parts, result_id=None, truncated=False)
+        return to_pack(
+            query,
+            parts,
+            result_id=None,
+            truncated=False,
+            precomputed_tokens=full_tokens,
+        )
 
     def _compose(
         self,

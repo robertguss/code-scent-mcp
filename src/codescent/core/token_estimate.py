@@ -1,7 +1,7 @@
-"""Local, deterministic token estimator (KTD-4).
+"""Local, deterministic token estimator.
 
 CodeScent counts tokens through a single pluggable helper so the
-token-efficiency benchmark (U2) and the answer-pack budget (U6) share one
+token-efficiency benchmark and the answer-pack budget share one
 estimator. It is a word + punctuation heuristic in the chars/4 accuracy class:
 approximate but consistent. The benchmark's metric is the *relative* token
 delta between the CodeScent path and the naive path, which is robust to

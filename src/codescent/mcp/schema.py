@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
-from typing import TYPE_CHECKING, Final, TypedDict, cast
+from typing import TYPE_CHECKING, Final, TypedDict, cast, get_type_hints
 
 from codescent.core.defensive import PARAM_ALIASES
 from codescent.core.models import EnvelopeConfidence, EnvelopeMode, FindingStatus
@@ -83,7 +83,7 @@ class SchemaPayload(TypedDict):
     tools: tuple[SchemaToolEntry, ...]
     types: tuple[SchemaTypeSet, ...]
     param_aliases: tuple[SchemaAlias, ...]
-    # The search/grep ``constraints`` DSL prefilter kinds (plan unit U9).
+    # The search/grep ``constraints`` DSL prefilter kinds.
     constraints: tuple[SchemaConstraintKind, ...]
 
 
@@ -162,7 +162,11 @@ def _response_keys(fn: Callable[..., object], module: ModuleType) -> tuple[str, 
     if not isinstance(return_name, str):
         return ()
     payload = getattr(module, return_name, None)
-    return tuple(_annotations(payload))
+    try:
+        # get_type_hints picks up inherited TypedDict fields, unlike __annotations__.
+        return tuple(get_type_hints(payload))
+    except Exception:  # noqa: BLE001 - forward-ref/NameError safety; fall back.
+        return tuple(_annotations(payload))
 
 
 def _annotations(obj: object) -> dict[str, object]:

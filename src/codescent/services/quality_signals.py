@@ -1,4 +1,4 @@
-"""Derived code-quality ranking signals (plan unit U13 / bead P3.2).
+"""Derived code-quality ranking signals.
 
 Reads the PERSISTED findings (never a fresh scan) and turns them into per-path
 quality flags -- hotspot (churn x size), dead code, structural duplication and
@@ -11,9 +11,9 @@ finding, and degrades to neutral (``{}``) when a repo has no persisted findings.
 
 from __future__ import annotations
 
-import json
-from typing import TYPE_CHECKING, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict
 
+from codescent.core.json_decode import decode_json_object
 from codescent.core.models import FindingStatus
 from codescent.engine.search.ranking import PathQuality
 from codescent.services.git import git_change_counts
@@ -24,11 +24,12 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
+    from codescent.engine.search.ranking import QualityFlag
     from codescent.storage.repositories import FindingRow
 
 
 class QualityAnnotation(TypedDict):
-    """Bounded inline quality annotation attached to a search result (U13)."""
+    """Bounded inline quality annotation attached to a search result."""
 
     flags: tuple[str, ...]
     duplicate_twin: str | None
@@ -79,7 +80,7 @@ def quality_signals_for(repo_root: Path) -> dict[str, PathQuality]:
     if not findings:
         return {}
     churn = git_change_counts(repo_root)
-    flags_by_path: dict[str, set[str]] = {}
+    flags_by_path: dict[str, set[QualityFlag]] = {}
     twin_by_path: dict[str, str] = {}
     for finding in findings:
         path = finding.file_path
@@ -124,8 +125,8 @@ def _active_findings(repo_root: Path) -> tuple[FindingRow, ...]:
     )
 
 
-def _flags_for(finding: FindingRow, churn: Mapping[str, int]) -> set[str]:
-    flags: set[str] = set()
+def _flags_for(finding: FindingRow, churn: Mapping[str, int]) -> set[QualityFlag]:
+    flags: set[QualityFlag] = set()
     rule_id = finding.rule_id
     if rule_id in _DEAD_RULES:
         flags.add("dead_code")
@@ -151,24 +152,14 @@ def _twin_for(finding: FindingRow) -> str | None:
 
 
 def _locations(evidence_json: str) -> tuple[str, ...]:
-    value = _evidence(evidence_json).get("locations")
+    value = decode_json_object(evidence_json).get("locations")
     if not isinstance(value, str):
         return ()
     return tuple(part.strip() for part in value.split(";") if part.strip())
 
 
 def _line_count(evidence_json: str) -> int:
-    value = _evidence(evidence_json).get("line_count")
+    value = decode_json_object(evidence_json).get("line_count")
     if isinstance(value, bool) or not isinstance(value, int):
         return 0
     return max(value, 0)
-
-
-def _evidence(evidence_json: str) -> dict[str, object]:
-    try:
-        parsed = cast("object", json.loads(evidence_json))
-    except json.JSONDecodeError:
-        return {}
-    if not isinstance(parsed, dict):
-        return {}
-    return cast("dict[str, object]", parsed)

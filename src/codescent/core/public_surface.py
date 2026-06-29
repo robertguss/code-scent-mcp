@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final, Literal, cast, get_args
 
-# Output shape requested from the bounded search/grep tools (plan unit U5).
+# Output shape requested from the bounded search/grep tools.
 # `content` is the collapse-aware default; the others trade content for a
 # cheaper shape (paths, a tally, or minimal match sites). Part of the tool
 # contract, so it lives in the public surface registry.

@@ -118,10 +118,20 @@ def store_full(
     return stored.id
 
 
-def fit_budget(query: str, parts: Contributors, budget: int) -> None:
-    while estimate_tokens(serialize_contributors(query, parts)) > budget:
+def fit_budget(
+    query: str,
+    parts: Contributors,
+    budget: int,
+    *,
+    full_tokens: int | None = None,
+) -> None:
+    tokens = full_tokens
+    if tokens is None:
+        tokens = estimate_tokens(serialize_contributors(query, parts))
+    while tokens > budget:
         if not _drop_last(parts):
             return
+        tokens = estimate_tokens(serialize_contributors(query, parts))
 
 
 def _drop_last(parts: Contributors) -> bool:
@@ -144,7 +154,13 @@ def to_pack(
     *,
     result_id: str | None,
     truncated: bool,
+    precomputed_tokens: int | None = None,
 ) -> AnswerPack:
+    estimated = (
+        precomputed_tokens
+        if precomputed_tokens is not None
+        else estimate_tokens(serialize_contributors(query, parts))
+    )
     return AnswerPack(
         query=query,
         top_files=tuple(parts.top_files),
@@ -154,7 +170,7 @@ def to_pack(
         related_files=tuple(parts.related_files),
         result_id=result_id,
         truncated=truncated,
-        estimated_tokens=estimate_tokens(serialize_contributors(query, parts)),
+        estimated_tokens=estimated,
         warnings=_warnings(parts, truncated=truncated, result_id=result_id),
     )
 

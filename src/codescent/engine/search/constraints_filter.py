@@ -1,4 +1,4 @@
-"""Apply a parsed constraint set as a path prefilter (plan unit U9 / bead P2.2).
+"""Apply a parsed constraint set as a path prefilter.
 
 Splits the AND-of-groups filtering away from the parser in
 :mod:`codescent.engine.search.constraints`. ``build_predicate`` yields a

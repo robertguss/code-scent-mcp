@@ -1,4 +1,4 @@
-"""Multi-pattern literal matcher (plan unit U10 / bead P2.3).
+"""Multi-pattern literal matcher.
 
 One pass finds every line matching ANY of many literal patterns, so impact
 analysis can trace many identifiers in a single sweep instead of N searches.
