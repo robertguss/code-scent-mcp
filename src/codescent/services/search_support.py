@@ -5,7 +5,7 @@ import math
 import sqlite3
 from contextlib import closing
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Final, TypedDict
+from typing import TYPE_CHECKING, Final, NotRequired, TypedDict
 
 from codescent.core.models import PageOptions
 from codescent.core.symbol_formatter import CollapsedSymbol  # noqa: TC001
@@ -17,6 +17,7 @@ from codescent.engine.search.ranking import (
 from codescent.engine.source_read import read_source_lines
 from codescent.services.config import ConfigService
 from codescent.services.git import detect_git_state, git_changed_paths
+from codescent.services.quality_signals import QualityAnnotation, quality_signals_for
 from codescent.storage import RepositoryStorage, initialize_storage
 
 if TYPE_CHECKING:
@@ -42,6 +43,9 @@ class SearchResultPayload(TypedDict):
     # Enclosing function/class for content/grep hits (U4 collapse-to-symbol).
     # None for path-only results and module-level matches.
     symbol: CollapsedSymbol | None
+    # Inline code-quality annotation (U13): hotspot/dead/duplicate/complex flags
+    # plus the duplicate's twin. Absent when the path carries no quality signal.
+    quality: NotRequired[QualityAnnotation | None]
 
 
 class TodoSearchResultPayload(TypedDict):
@@ -133,6 +137,7 @@ def ranking_signals_for(repo_root: Path) -> RankingSignals:
         git_modified=git_changed_paths(repo_root),
         frecency=frecency_scores(repo_root),
         recent_queries=recent_query_paths(repo_root),
+        quality=quality_signals_for(repo_root),
     )
 
 

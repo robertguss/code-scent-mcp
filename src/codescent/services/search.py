@@ -11,6 +11,7 @@ from codescent.engine.search import rank_path
 from codescent.engine.search.multi_grep import multi_grep
 from codescent.services.config import ConfigService
 from codescent.services.fff_backend import select_search_backend
+from codescent.services.quality_signals import quality_annotation_for
 from codescent.services.search_collapse import (
     content_signals,
     file_spans,
@@ -47,9 +48,23 @@ from codescent.services.search_support import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
+    from codescent.engine.search import PathQuality
     from codescent.services.fff_backend import FffClient
+
+
+def _annotate_quality(
+    results: tuple[SearchResultPayload, ...],
+    quality: Mapping[str, PathQuality],
+) -> tuple[SearchResultPayload, ...]:
+    """Attach the bounded inline quality annotation to each result (U13)."""
+    for result in results:
+        annotation = quality_annotation_for(result["path"], quality)
+        if annotation is not None:
+            result["quality"] = annotation
+    return results
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,7 +97,7 @@ class SearchService:
         page = PageOptions(limit=limit, offset=offset)
         selected = tuple(sort_results(results)[page.offset : page.offset + page.limit])
         record_frecency(repo_root, query, tuple(result["path"] for result in selected))
-        return selected
+        return _annotate_quality(selected, context.signals.quality)
 
     def search_files_page(
         self,
@@ -125,7 +140,7 @@ class SearchService:
         page = PageOptions(limit=limit, offset=offset)
         selected = tuple(sort_results(results)[page.offset : page.offset + page.limit])
         record_frecency(repo_root, query, tuple(result["path"] for result in selected))
-        return selected
+        return _annotate_quality(selected, context.signals.quality)
 
     def search_content_page(  # noqa: PLR0913 - additive constraints prefilter knob.
         self,
@@ -212,7 +227,7 @@ class SearchService:
                 if f"query:{query}" in result["reasons"]
             )
             record_frecency(repo_root, query, query_paths)
-        return selected
+        return _annotate_quality(selected, signals.quality)
 
     def search_changed_files(
         self,

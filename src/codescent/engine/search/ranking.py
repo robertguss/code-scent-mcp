@@ -15,10 +15,41 @@ GIT_MODIFIED_BONUS: Final = 20.0
 FRECENCY_BONUS_MULTIPLIER: Final = 30.0
 FRECENCY_CAP: Final = 5.0
 RECENT_QUERY_BONUS: Final = 15.0
+# Code-quality rank deltas (U13): deliberately small tie-breakers/flags, kept
+# well below the personal-first bonuses so quality NEVER dominates text
+# relevance -- it only nudges and flags. Dead/duplicate code is down-weighted;
+# risky hotspot/complex code gets a modest surfacing nudge plus a risk flag.
+HOTSPOT_BOOST: Final = 3.0
+COMPLEX_BOOST: Final = 2.0
+DEAD_CODE_PENALTY: Final = 5.0
+DUPLICATE_PENALTY: Final = 3.0
+_QUALITY_DELTAS: Final[dict[str, float]] = {
+    "hotspot": HOTSPOT_BOOST,
+    "complex": COMPLEX_BOOST,
+    "dead_code": -DEAD_CODE_PENALTY,
+    "duplicate": -DUPLICATE_PENALTY,
+}
 
 
 def _empty_frecency() -> dict[str, float]:
     return {}
+
+
+def _empty_quality() -> dict[str, PathQuality]:
+    return {}
+
+
+@dataclass(frozen=True, slots=True)
+class PathQuality:
+    """Derived code-quality for one path, read from persisted findings (U13).
+
+    ``flags`` is the bounded set of quality reasons (``hotspot``/``dead_code``/
+    ``duplicate``/``complex``); ``duplicate_twin`` names the other location of a
+    structural duplicate when known. Empty flags means neutral (no annotation).
+    """
+
+    flags: tuple[str, ...] = ()
+    duplicate_twin: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,14 +65,16 @@ class RankingSignals:
     ``changed`` is the union git/index change set already surfaced as
     ``changed_file``; ``git_modified`` is the narrower git working-tree dirty
     set; ``frecency`` is the decayed access score per path; ``recent_queries``
-    is the set of paths a recent query surfaced (query-history). Each maps to an
-    explainable reason string in :func:`apply_signals`.
+    is the set of paths a recent query surfaced (query-history); ``quality`` is
+    the derived code-quality per path (U13). Each maps to an explainable reason
+    string in :func:`apply_signals`.
     """
 
     changed: frozenset[str] = frozenset()
     git_modified: frozenset[str] = frozenset()
     frecency: Mapping[str, float] = field(default_factory=_empty_frecency)
     recent_queries: frozenset[str] = frozenset()
+    quality: Mapping[str, PathQuality] = field(default_factory=_empty_quality)
 
 
 def apply_signals(
@@ -68,6 +101,11 @@ def apply_signals(
     if path in signals.recent_queries:
         score += RECENT_QUERY_BONUS
         reasons = (*reasons, "recent_query")
+    quality = signals.quality.get(path)
+    if quality is not None:
+        for flag in quality.flags:
+            score += _QUALITY_DELTAS.get(flag, 0.0)
+            reasons = (*reasons, flag)
     return score, reasons
 
 

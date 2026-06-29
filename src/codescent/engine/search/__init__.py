@@ -1,3 +1,8 @@
-from codescent.engine.search.ranking import RankingSignals, apply_signals, rank_path
+from codescent.engine.search.ranking import (
+    PathQuality,
+    RankingSignals,
+    apply_signals,
+    rank_path,
+)
 
-__all__ = ["RankingSignals", "apply_signals", "rank_path"]
+__all__ = ["PathQuality", "RankingSignals", "apply_signals", "rank_path"]
