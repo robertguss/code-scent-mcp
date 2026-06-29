@@ -101,6 +101,47 @@ def git_changed_paths(repo_root: Path) -> frozenset[str]:
     return frozenset(_parse_git_status_paths(result.stdout))
 
 
+def git_untracked_paths(repo_root: Path) -> frozenset[str]:
+    """Repo-relative paths git reports as untracked (new, unstaged files).
+
+    Returns an empty set when this is not a git repo, git is missing, or git
+    errors, so a ``git:untracked`` constraint self-disables cleanly rather than
+    raising. Excludes the ``.codescent`` runtime directory, matching the other
+    status helpers.
+    """
+    if not (repo_root / ".git").exists():
+        return frozenset()
+
+    git_path = which("git")
+    if git_path is None:
+        return frozenset()
+
+    try:
+        result = subprocess.run(
+            [
+                git_path,
+                "-C",
+                str(repo_root),
+                "ls-files",
+                "--others",
+                "--exclude-standard",
+                "--",
+                ".",
+                ":(exclude).codescent",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=GIT_STATUS_TIMEOUT_SECONDS,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return frozenset()
+
+    return frozenset(
+        line.strip() for line in result.stdout.splitlines() if line.strip()
+    )
+
+
 def git_changed_paths_since(repo_root: Path, base_ref: str) -> frozenset[str] | None:
     """Repo-relative paths changed since ``base_ref`` (merge-base..working tree).
 

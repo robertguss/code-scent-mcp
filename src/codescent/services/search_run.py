@@ -16,7 +16,10 @@ from typing import TYPE_CHECKING, Final
 
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.search import rank_path
+from codescent.engine.search.constraints import GitPaths, parse_constraints
+from codescent.engine.search.constraints_filter import build_predicate
 from codescent.services.fff_backend import probe_capabilities
+from codescent.services.git import git_changed_paths, git_untracked_paths
 from codescent.services.search_collapse import collapsed_results, content_signals
 from codescent.services.search_support import (
     CHANGED_FILE_BONUS,
@@ -28,9 +31,11 @@ from codescent.services.search_support import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     from codescent.core.models import IndexedFile, ProjectConfig
+    from codescent.engine.search.constraints import ConstraintSet
     from codescent.services.fff_backend import FffClient
 
 _FRECENCY_CAP: Final = 5.0
@@ -45,6 +50,31 @@ class RetrievalContext:
     config: ProjectConfig
     changed: frozenset[str]
     frecency: dict[str, float]
+    # Constraints DSL prefilter (U9): keep(path) gate applied to candidates
+    # BEFORE ranking/collapse and the result bound. None means no constraint.
+    allow: Callable[[str], bool] | None = None
+
+
+def build_constraint_filter(
+    repo_root: Path,
+    constraints: str,
+) -> Callable[[str], bool] | None:
+    """Resolve a ``constraints`` string into a path prefilter, or None if empty."""
+    parsed = parse_constraints(constraints)
+    if parsed.is_empty:
+        return None
+    return build_predicate(parsed, repo_root, git=_resolve_git_paths(repo_root, parsed))
+
+
+def _resolve_git_paths(repo_root: Path, parsed: ConstraintSet) -> GitPaths | None:
+    if not parsed.git_kinds:
+        return None
+    empty: frozenset[str] = frozenset()
+    modified = git_changed_paths(repo_root) if "modified" in parsed.git_kinds else empty
+    untracked = (
+        git_untracked_paths(repo_root) if "untracked" in parsed.git_kinds else empty
+    )
+    return GitPaths(modified=modified, untracked=untracked)
 
 
 def file_results(
@@ -71,6 +101,8 @@ def content_results(
 ) -> list[SearchResultPayload]:
     """Content search: fff ``grep_content`` when available, native scan else."""
     items = build_file_inventory(context.repo_root, config=context.config)
+    if context.allow is not None:
+        items = tuple(item for item in items if context.allow(item.path))
     if backend is not None:
         routed = _fff_content_results(
             backend,
@@ -97,6 +129,8 @@ def _native_file_results(
 ) -> list[SearchResultPayload]:
     results: list[SearchResultPayload] = []
     for item in build_file_inventory(context.repo_root, config=context.config):
+        if context.allow is not None and not context.allow(item.path):
+            continue
         rank = rank_path(item.path, query)
         if rank is None:
             continue
@@ -167,6 +201,8 @@ def _fff_path_results(
         return None
     results: list[SearchResultPayload] = []
     for position, path in enumerate(paths):
+        if context.allow is not None and not context.allow(path):
+            continue
         score = _FFF_BASE_SCORE - position
         reasons: tuple[str, ...] = ("fff_path",)
         if path in context.changed:

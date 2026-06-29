@@ -127,7 +127,8 @@ def register_search_tools(mcp: FastMCP) -> None:
             "with bounded results and ranking reasons. Collapses each match to "
             "its enclosing function/class signature (exact for Python, heuristic "
             "for TS/JS); pass expand=True for full lines. output_mode picks the "
-            "shape: content (default), files, count, or usage."
+            "shape: content (default), files, count, or usage. constraints (see "
+            "get_schema) prefilters candidates, e.g. 'src/ *.py git:modified'."
         ),
     )(search_content)
 
@@ -169,6 +170,7 @@ def search_files(  # noqa: PLR0913 - additive defensive alias for sloppy inputs.
     cursor: str | None = None,
     output_mode: str = "content",
     pattern: str | None = None,
+    constraints: str = "",
 ) -> SearchToolPayload:
     query = resolve_query(query, pattern)
     limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
@@ -179,7 +181,7 @@ def search_files(  # noqa: PLR0913 - additive defensive alias for sloppy inputs.
         mode = "content"
     page = or_empty(
         lambda: SearchService(repo).search_files_page(
-            query, limit=limit, cursor=cursor
+            query, limit=limit, cursor=cursor, constraints=constraints
         ),
         _EMPTY_PAGE,
     )
@@ -209,6 +211,7 @@ def search_content(  # noqa: PLR0913 - MCP tool exposes orthogonal shape toggles
     expand: bool = False,
     output_mode: str = "content",
     pattern: str | None = None,
+    constraints: str = "",
 ) -> SearchToolPayload:
     query = resolve_query(query, pattern)
     limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
@@ -220,6 +223,7 @@ def search_content(  # noqa: PLR0913 - MCP tool exposes orthogonal shape toggles
             cursor=cursor,
             line_budget=1,
             expand=expand,
+            constraints=constraints,
         ),
         _EMPTY_PAGE,
     )
@@ -241,12 +245,13 @@ def search_content(  # noqa: PLR0913 - MCP tool exposes orthogonal shape toggles
     }
 
 
-def multi_search_content(
+def multi_search_content(  # noqa: PLR0913 - additive constraints prefilter knob.
     queries: tuple[str, ...],
     repo: str = ".",
     limit: int = SAMPLE_FILE_LIMIT,
     expand: bool = False,
     output_mode: str = "content",
+    constraints: str = "",
 ) -> MultiSearchToolPayload:
     limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
     mode = normalize_output_mode(output_mode)
@@ -256,6 +261,7 @@ def multi_search_content(
             limit=limit,
             line_budget=1,
             expand=expand,
+            constraints=constraints,
         ),
         (),
     )

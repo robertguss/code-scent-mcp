@@ -21,6 +21,7 @@ from codescent.services.search_queries import (
 )
 from codescent.services.search_run import (
     RetrievalContext,
+    build_constraint_filter,
     content_results,
     file_results,
 )
@@ -69,6 +70,7 @@ class SearchService:
         *,
         limit: int = DEFAULT_LIMIT,
         offset: int = 0,
+        constraints: str = "",
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
         context = RetrievalContext(
@@ -76,6 +78,7 @@ class SearchService:
             config=ConfigService(repo_root).load(),
             changed=changed_files(repo_root),
             frecency=frecency_scores(repo_root),
+            allow=build_constraint_filter(repo_root, constraints),
         )
         results = file_results(context, query, backend=self._backend(repo_root))
         page = PageOptions(limit=limit, offset=offset)
@@ -89,12 +92,15 @@ class SearchService:
         *,
         limit: int = DEFAULT_LIMIT,
         cursor: str | None = None,
+        constraints: str = "",
     ) -> SearchPagePayload:
         offset = cursor_to_offset(cursor)
-        results = self.search_files(query, limit=MAX_LIMIT, offset=0)
+        results = self.search_files(
+            query, limit=MAX_LIMIT, offset=0, constraints=constraints
+        )
         return page_results(results, limit=limit, offset=offset)
 
-    def search_content(
+    def search_content(  # noqa: PLR0913 - additive constraints prefilter knob.
         self,
         query: str,
         *,
@@ -102,6 +108,7 @@ class SearchService:
         line_budget: int = DEFAULT_LINE_BUDGET,
         offset: int = 0,
         expand: bool = False,
+        constraints: str = "",
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
         context = RetrievalContext(
@@ -109,6 +116,7 @@ class SearchService:
             config=ConfigService(repo_root).load(),
             changed=changed_files(repo_root),
             frecency=frecency_scores(repo_root),
+            allow=build_constraint_filter(repo_root, constraints),
         )
         results = content_results(
             context,
@@ -122,7 +130,7 @@ class SearchService:
         record_frecency(repo_root, query, tuple(result["path"] for result in selected))
         return selected
 
-    def search_content_page(
+    def search_content_page(  # noqa: PLR0913 - additive constraints prefilter knob.
         self,
         query: str,
         *,
@@ -130,6 +138,7 @@ class SearchService:
         cursor: str | None = None,
         line_budget: int = DEFAULT_LINE_BUDGET,
         expand: bool = False,
+        constraints: str = "",
     ) -> SearchPagePayload:
         offset = cursor_to_offset(cursor)
         results = self.search_content(
@@ -138,6 +147,7 @@ class SearchService:
             offset=0,
             line_budget=line_budget,
             expand=expand,
+            constraints=constraints,
         )
         return page_results(results, limit=limit, offset=offset)
 
@@ -148,6 +158,7 @@ class SearchService:
         limit: int = DEFAULT_LIMIT,
         line_budget: int = DEFAULT_LINE_BUDGET,
         expand: bool = False,
+        constraints: str = "",
     ) -> tuple[SearchResultPayload, ...]:
         page = PageOptions(limit=limit)
         if not queries:
@@ -157,9 +168,12 @@ class SearchService:
         config = ConfigService(repo_root).load()
         changed = changed_files(repo_root)
         frecency = frecency_scores(repo_root)
+        allow = build_constraint_filter(repo_root, constraints)
         merged: dict[str, SearchResultPayload] = {}
 
         for item in build_file_inventory(repo_root, config=config):
+            if allow is not None and not allow(item.path):
+                continue
             lines = searchable_lines(repo_root, item.path)
             spans, confidence = file_spans(repo_root, item, expand=expand)
             score, base_reasons = content_signals(item.path, changed, frecency)

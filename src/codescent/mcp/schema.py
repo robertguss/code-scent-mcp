@@ -21,6 +21,7 @@ from codescent.core.public_surface import (
     SEARCH_OUTPUT_MODES,
     registered_mcp_tool_names,
 )
+from codescent.engine.search.constraints import CONSTRAINT_KINDS
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -68,6 +69,11 @@ class SchemaAlias(TypedDict):
     canonical: str
 
 
+class SchemaConstraintKind(TypedDict):
+    token: str
+    description: str
+
+
 class SchemaPayload(TypedDict):
     ok: bool
     server: str
@@ -76,6 +82,8 @@ class SchemaPayload(TypedDict):
     tools: tuple[SchemaToolEntry, ...]
     types: tuple[SchemaTypeSet, ...]
     param_aliases: tuple[SchemaAlias, ...]
+    # The search/grep ``constraints`` DSL prefilter kinds (plan unit U9).
+    constraints: tuple[SchemaConstraintKind, ...]
 
 
 def build_schema() -> SchemaPayload:
@@ -105,6 +113,10 @@ def build_schema() -> SchemaPayload:
         "param_aliases": tuple(
             {"alias": alias, "canonical": canonical}
             for alias, canonical in sorted(PARAM_ALIASES.items())
+        ),
+        "constraints": tuple(
+            {"token": kind.token, "description": kind.description}
+            for kind in CONSTRAINT_KINDS
         ),
     }
 
