@@ -36,11 +36,10 @@ from codescent.services.search_support import (
     TestSearchResultPayload,
     TodoSearchResultPayload,
     changed_file_reasons,
-    changed_files,
     cursor_to_offset,
-    frecency_scores,
     merge_reasons,
     page_results,
+    ranking_signals_for,
     record_frecency,
     searchable_lines,
     snippet,
@@ -76,8 +75,7 @@ class SearchService:
         context = RetrievalContext(
             repo_root=repo_root,
             config=ConfigService(repo_root).load(),
-            changed=changed_files(repo_root),
-            frecency=frecency_scores(repo_root),
+            signals=ranking_signals_for(repo_root),
             allow=build_constraint_filter(repo_root, constraints),
         )
         results = file_results(context, query, backend=self._backend(repo_root))
@@ -114,8 +112,7 @@ class SearchService:
         context = RetrievalContext(
             repo_root=repo_root,
             config=ConfigService(repo_root).load(),
-            changed=changed_files(repo_root),
-            frecency=frecency_scores(repo_root),
+            signals=ranking_signals_for(repo_root),
             allow=build_constraint_filter(repo_root, constraints),
         )
         results = content_results(
@@ -166,8 +163,7 @@ class SearchService:
 
         repo_root = resolve_repo_root(self.repo_root)
         config = ConfigService(repo_root).load()
-        changed = changed_files(repo_root)
-        frecency = frecency_scores(repo_root)
+        signals = ranking_signals_for(repo_root)
         allow = build_constraint_filter(repo_root, constraints)
         merged: dict[str, SearchResultPayload] = {}
 
@@ -179,7 +175,7 @@ class SearchService:
             if not any(line_matches.values()):
                 continue
             spans, confidence = file_spans(repo_root, item, expand=expand)
-            score, base_reasons = content_signals(item.path, changed, frecency)
+            score, base_reasons = content_signals(item.path, signals)
             for query in queries:
                 for index in line_matches.get(query, ()):
                     if expand:

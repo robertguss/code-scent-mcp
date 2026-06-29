@@ -15,15 +15,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from codescent.engine.inventory import build_file_inventory
-from codescent.engine.search import rank_path
+from codescent.engine.search import apply_signals, rank_path
 from codescent.engine.search.constraints import GitPaths, parse_constraints
 from codescent.engine.search.constraints_filter import build_predicate
 from codescent.services.fff_backend import probe_capabilities
 from codescent.services.git import git_changed_paths, git_untracked_paths
 from codescent.services.search_collapse import collapsed_results, content_signals
 from codescent.services.search_support import (
-    CHANGED_FILE_BONUS,
-    FRECENCY_BONUS_MULTIPLIER,
     SearchResultPayload,
     match_text,
     searchable_lines,
@@ -35,10 +33,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from codescent.core.models import IndexedFile, ProjectConfig
+    from codescent.engine.search import RankingSignals
     from codescent.engine.search.constraints import ConstraintSet
     from codescent.services.fff_backend import FffClient
 
-_FRECENCY_CAP: Final = 5.0
 _FFF_BASE_SCORE: Final = 100.0
 
 
@@ -48,8 +46,8 @@ class RetrievalContext:
 
     repo_root: Path
     config: ProjectConfig
-    changed: frozenset[str]
-    frecency: dict[str, float]
+    # Personal-first ranking signals (frecency, git-status, query-history).
+    signals: RankingSignals
     # Constraints DSL prefilter (U9): keep(path) gate applied to candidates
     # BEFORE ranking/collapse and the result bound. None means no constraint.
     allow: Callable[[str], bool] | None = None
@@ -134,15 +132,12 @@ def _native_file_results(
         rank = rank_path(item.path, query)
         if rank is None:
             continue
-        score = rank.score
-        reasons = rank.reasons
-        if item.path in context.changed:
-            score += CHANGED_FILE_BONUS
-            reasons = (*reasons, "changed_file")
-        frecency_score = context.frecency.get(item.path, 0.0)
-        if frecency_score > 0:
-            score += min(frecency_score, _FRECENCY_CAP) * FRECENCY_BONUS_MULTIPLIER
-            reasons = (*reasons, "frecency")
+        score, reasons = apply_signals(
+            item.path,
+            rank.score,
+            rank.reasons,
+            context.signals,
+        )
         results.append(
             {
                 "path": item.path,
@@ -173,7 +168,7 @@ def _native_content_results(
         )
         if not match_indexes:
             continue
-        signals = content_signals(item.path, context.changed, context.frecency)
+        signals = content_signals(item.path, context.signals)
         results.extend(
             _shape_content_matches(
                 context,
@@ -203,15 +198,12 @@ def _fff_path_results(
     for position, path in enumerate(paths):
         if context.allow is not None and not context.allow(path):
             continue
-        score = _FFF_BASE_SCORE - position
-        reasons: tuple[str, ...] = ("fff_path",)
-        if path in context.changed:
-            score += CHANGED_FILE_BONUS
-            reasons = (*reasons, "changed_file")
-        frecency_score = context.frecency.get(path, 0.0)
-        if frecency_score > 0:
-            score += min(frecency_score, _FRECENCY_CAP) * FRECENCY_BONUS_MULTIPLIER
-            reasons = (*reasons, "frecency")
+        score, reasons = apply_signals(
+            path,
+            _FFF_BASE_SCORE - position,
+            ("fff_path",),
+            context.signals,
+        )
         results.append(
             {
                 "path": path,
@@ -252,7 +244,7 @@ def _fff_content_results(  # noqa: PLR0913 - fff grep candidates plus shaping kn
         )
         if not match_indexes:
             continue
-        signals = content_signals(path, context.changed, context.frecency)
+        signals = content_signals(path, context.signals)
         results.extend(
             _shape_content_matches(
                 context,

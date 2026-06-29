@@ -63,11 +63,13 @@ def test_search_files_pattern_alias_resolves_to_query() -> None:
 
 
 def test_valid_call_is_unchanged_by_the_alias_param() -> None:
-    # Warm ranking state first: the first read of a cold index records a frecency
-    # access that lifts the second read's scores, so without this the two reads
-    # below would differ on a cold index (order-dependent flake). One warm-up
-    # makes the comparison idempotent regardless of cold/warm start.
-    _ = search_content(_MATCH, repo=_REPO, limit=5)
+    # Warm ranking state first so the frecency signal is saturated: each search
+    # records a frecency access, and time-decayed frecency keeps nudging the
+    # order until repeated touches push the contested paths past the boost cap
+    # (and into the recent-query window). A few warm-up reads saturate them so
+    # the two reads below are idempotent regardless of the decayed store state.
+    for _ in range(5):
+        _ = search_content(_MATCH, repo=_REPO, limit=5)
 
     canonical = search_content(_MATCH, repo=_REPO, limit=5)
     with_alias = search_content(_MATCH, repo=_REPO, limit=5, pattern="ignored")

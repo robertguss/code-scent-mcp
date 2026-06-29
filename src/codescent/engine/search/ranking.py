@@ -1,15 +1,74 @@
-from dataclasses import dataclass
-from typing import Final
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Final
 
 from rapidfuzz import fuzz
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
 FUZZY_MATCH_THRESHOLD: Final = 60.0
+# Personal-first ranking bonuses: what THIS developer actually touches floats up.
+CHANGED_FILE_BONUS: Final = 25.0
+GIT_MODIFIED_BONUS: Final = 20.0
+FRECENCY_BONUS_MULTIPLIER: Final = 30.0
+FRECENCY_CAP: Final = 5.0
+RECENT_QUERY_BONUS: Final = 15.0
+
+
+def _empty_frecency() -> dict[str, float]:
+    return {}
 
 
 @dataclass(frozen=True, slots=True)
 class PathRank:
     score: float
     reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class RankingSignals:
+    """Personal-first ranking signals shared by every retrieval path.
+
+    ``changed`` is the union git/index change set already surfaced as
+    ``changed_file``; ``git_modified`` is the narrower git working-tree dirty
+    set; ``frecency`` is the decayed access score per path; ``recent_queries``
+    is the set of paths a recent query surfaced (query-history). Each maps to an
+    explainable reason string in :func:`apply_signals`.
+    """
+
+    changed: frozenset[str] = frozenset()
+    git_modified: frozenset[str] = frozenset()
+    frecency: Mapping[str, float] = field(default_factory=_empty_frecency)
+    recent_queries: frozenset[str] = frozenset()
+
+
+def apply_signals(
+    path: str,
+    score: float,
+    reasons: tuple[str, ...],
+    signals: RankingSignals,
+) -> tuple[float, tuple[str, ...]]:
+    """Fold the personal-first signals into a base ``(score, reasons)`` pair.
+
+    Each contributing signal appends a named reason so callers can explain why a
+    path floated up. Untouched paths return the base pair unchanged (neutral).
+    """
+    if path in signals.changed:
+        score += CHANGED_FILE_BONUS
+        reasons = (*reasons, "changed_file")
+    if path in signals.git_modified:
+        score += GIT_MODIFIED_BONUS
+        reasons = (*reasons, "git_modified")
+    frecency_score = signals.frecency.get(path, 0.0)
+    if frecency_score > 0:
+        score += min(frecency_score, FRECENCY_CAP) * FRECENCY_BONUS_MULTIPLIER
+        reasons = (*reasons, "frecency")
+    if path in signals.recent_queries:
+        score += RECENT_QUERY_BONUS
+        reasons = (*reasons, "recent_query")
+    return score, reasons
 
 
 def rank_path(path: str, query: str) -> PathRank | None:

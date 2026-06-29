@@ -18,11 +18,7 @@ from codescent.core.symbol_formatter import (
 )
 from codescent.engine.packs_ts import parse_typescript_file
 from codescent.engine.parsers.python import parse_python_file
-from codescent.services.search_support import (
-    CHANGED_FILE_BONUS,
-    FRECENCY_BONUS_MULTIPLIER,
-    SearchResultPayload,
-)
+from codescent.engine.search import apply_signals
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -30,8 +26,9 @@ if TYPE_CHECKING:
 
     from codescent.core.models import IndexedFile
     from codescent.engine.parsers.python import ParsedPythonFile
+    from codescent.engine.search import RankingSignals
+    from codescent.services.search_support import SearchResultPayload
 
-_FRECENCY_CAP: Final = 5.0
 # Suffix-language -> (parser, collapse confidence label). Python is AST-exact;
 # the TS/JS regex pack is heuristic. Go is not in the search inventory, so it
 # never reaches this map. Languages absent here collapse to bounded raw lines.
@@ -46,19 +43,9 @@ _PARSERS_BY_LANGUAGE: Final[
 
 def content_signals(
     path: str,
-    changed: frozenset[str],
-    frecency: dict[str, float],
+    signals: RankingSignals,
 ) -> tuple[float, tuple[str, ...]]:
-    score = 100.0
-    reasons: tuple[str, ...] = ("content_match",)
-    if path in changed:
-        score += CHANGED_FILE_BONUS
-        reasons = (*reasons, "changed_file")
-    frecency_score = frecency.get(path, 0.0)
-    if frecency_score > 0:
-        score += min(frecency_score, _FRECENCY_CAP) * FRECENCY_BONUS_MULTIPLIER
-        reasons = (*reasons, "frecency")
-    return score, reasons
+    return apply_signals(path, 100.0, ("content_match",), signals)
 
 
 def collapsed_results(
