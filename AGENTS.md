@@ -8,6 +8,41 @@ CodeScent is a local, MCP-first codebase improvement server for coding agents.
 The package is Python 3.12+, distributed as `codescent`, and exposes a Typer
 CLI, a FastMCP stdio server, and a local dashboard backed by `.codescent` state.
 
+## NAVIGATOR NORTH STAR
+
+CodeScent is the **quality-aware navigator** for a coding agent's codebase: it
+finds the right code, knows which code is healthy or risky, and feeds the model
+a tight, trustworthy bundle — fewer tokens, sharper focus. The single yardstick
+for every decision: _does it get the right code into the model with fewer tokens
+and tighter focus?_
+
+- **Native is the always-on floor.** stdlib `ast`, health rules, and the import
+  graph never fail and never require a network. The navigator always works on
+  native alone.
+- **fff / cbm / LLM are optional accelerators.** Present, they upgrade the
+  answer; absent, the navigator degrades gracefully to native. Removing any one
+  must not break the tool.
+- **Facts stay deterministic.** Where-is-X, who-calls-Y, the smells, and the CI
+  gate are reproducible facts — always the floor and the fallback. Never let an
+  LLM call into `scan_code_health` or the CI gate.
+- **Judgment may use the opt-in LLM layer.** Rank, summarize, suggest, and
+  vague-ask understanding may use the LLM — but only opt-in, cached, and labeled
+  "subjective", with a deterministic fallback when it is off or fails. The LLM
+  augments the fact layer; it never replaces it.
+
+### Anti-drift checklist
+
+Before shipping any navigator change, confirm:
+
+- [ ] **Facts stay deterministic** — no LLM/network in indexing, scan, search,
+      context, or eval paths; reproducibility and calibration preserved.
+- [ ] **LLM layer is opt-in, cached, labeled** — every probabilistic result is
+      marked "subjective" and falls back to deterministic when off or failing.
+- [ ] **Stay bounded** — every answer keeps its explicit bound and a result
+      handle; no unbounded payloads.
+- [ ] **Engines stay optional** — remove fff, cbm, or the network and the
+      navigator still works on native alone.
+
 ## STRUCTURE
 
 ```text
