@@ -1,0 +1,256 @@
+"""Backend-aware retrieval: route through fff when present, native floor else.
+
+``SearchService.search_files`` / ``search_content`` delegate the candidate-
+generation step here. When ``backend`` is a present-and-healthy fff engine that
+exposes the needed capability, fff supplies the raw candidates (fuzzy paths /
+grep hits) and CodeScent re-applies its existing bounding, collapse-to-symbol
+and freshness shaping on the way out, so the result envelope is byte-identical
+to the native path. When ``backend`` is ``None`` (the common case: fff absent),
+lacks the capability, or errors, the native rapidfuzz floor runs unchanged.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Final
+
+from codescent.engine.inventory import build_file_inventory
+from codescent.engine.search import rank_path
+from codescent.services.fff_backend import probe_capabilities
+from codescent.services.search_collapse import collapsed_results, content_signals
+from codescent.services.search_support import (
+    CHANGED_FILE_BONUS,
+    FRECENCY_BONUS_MULTIPLIER,
+    SearchResultPayload,
+    match_text,
+    searchable_lines,
+    snippet,
+)
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from codescent.core.models import IndexedFile, ProjectConfig
+    from codescent.services.fff_backend import FffClient
+
+_FRECENCY_CAP: Final = 5.0
+_FFF_BASE_SCORE: Final = 100.0
+
+
+@dataclass(frozen=True, slots=True)
+class RetrievalContext:
+    """The repo signals every retrieval path needs, passed around as one unit."""
+
+    repo_root: Path
+    config: ProjectConfig
+    changed: frozenset[str]
+    frecency: dict[str, float]
+
+
+def file_results(
+    context: RetrievalContext,
+    query: str,
+    *,
+    backend: FffClient | None,
+) -> list[SearchResultPayload]:
+    """Path search: fff ``fuzzy_paths`` when available, native rapidfuzz else."""
+    if backend is not None:
+        routed = _fff_path_results(backend, context, query)
+        if routed is not None:
+            return routed
+    return _native_file_results(context, query)
+
+
+def content_results(
+    context: RetrievalContext,
+    query: str,
+    *,
+    backend: FffClient | None,
+    line_budget: int,
+    expand: bool,
+) -> list[SearchResultPayload]:
+    """Content search: fff ``grep_content`` when available, native scan else."""
+    items = build_file_inventory(context.repo_root, config=context.config)
+    if backend is not None:
+        routed = _fff_content_results(
+            backend,
+            context,
+            query,
+            items_by_path={item.path: item for item in items},
+            line_budget=line_budget,
+            expand=expand,
+        )
+        if routed is not None:
+            return routed
+    return _native_content_results(
+        context,
+        items,
+        query,
+        line_budget=line_budget,
+        expand=expand,
+    )
+
+
+def _native_file_results(
+    context: RetrievalContext,
+    query: str,
+) -> list[SearchResultPayload]:
+    results: list[SearchResultPayload] = []
+    for item in build_file_inventory(context.repo_root, config=context.config):
+        rank = rank_path(item.path, query)
+        if rank is None:
+            continue
+        score = rank.score
+        reasons = rank.reasons
+        if item.path in context.changed:
+            score += CHANGED_FILE_BONUS
+            reasons = (*reasons, "changed_file")
+        frecency_score = context.frecency.get(item.path, 0.0)
+        if frecency_score > 0:
+            score += min(frecency_score, _FRECENCY_CAP) * FRECENCY_BONUS_MULTIPLIER
+            reasons = (*reasons, "frecency")
+        results.append(
+            {
+                "path": item.path,
+                "score": score,
+                "reasons": reasons,
+                "snippet": None,
+                "symbol": None,
+            },
+        )
+    return results
+
+
+def _native_content_results(
+    context: RetrievalContext,
+    items: tuple[IndexedFile, ...],
+    query: str,
+    *,
+    line_budget: int,
+    expand: bool,
+) -> list[SearchResultPayload]:
+    results: list[SearchResultPayload] = []
+    for item in items:
+        lines = searchable_lines(context.repo_root, item.path)
+        match_indexes = tuple(
+            index
+            for index, line in enumerate(lines)
+            if match_text(line, query) is not None
+        )
+        if not match_indexes:
+            continue
+        signals = content_signals(item.path, context.changed, context.frecency)
+        results.extend(
+            _shape_content_matches(
+                context,
+                item,
+                lines,
+                match_indexes,
+                signals=signals,
+                line_budget=line_budget,
+                expand=expand,
+            ),
+        )
+    return results
+
+
+def _fff_path_results(
+    backend: FffClient,
+    context: RetrievalContext,
+    query: str,
+) -> list[SearchResultPayload] | None:
+    if "fuzzy_paths" not in probe_capabilities(backend):
+        return None
+    try:
+        paths = backend.fuzzy_paths(query)
+    except Exception:  # noqa: BLE001 - optional backend must never reach the caller.
+        return None
+    results: list[SearchResultPayload] = []
+    for position, path in enumerate(paths):
+        score = _FFF_BASE_SCORE - position
+        reasons: tuple[str, ...] = ("fff_path",)
+        if path in context.changed:
+            score += CHANGED_FILE_BONUS
+            reasons = (*reasons, "changed_file")
+        frecency_score = context.frecency.get(path, 0.0)
+        if frecency_score > 0:
+            score += min(frecency_score, _FRECENCY_CAP) * FRECENCY_BONUS_MULTIPLIER
+            reasons = (*reasons, "frecency")
+        results.append(
+            {
+                "path": path,
+                "score": score,
+                "reasons": reasons,
+                "snippet": None,
+                "symbol": None,
+            },
+        )
+    return results
+
+
+def _fff_content_results(  # noqa: PLR0913 - fff grep candidates plus shaping knobs.
+    backend: FffClient,
+    context: RetrievalContext,
+    query: str,
+    *,
+    items_by_path: dict[str, IndexedFile],
+    line_budget: int,
+    expand: bool,
+) -> list[SearchResultPayload] | None:
+    if "grep_content" not in probe_capabilities(backend):
+        return None
+    try:
+        hits = backend.grep_content(query)
+    except Exception:  # noqa: BLE001 - optional backend must never reach the caller.
+        return None
+    indexes_by_path: dict[str, list[int]] = {}
+    for hit in hits:
+        if hit.path in items_by_path:
+            indexes_by_path.setdefault(hit.path, []).append(hit.line - 1)
+    results: list[SearchResultPayload] = []
+    for path, raw_indexes in indexes_by_path.items():
+        item = items_by_path[path]
+        lines = searchable_lines(context.repo_root, path)
+        match_indexes = tuple(
+            sorted({index for index in raw_indexes if 0 <= index < len(lines)}),
+        )
+        if not match_indexes:
+            continue
+        signals = content_signals(path, context.changed, context.frecency)
+        results.extend(
+            _shape_content_matches(
+                context,
+                item,
+                lines,
+                match_indexes,
+                signals=signals,
+                line_budget=line_budget,
+                expand=expand,
+            ),
+        )
+    return results
+
+
+def _shape_content_matches(  # noqa: PLR0913 - per-file match data plus shaping knobs.
+    context: RetrievalContext,
+    item: IndexedFile,
+    lines: list[str],
+    match_indexes: tuple[int, ...],
+    *,
+    signals: tuple[float, tuple[str, ...]],
+    line_budget: int,
+    expand: bool,
+) -> list[SearchResultPayload]:
+    if expand:
+        score, reasons = signals
+        return [
+            {
+                "path": item.path,
+                "score": score,
+                "reasons": reasons,
+                "snippet": snippet(lines, index, line_budget),
+                "symbol": None,
+            }
+            for index in match_indexes
+        ]
+    return collapsed_results(context.repo_root, item, lines, match_indexes, signals)

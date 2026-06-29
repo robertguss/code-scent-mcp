@@ -9,8 +9,8 @@ from codescent.core.symbol_formatter import CollapsedSymbol, collapse_line
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.search import rank_path
 from codescent.services.config import ConfigService
+from codescent.services.fff_backend import select_search_backend
 from codescent.services.search_collapse import (
-    collapsed_results,
     content_signals,
     file_spans,
 )
@@ -19,11 +19,15 @@ from codescent.services.search_queries import (
     search_tests_for_repo,
     search_todos_for_repo,
 )
+from codescent.services.search_run import (
+    RetrievalContext,
+    content_results,
+    file_results,
+)
 from codescent.services.search_support import (
     CHANGED_FILE_BONUS,
     DEFAULT_LIMIT,
     DEFAULT_LINE_BUDGET,
-    FRECENCY_BONUS_MULTIPLIER,
     MAX_LIMIT,
     SearchPagePayload,
     SearchResultPayload,
@@ -45,10 +49,19 @@ from codescent.services.search_support import (
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from codescent.services.fff_backend import FffClient
+
 
 @dataclass(frozen=True, slots=True)
 class SearchService:
     repo_root: Path | str
+    # Optional pre-built fff engine (tests / U8 wiring). Routed through
+    # ``select_search_backend`` so an unhealthy client falls back to native; the
+    # default (``None``) detects fff and returns native when it is absent.
+    fff_client: FffClient | None = None
+
+    def _backend(self, repo_root: Path) -> FffClient | None:
+        return select_search_backend(repo_root, client=self.fff_client)
 
     def search_files(
         self,
@@ -58,34 +71,13 @@ class SearchService:
         offset: int = 0,
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
-        config = ConfigService(repo_root).load()
-        changed = changed_files(repo_root)
-        frecency = frecency_scores(repo_root)
-        results: list[SearchResultPayload] = []
-
-        for item in build_file_inventory(repo_root, config=config):
-            rank = rank_path(item.path, query)
-            if rank is None:
-                continue
-            score = rank.score
-            reasons = rank.reasons
-            if item.path in changed:
-                score += CHANGED_FILE_BONUS
-                reasons = (*reasons, "changed_file")
-            frecency_score = frecency.get(item.path, 0.0)
-            if frecency_score > 0:
-                score += min(frecency_score, 5.0) * FRECENCY_BONUS_MULTIPLIER
-                reasons = (*reasons, "frecency")
-            results.append(
-                {
-                    "path": item.path,
-                    "score": score,
-                    "reasons": reasons,
-                    "snippet": None,
-                    "symbol": None,
-                },
-            )
-
+        context = RetrievalContext(
+            repo_root=repo_root,
+            config=ConfigService(repo_root).load(),
+            changed=changed_files(repo_root),
+            frecency=frecency_scores(repo_root),
+        )
+        results = file_results(context, query, backend=self._backend(repo_root))
         page = PageOptions(limit=limit, offset=offset)
         selected = tuple(sort_results(results)[page.offset : page.offset + page.limit])
         record_frecency(repo_root, query, tuple(result["path"] for result in selected))
@@ -112,38 +104,19 @@ class SearchService:
         expand: bool = False,
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
-        config = ConfigService(repo_root).load()
-        changed = changed_files(repo_root)
-        frecency = frecency_scores(repo_root)
-        results: list[SearchResultPayload] = []
-
-        for item in build_file_inventory(repo_root, config=config):
-            lines = searchable_lines(repo_root, item.path)
-            match_indexes = tuple(
-                index
-                for index, line in enumerate(lines)
-                if match_text(line, query) is not None
-            )
-            if not match_indexes:
-                continue
-            signals = content_signals(item.path, changed, frecency)
-            if expand:
-                score, reasons = signals
-                results.extend(
-                    {
-                        "path": item.path,
-                        "score": score,
-                        "reasons": reasons,
-                        "snippet": snippet(lines, index, line_budget),
-                        "symbol": None,
-                    }
-                    for index in match_indexes
-                )
-                continue
-            results.extend(
-                collapsed_results(repo_root, item, lines, match_indexes, signals),
-            )
-
+        context = RetrievalContext(
+            repo_root=repo_root,
+            config=ConfigService(repo_root).load(),
+            changed=changed_files(repo_root),
+            frecency=frecency_scores(repo_root),
+        )
+        results = content_results(
+            context,
+            query,
+            backend=self._backend(repo_root),
+            line_budget=line_budget,
+            expand=expand,
+        )
         page = PageOptions(limit=limit, offset=offset)
         selected = tuple(sort_results(results)[page.offset : page.offset + page.limit])
         record_frecency(repo_root, query, tuple(result["path"] for result in selected))
