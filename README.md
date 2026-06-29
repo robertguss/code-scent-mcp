@@ -60,7 +60,12 @@ The first-run loop is:
    suggested tests, and rescan
 5. mark findings only after the user or agent has separate verification evidence
 
-See [docs/mcp-tools.md](docs/mcp-tools.md) for the registered MCP tool surface.
+The registered tools include bounded `search_files` / `search_content` /
+`multi_search_content` (with `output_mode` and a constraints DSL), `answer_pack`
+(one token-budgeted, deduped bundle that returns a `ctx_` result handle when
+trimmed), `get_architecture` (module clusters), `get_repo_map`, finding context,
+refactor planning, and `get_schema`. Call `get_schema` for the live,
+machine-readable tool surface — names, parameters, and output shapes.
 
 ## Evals And Smoke
 

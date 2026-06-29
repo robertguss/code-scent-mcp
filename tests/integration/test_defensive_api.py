@@ -88,6 +88,20 @@ def test_coerce_int_helper() -> None:
     assert coerce_int(None, default=20) == 20
     # A bool is not a count; it degrades to the default rather than 0/1.
     assert coerce_int(value=True, default=20) == 20
+    # A non-finite numeric string overflows int(float(...)); it must degrade to
+    # the default, never raise OverflowError.
+    assert coerce_int("inf", default=20) == 20
+    assert coerce_int("1e999", default=20) == 20
+
+
+def test_overflowing_size_constraint_degrades_not_crashes() -> None:
+    # A 400-digit size: amount overflows float() to inf; int(inf) in the size
+    # parser must not escape and crash the always-on native search floor. The
+    # malformed token is dropped and the search still returns a bounded result.
+    payload = search_content(_MATCH, repo=_REPO, constraints="size:<" + "9" * 400)
+
+    assert payload["ok"] is True
+    assert payload["results"]
 
 
 def test_resolve_query_prefers_canonical_then_aliases() -> None:

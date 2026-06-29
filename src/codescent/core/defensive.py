@@ -58,7 +58,9 @@ def coerce_int(value: object, *, default: int) -> int:
     if isinstance(value, str):
         try:
             return int(float(value.strip()))
-        except ValueError:
+        except (ValueError, OverflowError):
+            # OverflowError guards int(float("inf"))/int(float("1e999")): a
+            # non-finite numeric string degrades to the default, never raises.
             return default
     return default
 
@@ -76,8 +78,9 @@ def or_empty[T](producer: Callable[[], T], empty: T) -> T:
     """
     try:
         result = producer()
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, OverflowError):
         # ponytail: catch only input-shape errors; real bugs (OSError, KeyError)
-        # still surface. Widen the tuple only if a new sloppy-input mode appears.
+        # still surface. OverflowError covers non-finite numbers a malformed
+        # size:/mtime: token can produce. Widen only for a new sloppy-input mode.
         return empty
     return result

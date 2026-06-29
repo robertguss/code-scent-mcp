@@ -20,6 +20,7 @@ default search is unchanged.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final, Literal
 
@@ -261,9 +262,15 @@ def _parse_amount(
     if multiplier is None:
         return None
     try:
-        return float(digits) * multiplier
+        amount = float(digits) * multiplier
     except ValueError:
         return None
+    if not math.isfinite(amount):
+        # float('9'*400) overflows to inf without raising; int(inf) in
+        # _parse_size would crash the always-on native floor, so drop it like
+        # any malformed token (module docstring): degrade, never raise.
+        return None
+    return amount
 
 
 def _split_number(text: str) -> tuple[str | None, str]:
