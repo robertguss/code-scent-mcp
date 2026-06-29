@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mining fff for CodeScent — fast search, in concert with cbm</title>
+<style>
+  :root{
+    --bg:#fbfcfe; --surface:#ffffff; --surface-2:#f4f6fb; --text:#1b2230;
+    --muted:#5b6676; --border:#e6e9f0; --accent:#ea580c; --accent-2:#0d9488;
+    --strong:#16a34a; --moderate:#d97706; --minor:#aab3c0;
+    --E:#0d9488; --E-bg:#e3f6f2; --S:#2563eb; --S-bg:#e6efff;
+    --R:#7c3aed; --R-bg:#f1e9ff; --C:#64748b; --C-bg:#eef1f6;
+    --eS:#16a34a; --eM:#d97706; --eL:#ea580c; --eXL:#dc2626;
+    --shadow:0 1px 2px rgba(20,30,50,.06),0 8px 24px rgba(20,30,50,.06);
+    --radius:14px; --maxw:920px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e1117; --surface:#161b22; --surface-2:#1b222c; --text:#e6edf3;
+      --muted:#9aa7b6; --border:#28313d; --accent:#fb923c; --accent-2:#2dd4bf;
+      --strong:#34d399; --moderate:#fbbf24; --minor:#5b6676;
+      --E:#2dd4bf; --E-bg:#103029; --S:#60a5fa; --S-bg:#16263f;
+      --R:#a78bfa; --R-bg:#241640; --C:#94a3b8; --C-bg:#1e242e;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e1117; --surface:#161b22; --surface-2:#1b222c; --text:#e6edf3;
+    --muted:#9aa7b6; --border:#28313d; --accent:#fb923c; --accent-2:#2dd4bf;
+    --strong:#34d399; --moderate:#fbbf24; --minor:#5b6676;
+    --E:#2dd4bf; --E-bg:#103029; --S:#60a5fa; --S-bg:#16263f;
+    --R:#a78bfa; --R-bg:#241640; --C:#94a3b8; --C-bg:#1e242e;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+    line-height:1.65;font-size:16.5px;-webkit-font-smoothing:antialiased}
+  code,kbd,.mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+  code{background:var(--surface-2);border:1px solid var(--border);padding:.06em .4em;border-radius:6px;white-space:nowrap}
+  .topbar{position:sticky;top:0;z-index:50;backdrop-filter:saturate(1.4) blur(8px);
+    background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom:1px solid var(--border)}
+  .topbar-in{max-width:var(--maxw);margin:0 auto;padding:.6rem 1.25rem;display:flex;align-items:center;gap:.9rem}
+  .brand{font-weight:700;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:center;gap:.55rem}
+  .brand .pip{width:11px;height:11px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+  .navlinks{display:flex;gap:.25rem;flex-wrap:wrap}
+  .navlinks a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:.3rem .55rem;border-radius:8px}
+  .navlinks a:hover{color:var(--text);background:var(--surface-2)}
+  .toggle{cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);
+    width:34px;height:34px;border-radius:9px;font-size:1rem;display:grid;place-items:center}
+  .toggle:hover{border-color:var(--accent)}
+  @media(max-width:760px){.navlinks{display:none}}
+  main{max-width:var(--maxw);margin:0 auto;padding:0 1.25rem 5rem}
+  .hero{padding:3rem 0 1.4rem;border-bottom:1px solid var(--border);margin-bottom:2rem}
+  .eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:2.3rem;line-height:1.12;letter-spacing:-.025em;margin:.5rem 0 .6rem}
+  .lede{font-size:1.12rem;color:var(--muted);max-width:62ch;margin:0}
+  .meta{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1.3rem}
+  .chip{font-size:.76rem;font-weight:600;color:var(--muted);background:var(--surface);
+    border:1px solid var(--border);padding:.32rem .7rem;border-radius:999px}
+  .chip b{color:var(--text)}
+  .goals{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin:1.6rem 0 .2rem}
+  @media(max-width:640px){.goals{grid-template-columns:1fr}}
+  .goal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.1rem;box-shadow:var(--shadow)}
+  .goal .n{font-size:.74rem;font-weight:800;color:var(--accent-2);letter-spacing:.06em}
+  .goal h3{margin:.25rem 0 .2rem;font-size:1.02rem}
+  .goal p{margin:0;font-size:.86rem;color:var(--muted)}
+  h2{font-size:1.5rem;letter-spacing:-.02em;margin:2.8rem 0 .3rem;padding-top:.6rem;scroll-margin-top:72px}
+  h2 .sec{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:.5rem;font-weight:800}
+  p{margin:.7rem 0}
+  a{color:var(--accent)}
+  .callout{border:1px solid var(--border);border-left:4px solid var(--accent);background:var(--surface);
+    border-radius:12px;padding:1.05rem 1.2rem;margin:1.3rem 0;box-shadow:var(--shadow)}
+  .callout.key{border-left-color:var(--accent-2)}
+  .callout.warn{border-left-color:#db2777}
+  .callout h4{margin:0 0 .35rem;font-size:.98rem;display:flex;align-items:center;gap:.5rem}
+  .callout p{margin:.4rem 0}.callout .ic{font-size:1.05rem}
+  .tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin:1.2rem 0}
+  table{border-collapse:collapse;width:100%;font-size:.9rem;background:var(--surface)}
+  th,td{padding:.6rem .8rem;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+  thead th{position:sticky;top:0;background:var(--surface-2);font-size:.76rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);font-weight:700;z-index:1}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--surface-2)}
+  td.c,th.c{text-align:center;white-space:nowrap}
+  .idx{font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+  .imp{font-size:1.05rem;line-height:1}
+  .imp.strong{color:var(--strong)}.imp.moderate{color:var(--moderate)}.imp.minor{color:var(--minor)}
+  .legend{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin:.4rem 0 0}
+  .legend span{display:inline-flex;align-items:center;gap:.35rem}
+  .badge{font-size:.72rem;font-weight:800;padding:.16rem .5rem;border-radius:7px;white-space:nowrap;letter-spacing:.02em}
+  .b-E{color:var(--E);background:var(--E-bg)}.b-S{color:var(--S);background:var(--S-bg)}
+  .b-R{color:var(--R);background:var(--R-bg)}.b-C{color:var(--C);background:var(--C-bg)}
+  .eff{font-size:.72rem;font-weight:800;padding:.14rem .46rem;border-radius:7px;color:#fff}
+  .e-S{background:var(--eS)}.e-M{background:var(--eM)}.e-L{background:var(--eL)}.e-XL{background:var(--eXL)}
+  ul.tight{margin:.6rem 0;padding-left:1.2rem}ul.tight li{margin:.28rem 0}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.15rem 1.3rem;margin:1rem 0;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 .2rem;font-size:1.06rem;display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+  .card h3 .tag{font-size:.72rem;color:var(--muted);font-weight:600}
+  .kv{margin:.5rem 0}.kv b{color:var(--text)}
+  .kv .lbl{display:inline-block;min-width:5.4rem;color:var(--accent-2);font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em}
+  hr{border:0;border-top:1px solid var(--border);margin:2.4rem 0}
+  footer{color:var(--muted);font-size:.85rem;text-align:center;padding-top:2rem}
+  .totop{position:fixed;right:1rem;bottom:1rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.5rem .7rem;text-decoration:none;color:var(--muted);box-shadow:var(--shadow);font-size:.85rem}
+  .totop:hover{color:var(--text);border-color:var(--accent)}
+</style>
+</head>
+<body id="top">
+
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="brand"><span class="pip"></span>fff&nbsp;→&nbsp;CodeScent</span>
+    <nav class="navlinks">
+      <a href="#what">What fff is</a>
+      <a href="#gap">Gap</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#detail">Detail</a>
+      <a href="#avoid">Avoid</a>
+      <a href="#concert">In concert</a>
+      <a href="#next">Next</a>
+    </nav>
+    <button class="toggle" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
+  </div>
+</div>
+
+<main>
+  <header class="hero">
+    <div class="eyebrow">Mining report</div>
+    <h1>Mining <span class="mono">fff</span> for CodeScent — fast search, in concert with cbm</h1>
+    <p class="lede">A typo-resistant, frecency-ranked, MIT, pip-installable search engine — and how it
+      composes with codebase-memory-mcp and CodeScent's native engine into one retrieval stack.</p>
+    <div class="meta">
+      <span class="chip">Source: <b>dmtrKovalenko/fff</b></span>
+      <span class="chip">Target: <b>code-scent-mcp</b></span>
+      <span class="chip">License: <b>MIT</b></span>
+      <span class="chip">Date: <b>2026-06-29</b></span>
+      <span class="chip">Status: <b>Report for review</b> · beads after approval</span>
+    </div>
+    <div class="goals">
+      <div class="goal"><div class="n">GOAL 1</div><h3>Find code faster</h3><p>Sub-10 ms retrieval; fewer round-trips to the right file/string.</p></div>
+      <div class="goal"><div class="n">GOAL 2</div><h3>Spend fewer tokens</h3><p>Def-expansion, line truncation, output modes — return only what answers.</p></div>
+      <div class="goal"><div class="n">GOAL 3</div><h3>Tight, focused context</h3><p>Frecency + git rank by what's actually being worked on.</p></div>
+    </div>
+  </header>
+
+  <section id="what">
+    <h2><span class="sec">1</span>What fff is — and why it matters here</h2>
+    <p>fff began as a Neovim fuzzy-finder but deliberately became <b>"accurate, fast file search as a
+      library for AI harnesses."</b> It already powers file search in <b>opencode</b> and <b>nushell</b>. It ships as:</p>
+    <ul class="tight">
+      <li><b><code>fff-core</code></b> (crate <code>fff-search</code>) — the engine: typo-resistant fuzzy <b>path</b> search, a <b>grep</b> content engine, <b>frecency</b> ranking, a <b>background watcher</b>, a lightweight in-memory <b>content index</b> (~360 B/file, mmap-backable), git awareness, a <b>constraints DSL</b>, SIMD/bigram perf. Sub-10 ms repeat search.</li>
+      <li><b><code>fff-mcp</code></b> — fff's <b>own MCP server</b>: a "drop-in replacement for AI code-assistant search tools" (<code>grep</code>, <code>multi_grep</code>, fuzzy file search) with cursor pagination.</li>
+      <li><b><code>fff-c</code></b> — a <b>stable C ABI</b> (versioned, append-only options struct).</li>
+      <li><b><code>fff-python</code></b> — published to PyPI: <b><code>pip install fff-search</code></b> (maturin/PyO3 wheel).</li>
+      <li><b><code>fff-nvim</code></b> + Lua — the original picker (optional; same ranking as SDK/MCP).</li>
+    </ul>
+    <p><b>Why it matters.</b> CodeScent's weakest layer is exactly fff's core competency. CodeScent
+      search today = <code>rapidfuzz</code> lexical fuzzy over a JSON store: no identifier tokenization,
+      no frecency, no content index, no constraints DSL. fff is a drop-in, pip-installable, MIT engine
+      that solves all of that — and adds ranking signals (frecency, query history, git) CodeScent lacks.</p>
+
+    <div class="callout key">
+      <h4><span class="ic">🔑</span> The key symmetry: an optional <span class="mono">fff_backend</span></h4>
+      <p>CodeScent already ships <code>cbm_backend</code> — an <i>optional</i> native backend that upgrades
+        results when cbm is present and <i>falls back</i> to native when it isn't. fff slots into the
+        <b>exact same pattern</b>: an optional <b><code>fff_backend</code></b> that upgrades retrieval when
+        <code>fff-search</code> is importable, falling back to today's <code>rapidfuzz</code> path otherwise.
+        Lowest-friction, already-proven integration shape.</p>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin-top:1.5rem">The three-layer "concert" model <span style="color:var(--muted);font-weight:400;font-size:.9rem">(full detail in §6)</span></h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Layer</th><th>Owner</th><th>Answers</th></tr></thead>
+        <tbody>
+          <tr><td><b>Retrieval</b> — fuzzy path, grep, frecency, git</td><td><b>fff</b></td><td>"Where is this file/string, ranked by what I actually touch — fast."</td></tr>
+          <tr><td><b>Structure</b> — graph, type-accurate calls, clusters</td><td><b>cbm</b></td><td>"Who calls what, what's dead, what are the modules."</td></tr>
+          <tr><td><b>Brain</b> — bounding, confidence, freshness, health, orchestration</td><td><b>CodeScent</b></td><td>"Compose the above into one bounded, deterministic, LLM-shaped answer."</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>CodeScent is the only one of the three that <b>bounds</b> output for token discipline. fff and cbm
+      are fast engines; CodeScent is the context-router that keeps the window tight.</p>
+  </section>
+
+  <section id="gap">
+    <h2><span class="sec">2</span>Capability gap — search layer</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Capability</th><th>fff</th><th>CodeScent today</th><th>Gap → opportunity</th></tr></thead>
+        <tbody>
+          <tr><td><b>Fuzzy path search</b></td><td>Typo-resistant (frizbee/SIMD), bigram-prefiltered, sub-10 ms</td><td><code>rapidfuzz</code>, no identifier tokenization</td><td><b>Large.</b> Core retrieval quality + speed.</td></tr>
+          <tr><td><b>Ranking signals</b></td><td><b>frecency</b>, <b>query history</b>, git status, filename/special-file bonuses, distance penalties</td><td>churn×size hotspots; no access frecency / query history</td><td><b>Large.</b> Rank by what's actually touched.</td></tr>
+          <tr><td><b>Content grep</b></td><td>SIMD plain + ripgrep regex + <b>aho-corasick multi</b>; warm content index</td><td><code>search_content</code> over JSON; no content index</td><td><b>Large.</b> Faster, multi-pattern, warm.</td></tr>
+          <tr><td><b>Token-smart output</b></td><td><b><code>auto_expand_defs</code></b> (line → enclosing def, skip imports), <code>truncate_line_for_ai</code>, modes content/files/count/<b>usage</b></td><td>bounded snippets; no def-expansion at grep layer</td><td><b>Large.</b> Direct fewer-tokens win.</td></tr>
+          <tr><td><b>Prefilter DSL</b></td><td><b>constraints</b>: <code>git:modified</code>, <code>*.rs</code>, <code>!test/</code>, <code>src/</code>, size, time — inline</td><td>many separate params</td><td>Medium–large. One compact, agent-friendly param.</td></tr>
+          <tr><td><b>Freshness</b></td><td>background watcher + live in-memory index</td><td>incremental reindex + watch (already has)</td><td>Small. Mine the <b>content</b> index idea.</td></tr>
+          <tr><td><b>Pagination</b></td><td>opaque <b>cursor</b>, "only use if previous insufficient"</td><td>result-handles (<code>ctx_</code>) — already has</td><td>Small. Adopt the agent-guidance wording.</td></tr>
+          <tr><td><b>Embeddability</b></td><td><b><code>pip install fff-search</code></b>, stable C ABI</td><td>pure-Python</td><td><b>Large</b> (enabler). Makes "embed" nearly free.</td></tr>
+          <tr><td><b>LLM-defensive API</b></td><td><code>pattern</code> alias, float <code>maxResults</code>, accept sloppy input, 0-result fallback</td><td>careful, but no aho/alias/fallback specifics</td><td>Medium. Cheap robustness/ergonomics.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="roadmap">
+    <h2><span class="sec">3</span>Ranked roadmap</h2>
+    <div class="legend">
+      <span><b>Impact:</b></span>
+      <span><span class="imp strong">●</span> strong</span>
+      <span><span class="imp moderate">◐</span> moderate</span>
+      <span><span class="imp minor">○</span> minor</span>
+      <span>&nbsp;|&nbsp; <b>Borrow-mode:</b></span>
+      <span><span class="badge b-E">E</span> embed (pip / C ABI)</span>
+      <span><span class="badge b-S">S</span> shell / fff-mcp</span>
+      <span><span class="badge b-R">R</span> reimplement</span>
+      <span><span class="badge b-C">C</span> concept</span>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="c">#</th><th>Idea</th><th class="c">Faster</th><th class="c">Tokens</th><th class="c">Tight</th><th class="c">Effort</th><th class="c">Mode</th><th>Notes / tradeoff</th></tr></thead>
+        <tbody>
+          <tr><td class="c idx">1</td><td><b><code>fff_backend</code> — optional fff retrieval engine</b> (mirror <code>cbm_backend</code>)</td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="eff e-M">M</span></td><td class="c"><span class="badge b-E">E</span></td><td>Upgrades the weakest layer; falls back to <code>rapidfuzz</code>. Optional native wheel.</td></tr>
+          <tr><td class="c idx">2</td><td><b>Frecency ranking</b> (freq+recency) across search, related-files, start_task</td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="eff e-M">M</span></td><td class="c"><span class="badge b-R">R</span> <span class="badge b-E">E</span></td><td>Rank by what's actually touched. Native or via fff's LMDB.</td></tr>
+          <tr><td class="c idx">3</td><td><b><code>auto_expand_defs</code> for grep</b> (line → enclosing def, skip imports)</td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="eff e-M">M</span></td><td class="c"><span class="badge b-R">R</span></td><td>Collapse-to-symbol at grep layer. CodeScent's Python AST does this natively.</td></tr>
+          <tr><td class="c idx">4</td><td><b>Constraints DSL prefilter</b> (<code>git:modified</code>, <code>*.rs</code>, <code>!test/</code>, size, time)</td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="eff e-M">M</span></td><td class="c"><span class="badge b-R">R</span> <span class="badge b-E">E</span></td><td>One compact param replaces many. Reuse <code>fff-query-parser</code> or small native parser.</td></tr>
+          <tr><td class="c idx">5</td><td><b>Query-history-aware ranking</b></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="eff e-M">M</span></td><td class="c"><span class="badge b-R">R</span></td><td>Pairs with frecency; biases toward the active thread of work.</td></tr>
+          <tr><td class="c idx">6</td><td><b><code>truncate_line_for_ai</code></b> — cap match-line length, keep matched span</td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="eff e-S">S</span></td><td class="c"><span class="badge b-R">R</span></td><td>Trivial token-saver for minified/long lines.</td></tr>
+          <tr><td class="c idx">7</td><td><b>Output modes: content / files / count / usage</b></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="eff e-S">S</span></td><td class="c"><span class="badge b-R">R</span> <span class="badge b-C">C</span></td><td>Let the agent pick payload shape; <code>files</code>/<code>count</code> near-free.</td></tr>
+          <tr><td class="c idx">8</td><td><b>Multi-grep via aho-corasick</b> (OR of many literals, one pass)</td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="eff e-M">M</span></td><td class="c"><span class="badge b-E">E</span> <span class="badge b-R">R</span></td><td>"Trace these 8 identifiers at once." <code>pyahocorasick</code> or free via fff.</td></tr>
+          <tr><td class="c idx">9</td><td><b><code>fuzzy</code> mode for content search</b> (plain / regex / fuzzy)</td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="eff e-S">S</span></td><td class="c"><span class="badge b-E">E</span> <span class="badge b-R">R</span></td><td>"I don't remember the exact string."</td></tr>
+          <tr><td class="c idx">10</td><td><b>Git status as a search + rank signal</b> (inline + <code>git:</code> filter)</td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="eff e-M">M</span></td><td class="c"><span class="badge b-R">R</span></td><td>Bias toward the diff you're working on.</td></tr>
+          <tr><td class="c idx">11</td><td><b>Time-budgeted search</b> (<code>time_budget_ms</code>, mark truncation)</td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="eff e-S">S</span></td><td class="c"><span class="badge b-R">R</span> <span class="badge b-C">C</span></td><td>Bounds latency on huge repos; honest truncation.</td></tr>
+          <tr><td class="c idx">12</td><td><b>LLM-defensive tool API</b> (aliases, float nums, 0-result fallbacks)</td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="eff e-S">S</span></td><td class="c"><span class="badge b-C">C</span></td><td>Fewer failed tool calls = fewer wasted turns.</td></tr>
+          <tr><td class="c idx">13</td><td><b>Warm in-memory content index</b> (~360 B/file, mmap-backable)</td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="eff e-L">L</span></td><td class="c"><span class="badge b-E">E</span> <span class="badge b-R">R</span></td><td>Sub-10 ms repeat grep. CodeScent has symbol index; add <b>content</b>.</td></tr>
+          <tr><td class="c idx">14</td><td><b>fff behind the grep-injection hook</b> (cbm-report idea #5)</td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="eff e-M">M</span></td><td class="c"><span class="badge b-E">E</span></td><td>PreToolUse Grep → fff sub-10 ms frecency-ranked context. Concert play.</td></tr>
+          <tr><td class="c idx">15</td><td><b>Mixed file+dir search</b> (dir score = max child frecency)</td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="eff e-S">S</span></td><td class="c"><span class="badge b-R">R</span></td><td>"Where's the auth stuff" returns ranked dirs for orientation.</td></tr>
+          <tr><td class="c idx">16</td><td><b>Adopt fff's MCP server patterns</b> (instructions prompt, idle timeout, update notice)</td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="eff e-S">S</span></td><td class="c"><span class="badge b-C">C</span></td><td>Design polish for CodeScent's MCP surface.</td></tr>
+          <tr><td class="c idx">17</td><td><b>Stable versioned options-struct pattern</b> (append-only, <code>version</code> field)</td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="eff e-S">S</span></td><td class="c"><span class="badge b-C">C</span></td><td>ABI/protocol-stability lesson for the backends.</td></tr>
+          <tr><td class="c idx">18</td><td><b>Cursor-discipline guidance</b> ("only page if previous insufficient")</td><td class="c"><span class="imp minor">○</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="eff e-S">S</span></td><td class="c"><span class="badge b-C">C</span></td><td>Already have handles; adopt the token-discipline wording.</td></tr>
+          <tr><td class="c idx">M1</td><td><b>Moonshot: fff as CodeScent's default retrieval substrate</b></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="eff e-XL">XL</span></td><td class="c"><span class="badge b-E">E</span></td><td>Standardize on fff (pure-py fallback) for path+grep+frecency+watcher. Built for this.</td></tr>
+          <tr><td class="c idx">M2</td><td><b>Moonshot: cross-session frecency / query "code memory"</b></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="eff e-XL">XL</span></td><td class="c"><span class="badge b-R">R</span> <span class="badge b-E">E</span></td><td>Persist searched/opened/edited → personalized ranking feeding fff + cbm + the hook.</td></tr>
+          <tr><td class="c idx">M3</td><td><b>Moonshot: unified retrieval planner</b> (route query → fff / cbm / native)</td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="eff e-XL">XL</span></td><td class="c"><span class="badge b-C">C</span></td><td>One <code>search</code> entrypoint that picks the engine. The full concert vision (§6).</td></tr>
+          <tr><td class="c idx">M4</td><td><b>Moonshot: frecency-driven context budgeting</b></td><td class="c"><span class="imp moderate">◐</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="imp strong">●</span></td><td class="c"><span class="eff e-L">L</span></td><td class="c"><span class="badge b-R">R</span></td><td>Use frecency + history to decide what goes in answer-pack / start_task.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <h4><span class="ic">⭐</span> If we only do five</h4>
+      <p><b>1, 2, 3, 4, 7.</b> #1 unlocks the engine, #2 is the highest-value signal CodeScent lacks,
+        #3 and #7 are direct token wins, #4 is the agent-ergonomic prefilter. <b>#6</b> (S-effort) is a free add.</p>
+    </div>
+  </section>
+
+  <section id="detail">
+    <h2><span class="sec">4</span>Detail — the high-value borrows</h2>
+
+    <div class="card">
+      <h3>4.1 <code>fff_backend</code> — optional fff retrieval engine <span class="tag">#1 · <span class="badge b-E">E</span> · <span class="eff e-M">M</span></span></h3>
+      <p class="kv"><span class="lbl">What</span> A backend adapter, symmetric to <code>cbm_backend</code>: if <code>fff-search</code> is importable (or an <code>fff</code> binary / <code>fff-mcp</code> is reachable), route path-search and content-grep through it; otherwise fall back to today's <code>rapidfuzz</code> path.</p>
+      <p class="kv"><span class="lbl">How</span> <code>pip install fff-search</code> gives a PyO3 wheel; wrap its <code>file_search</code>/<code>content_search</code> behind CodeScent's existing search service interface, preserving bounding + confidence + freshness on the way out.</p>
+      <p class="kv"><span class="lbl">Why</span> One change upgrades CodeScent's weakest layer to sub-10 ms, typo-resistant, frecency-ranked retrieval.</p>
+      <p class="kv"><span class="lbl">Tradeoff</span> Adds an optional native wheel; keep it optional so the pure-Python, offline, uv-only install still works — the <code>cbm_backend</code> precedent proves that's acceptable.</p>
+    </div>
+
+    <div class="card">
+      <h3>4.2 Frecency ranking <span class="tag">#2 · <span class="badge b-R">R</span> <span class="badge b-E">E</span> · <span class="eff e-M">M</span></span></h3>
+      <p class="kv"><span class="lbl">What</span> Rank files/symbols by <b>frequency × recency</b> of access and edits — fff's headline signal ("ranks results by how often you actually open them").</p>
+      <p class="kv"><span class="lbl">Why</span> The right file is usually one you've touched recently; frecency floats it up, cutting wrong-result reads (tokens) and round-trips (speed). CodeScent has churn×size hotspots but no per-session access/edit frecency or query history.</p>
+      <p class="kv"><span class="lbl">How</span> Native: a small LMDB/SQLite of (path → access/edit timestamps + counts), decayed; or embed fff's frecency DB. Feed into search ranking, <code>get_related_files</code>, and the <code>start_task</code> brief.</p>
+      <p class="kv"><span class="lbl">Tradeoff</span> Frecency is per-user/per-checkout state — store under <code>.codescent/</code>, keep out of shared artifacts unless opted in.</p>
+    </div>
+
+    <div class="card">
+      <h3>4.3 <code>auto_expand_defs</code> for grep <span class="tag">#3 · <span class="badge b-R">R</span> · <span class="eff e-M">M</span></span></h3>
+      <p class="kv"><span class="lbl">What</span> When a content match has no explicit context, <b>expand the matched line to its enclosing definition</b>, and <b>skip import-only lines</b> once real definitions are shown; truncate long lines.</p>
+      <p class="kv"><span class="lbl">Why</span> The collapse-to-symbol token win — at the grep layer, where agents spend the most. fff ships it; CodeScent's Python AST can do it natively (exact for Python, heuristic for TS/Go).</p>
+      <p class="kv"><span class="lbl">Tradeoff</span> Needs the enclosing-symbol map; CodeScent already builds symbol ranges, so the lift is wiring, not new parsing.</p>
+    </div>
+
+    <div class="card">
+      <h3>4.4 Constraints DSL prefilter <span class="tag">#4 · <span class="badge b-R">R</span> <span class="badge b-E">E</span> · <span class="eff e-M">M</span></span></h3>
+      <p class="kv"><span class="lbl">What</span> A compact inline prefilter shared by path + content search: <code>git:modified</code>, <code>*.rs</code>, <code>!test/</code>, <code>src/</code> (prefix), plus size/time/extension. One param scopes the search.</p>
+      <p class="kv"><span class="lbl">Why</span> Fewer tool params, fewer tokens, and the agent expresses intent precisely ("search <code>*.py</code> under <code>src/</code>, modified only") in one string.</p>
+      <p class="kv"><span class="lbl">How</span> Embed <code>fff-query-parser</code> (MIT) via fff, or a ~100-line native parser.</p>
+      <p class="kv"><span class="lbl">Tradeoff</span> A mini-language to document; mitigate with a <code>get_schema</code>/instructions entry (fff's MCP instructions prompt is a ready template).</p>
+    </div>
+
+    <div class="card">
+      <h3>4.5 Multi-grep via aho-corasick <span class="tag">#8 · <span class="badge b-E">E</span> <span class="badge b-R">R</span> · <span class="eff e-M">M</span></span></h3>
+      <p class="kv"><span class="lbl">What</span> Search many literal patterns in a single pass (OR logic), returning files where <i>any</i> match.</p>
+      <p class="kv"><span class="lbl">Why</span> "Find every usage of these 8 symbols" in one call instead of 8 — a big speed + token win for impact/usage tracing (complements cbm's call graph).</p>
+      <p class="kv"><span class="lbl">How</span> Free via fff's <code>multi_grep</code>, or <code>pyahocorasick</code> natively.</p>
+      <p class="kv"><span class="lbl">Tradeoff</span> Literal-only (no regex) — which is the point, and matches how agents should search: bare identifiers, not syntax.</p>
+    </div>
+
+    <p style="color:var(--muted);font-size:.92rem">Ideas 5–18 and moonshots M1–M4 are specified in the
+      roadmap table (§3) with tradeoffs; each becomes its own bead when we operationalize.</p>
+  </section>
+
+  <section id="avoid">
+    <h2><span class="sec">5</span>What CodeScent should <u>not</u> copy</h2>
+    <div class="callout warn">
+      <h4><span class="ic">🚫</span> Mine the core, not these</h4>
+      <ul class="tight">
+        <li><b>The Neovim picker / Lua UI.</b> CodeScent is a headless MCP server; the interactive picker is off-scope.</li>
+        <li><b>Unbounded result payloads.</b> fff returns large arrays for a UI to render; CodeScent must keep bounding + result-handles on everything routed through <code>fff_backend</code>.</li>
+        <li><b>Mandatory native dependency.</b> Keep fff <b>optional</b> with a pure-Python fallback — the offline, uv-only install is a CodeScent feature (same call as <code>cbm_backend</code>).</li>
+        <li><b>fff's MCP server as a replacement.</b> CodeScent's value is the bounding/health/orchestration brain; use fff as an engine <i>under</i> CodeScent, not beside it.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="concert">
+    <h2><span class="sec">6</span>In concert with cbm — the composition</h2>
+    <p>Three engines, one brain. CodeScent routes each request to the layer that answers it cheapest, then bounds the result.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>The agent wants…</th><th>Best engine</th><th>CodeScent's job</th></tr></thead>
+        <tbody>
+          <tr><td>"Find files matching <code>auth</code>" (fuzzy path)</td><td><b>fff</b></td><td>frecency + bound + confidence-label</td></tr>
+          <tr><td>"Where is the string <code>InProgressQuote</code>" (grep)</td><td><b>fff</b></td><td><code>auto_expand_defs</code>, bound, dedupe</td></tr>
+          <tr><td>"Who calls <code>charge_card</code>" (call graph)</td><td><b>cbm</b></td><td>bound, risk-label, fall back to native AST</td></tr>
+          <tr><td>"Modules / dead code / hotspots"</td><td><b>cbm</b> + native</td><td>compose into architecture overview</td></tr>
+          <tr><td>"Is this code healthy / smelly"</td><td><b>native</b></td><td>the deterministic health lifecycle</td></tr>
+          <tr><td>"Brief me to start this task"</td><td><b>all three</b></td><td>answer-pack: fff (relevant files, frecency) + cbm (symbols, calls) + native (findings), all bounded</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Why CodeScent stays the brain.</b> Both fff and cbm ship their own MCP servers and could be used
+      directly — but neither bounds output, dedupes across sources, attaches confidence/freshness, or runs
+      the deterministic health lifecycle. CodeScent is the only layer optimizing for a <i>tight LLM context
+      window</i>. The concert is: <b>fff finds, cbm relates, CodeScent decides what the model actually sees.</b></p>
+    <div class="callout key">
+      <h4><span class="ic">✦</span> Frecency × graph — the compounding idea</h4>
+      <p>fff's frecency says <i>which files this developer touches</i>; cbm's graph says <i>which symbols are
+        structurally central</i>. Multiplying them ranks "what matters to <b>this</b> work on <b>this</b>
+        codebase" — a signal neither tool has alone, and exactly what a tight context window needs (M2/M4).
+        Two backends, one pattern: <code>cbm_backend</code> (exists) + <code>fff_backend</code> (proposed),
+        unified by a future retrieval planner (M3).</p>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2><span class="sec">7</span>Recommended next step</h2>
+    <p>Approve a slice and I'll turn it into a granular, self-documenting bead tree (via <code>br</code>, with unit + e2e tests and dependencies, per the idea-wizard method). Suggested cut:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Phase</th><th>Ideas</th><th>Character</th></tr></thead>
+        <tbody>
+          <tr><td><b>Phase 1</b> — token wins</td><td>#3 <code>auto_expand_defs</code>, #7 output modes, #6 line truncation, #12 LLM-defensive API</td><td>Native, S/M, no new deps.</td></tr>
+          <tr><td><b>Phase 2</b> — the engine</td><td>#1 <code>fff_backend</code> (optional <code>pip install fff-search</code>, fallback), #4 constraints DSL, #8 aho-corasick multi-grep</td><td>The retrieval upgrade.</td></tr>
+          <tr><td><b>Phase 3</b> — the signal</td><td>#2 frecency, #5 query history, #10 git-status ranking</td><td>The ranking edge fff has and CodeScent lacks.</td></tr>
+          <tr><td><b>Concert</b> (parallel)</td><td>#14 fff behind the grep-injection hook; wire the §6 routing table</td><td>Ties fff + cbm + native together.</td></tr>
+          <tr><td><b>Moonshots</b> — separate epic</td><td>M1–M4 (retrieval planner, cross-session code memory, frecency×graph)</td><td>Keep in or park.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Tell me which phases/ideas to bead, whether to prefer <b>embed (<code>pip install fff-search</code>)</b>
+      vs <b>reimplement</b> as the default borrow-mode, and whether moonshots are in or parked.</p>
+  </section>
+
+  <hr>
+  <footer>
+    Mining report · <span class="mono">fff</span> → CodeScent, in concert with cbm · generated 2026-06-29 ·
+    source markdown: <code>FFF_MINING_REPORT.md</code>
+  </footer>
+</main>
+
+<a href="#top" class="totop">↑ Top</a>
+
+<script>
+  (function(){
+    var root=document.documentElement, btn=document.getElementById('themeBtn');
+    var saved=null; try{saved=localStorage.getItem('cbm-theme');}catch(e){}
+    if(saved){root.setAttribute('data-theme',saved);}
+    function sync(){
+      var cur=root.getAttribute('data-theme');
+      var dark = cur==='dark' || (!cur && window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches);
+      btn.textContent = dark ? '☀' : '☾';
+    }
+    btn.addEventListener('click',function(){
+      var cur=root.getAttribute('data-theme');
+      var dark = cur==='dark' || (!cur && window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches);
+      var next = dark ? 'light' : 'dark';
+      root.setAttribute('data-theme',next);
+      try{localStorage.setItem('cbm-theme',next);}catch(e){}
+      sync();
+    });
+    sync();
+  })();
+</script>
+</body>
+</html>
