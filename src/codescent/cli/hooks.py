@@ -33,6 +33,8 @@ _STDIN_CAP: Final = 64 * 1024
 # Self-imposed wall-clock deadline so the hook cannot delay a search beyond a
 # small budget, independent of the settings-level timeout (R13).
 _DEADLINE_SECONDS: Final = 1.5
+# Marker that a repo is onboarded; its presence gates all hook work (R16/AE4).
+_INDEX_DB: Final = Path(".codescent") / "index.sqlite"
 
 
 @contextlib.contextmanager
@@ -75,18 +77,16 @@ def _gate_and_extract(tool_name: str, tool_input: dict[str, object]) -> str | No
     Applies the Bash search-detection gate (R2) and the pattern-usability rule
     (R3) using only string inspection — the command is never executed (R22).
     """
+    if tool_name not in {"Bash", "Grep", "Glob"}:
+        return None
     from codescent.cli.hook_support import (  # noqa: PLC0415 - lazy for cold start (R20)
-        detect_search_command,
         extract_pattern,
         usable_pattern,
     )
 
-    if tool_name == "Bash":
-        command = tool_input.get("command")
-        if not isinstance(command, str) or not detect_search_command(command):
-            return None
-    elif tool_name not in {"Grep", "Glob"}:
-        return None
+    # For Bash, extract_pattern returns None for non-search commands — it gates on
+    # the search-binary set internally — so no separate detect_search_command
+    # pre-check is needed, and the command is tokenized only once.
     return usable_pattern(extract_pattern(tool_name, tool_input))
 
 
@@ -117,7 +117,7 @@ def _run_hook_augment() -> None:
         return
 
     # Enrichment only rides an already-onboarded repo; never create state (R16/AE4).
-    if not (repo_root / ".codescent" / "index.sqlite").exists():
+    if not (repo_root / _INDEX_DB).exists():
         return
 
     from codescent.services.hook_payload import (  # noqa: PLC0415 - lazy (R20)
@@ -159,7 +159,7 @@ def _run_hook_reindex() -> None:
 
     # Never create state in a repo the user never onboarded (R16). Reuse the
     # existing index only; do not call initialize_storage.
-    if not (repo_root / ".codescent" / "index.sqlite").exists():
+    if not (repo_root / _INDEX_DB).exists():
         return
 
     from codescent.services.repo_index import (  # noqa: PLC0415 - lazy (R20)
@@ -199,7 +199,11 @@ def _write_settings(path: Path, settings: dict[str, object]) -> None:
     serialized = json.dumps(settings, indent=2) + "\n"
     tmp = path.with_name(path.name + ".tmp")
     _ = tmp.write_text(serialized, encoding="utf-8")
-    _ = tmp.replace(path)
+    try:
+        _ = tmp.replace(path)
+    except OSError:
+        tmp.unlink(missing_ok=True)  # don't leave a stale .tmp behind
+        raise
 
 
 def install_hook(

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from codescent.core.token_estimate import estimate_tokens
 from codescent.services import hook_payload
 from codescent.services.hook_payload import build_payload
 from codescent.services.hook_retrieval import HookMatch
@@ -27,10 +28,6 @@ def _copy_fixture(tmp_path: Path) -> Path:
     return repo
 
 
-def _estimate_tokens(text: str) -> int:
-    return len(text) // 4
-
-
 def test_build_payload_shape_and_budget(tmp_path: Path) -> None:
     # Covers AE2/R6/R7/R9.
     repo = _copy_fixture(tmp_path)
@@ -44,7 +41,7 @@ def test_build_payload_shape_and_budget(tmp_path: Path) -> None:
     # At most five match lines (R6) plus header + pointer.
     body_lines = [line for line in payload.splitlines() if line.startswith("  ")]
     assert len(body_lines) <= 5
-    assert _estimate_tokens(payload) <= 240  # token budget (R9)
+    assert estimate_tokens(payload) <= 240  # token budget (R9)
 
 
 def test_build_payload_none_on_no_matches(tmp_path: Path) -> None:
@@ -115,5 +112,5 @@ def test_build_payload_truncates_to_budget(
     payload = build_payload(Path(), "padding")
 
     assert payload is not None
-    assert _estimate_tokens(payload) <= 240
+    assert estimate_tokens(payload) <= 240
     assert "codescent" in payload  # pointer survives truncation

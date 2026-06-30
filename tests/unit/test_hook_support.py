@@ -80,3 +80,33 @@ def test_extract_pattern_edge_cases() -> None:
     assert extract_pattern("Bash", {"command": "grep"}) is None  # only the binary
     assert extract_pattern("Bash", {"command": "grep -i -n"}) is None  # only flags
     assert extract_pattern("Bash", {}) is None
+
+
+def test_extract_pattern_skips_value_taking_flags() -> None:
+    # A value-consuming flag's argument must not be mistaken for the pattern.
+    assert extract_pattern("Bash", {"command": "rg -t python load_config"}) == (
+        "load_config"
+    )
+    assert extract_pattern("Bash", {"command": "rg --type python load_config"}) == (
+        "load_config"
+    )
+    assert extract_pattern("Bash", {"command": "rg -g glob load_config"}) == (
+        "load_config"
+    )
+
+
+def test_extract_pattern_file_flag_is_not_the_pattern() -> None:
+    # -f/--file read patterns FROM a file; the filename is not a search term.
+    assert extract_pattern("Bash", {"command": "grep -f patterns.txt"}) is None
+    assert extract_pattern("Bash", {"command": "grep --file=patterns.txt"}) is None
+
+
+def test_usable_pattern_output_is_identifier_charset() -> None:
+    # The sole sanitization point: output is always plain identifier characters,
+    # so no shell/regex metacharacter can reach the search sink (R22).
+    allowed = set(
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+    )
+    for raw in ('"$(rm -rf /)"', "foo;bar|baz", "a.*b", "load_config", "--", "$x"):
+        result = usable_pattern(raw)
+        assert result is None or set(result) <= allowed

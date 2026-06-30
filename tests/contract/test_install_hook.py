@@ -78,6 +78,29 @@ def test_remove_without_codescent_entries_is_noop() -> None:
     assert remove_codescent_hooks(original) == original
 
 
+def test_third_party_substring_hook_survives_merge_and_remove() -> None:
+    # Covers R18: a third-party hook whose command merely contains the substring
+    # "hook-augment" is matched by whole token, so it is never clobbered.
+    original = {
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        {"type": "command", "command": "./scripts/hook-augment.sh"},
+                        {"type": "command", "command": "deploy --hook-reindex-mode"},
+                    ],
+                },
+            ],
+        },
+    }
+
+    merged = merge_codescent_hooks(original, "codescent")
+    restored = remove_codescent_hooks(merged)
+
+    assert restored == original  # the third-party handlers come back untouched
+
+
 def test_install_command_creates_file(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

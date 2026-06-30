@@ -13,16 +13,40 @@ import shlex
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Final
 
+from codescent.services.hook_install import SEARCH_GATES
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-# The content/file-search binaries the hook enriches (R2).
-_SEARCH_BINARIES: Final = frozenset({"rg", "grep", "ripgrep", "ag"})
-# Flags whose *following* token is the search pattern (grep/rg).
-_PATTERN_FLAGS: Final = frozenset({"-e", "--regexp", "-f", "--file"})
-# Flags that consume a separate value, so that value is not the pattern.
+# The content/file-search binaries the hook enriches (R2). Shared with the
+# install-time `if`-gates (SEARCH_GATES) so the runtime detector and the
+# registered Bash conditions can never drift apart.
+_SEARCH_BINARIES: Final = frozenset(SEARCH_GATES)
+# Flags whose *following* token is the search pattern (grep/rg). ``-f``/``--file``
+# are deliberately excluded: their argument is a patterns FILE, not a search term.
+_PATTERN_FLAGS: Final = frozenset({"-e", "--regexp"})
+# Flags that consume a separate value, so that value is not the pattern. Covers
+# the common grep/rg value-taking options whose argument would otherwise be
+# misread as the pattern (``rg -t python foo`` must not enrich for "python").
 _ARG_FLAGS: Final = frozenset(
-    {"-A", "-B", "-C", "-m", "-d", "--max-count", "--context"},
+    {
+        "-A",
+        "-B",
+        "-C",
+        "-m",
+        "-d",
+        "--max-count",
+        "--context",
+        "-f",
+        "--file",
+        "-t",
+        "--type",
+        "-g",
+        "--glob",
+        "--max-depth",
+        "--max-columns",
+        "--sort",
+    },
 )
 # A usable pattern needs an identifier-like token of length >= 3 (KTD4).
 _IDENTIFIER_RE: Final[re.Pattern[str]] = re.compile(r"[A-Za-z_][A-Za-z0-9_]{2,}")
@@ -77,7 +101,7 @@ def _extract_bash_pattern(command: str) -> str | None:
         token = rest[index]
         if token in _PATTERN_FLAGS:
             return rest[index + 1] if index + 1 < len(rest) else None
-        if token.startswith(("--regexp=", "--file=")):
+        if token.startswith("--regexp="):
             return token.split("=", 1)[1] or None
         if token in _ARG_FLAGS:
             index += 2

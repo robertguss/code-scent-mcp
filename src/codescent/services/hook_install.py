@@ -12,9 +12,10 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Final, cast
 
-# Bash command prefixes that the native ``if``-gate wakes the augment hook for
-# (KTD3); non-search Bash never spawns the Python entrypoint.
-_SEARCH_GATES: Final = ("rg", "grep", "ripgrep", "ag")
+# The search binaries codescent enriches: both the native ``if``-gate prefixes
+# (KTD3) and the runtime detector in hook_support import this one definition, so
+# the registered Bash conditions and the detector can never drift apart.
+SEARCH_GATES: Final = ("rg", "grep", "ripgrep", "ag")
 # Backstop ceiling for the synchronous augment hook (KTD2); reindex is async.
 _AUGMENT_TIMEOUT_SECONDS: Final = 5
 # Substrings that mark a handler as codescent's own (idempotent install/remove).
@@ -59,7 +60,7 @@ def codescent_hook_groups(entrypoint: str) -> dict[str, list[Group]]:
                         timeout=_AUGMENT_TIMEOUT_SECONDS,
                         condition=f"Bash({gate} *)",
                     )
-                    for gate in _SEARCH_GATES
+                    for gate in SEARCH_GATES
                 ],
             },
         ],
@@ -76,9 +77,12 @@ def _is_codescent_handler(handler: object) -> bool:
     if not isinstance(handler, dict):
         return False
     command = cast("dict[str, object]", handler).get("command")
-    return isinstance(command, str) and any(
-        sub in command for sub in _CODESCENT_SUBCOMMANDS
-    )
+    if not isinstance(command, str):
+        return False
+    # Match a codescent subcommand as a whole whitespace-delimited token, never a
+    # bare substring — so a third party's `./scripts/hook-augment.sh` or
+    # `deploy --hook-augment-mode` is never mistaken for ours and clobbered (R18).
+    return bool(set(command.split()) & set(_CODESCENT_SUBCOMMANDS))
 
 
 def _strip_event_groups(groups: list[object]) -> list[object]:

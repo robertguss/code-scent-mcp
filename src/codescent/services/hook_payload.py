@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
+from codescent.core.token_estimate import estimate_tokens
 from codescent.services.hook_retrieval import ranked_matches
 
 if TYPE_CHECKING:
@@ -41,11 +42,12 @@ def build_payload(
     if not matches:
         return None
     lines = [_render_line(match) for match in matches]
-    while lines and _estimate_tokens(_assemble(pattern, lines)) > _MAX_TOKENS:
+    while lines:
+        assembled = _assemble(pattern, lines)
+        if estimate_tokens(assembled) <= _MAX_TOKENS:
+            return assembled
         _ = lines.pop()
-    if not lines:
-        return None
-    return _assemble(pattern, lines)
+    return None
 
 
 def _assemble(pattern: str, lines: list[str]) -> str:
@@ -69,7 +71,3 @@ def _symbol_label(match: HookMatch) -> str:
     if match.symbol_kind in {"function", "method"}:
         return f"{match.symbol_name}()"
     return match.symbol_name
-
-
-def _estimate_tokens(text: str) -> int:
-    return len(text) // 4
