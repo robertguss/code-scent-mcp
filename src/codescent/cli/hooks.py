@@ -140,5 +140,36 @@ def _emit_context(context: str) -> None:
     _ = sys.stdout.write(output + "\n")
 
 
+def hook_reindex() -> None:
+    """SessionStart / PostToolUse entrypoint: incremental reindex, never fail loud.
+
+    Registered with ``async: true`` so it never delays the agent (R14/R15). It
+    guards on an existing index and does nothing in an un-onboarded repo, so it
+    never creates ``.codescent/`` state implicitly (R16). Any error exits 0.
+    """
+    with contextlib.suppress(Exception):
+        _run_hook_reindex()
+
+
+def _run_hook_reindex() -> None:
+    payload = _read_hook_stdin()
+    cwd = payload.get("cwd") if payload is not None else None
+    repo_root = Path(cwd) if isinstance(cwd, str) and cwd else Path()
+
+    # Never create state in a repo the user never onboarded (R16). Reuse the
+    # existing index only; do not call initialize_storage.
+    if not (repo_root / ".codescent" / "index.sqlite").exists():
+        return
+
+    from codescent.services.repo_index import (  # noqa: PLC0415 - lazy (R20)
+        RepoIndexService,
+    )
+
+    # Incremental by hash diff — covers both the session-start pass and the
+    # per-edit touched-file pass; the specific edited path needs no special case.
+    _ = RepoIndexService(repo_root).index_repo(full=False)
+
+
 def register_hook_commands(app: typer.Typer) -> None:
     _ = app.command(name="hook-augment")(hook_augment)
+    _ = app.command(name="hook-reindex")(hook_reindex)
