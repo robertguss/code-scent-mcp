@@ -6,7 +6,7 @@
       "args": [
         "run",
         "--directory",
-        "/Users/robertguss/Projects/startups/code-scent-mcp",
+        "/home/robert/Projects/code-scent-mcp",
         "codescent",
         "serve"
       ],

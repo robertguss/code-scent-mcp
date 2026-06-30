@@ -1,0 +1,68 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/robert/.local/bin/codescent hook-augment",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/robert/.local/bin/codescent hook-augment",
+            "if": "Bash(rg *)",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "/home/robert/.local/bin/codescent hook-augment",
+            "if": "Bash(grep *)",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "/home/robert/.local/bin/codescent hook-augment",
+            "if": "Bash(ripgrep *)",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "/home/robert/.local/bin/codescent hook-augment",
+            "if": "Bash(ag *)",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/robert/.local/bin/codescent hook-reindex",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/robert/.local/bin/codescent hook-reindex",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
