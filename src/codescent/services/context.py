@@ -34,7 +34,12 @@ from codescent.services.freshness import (
     next_tools_with_refresh_recovery,
     warnings_for_results,
 )
-from codescent.services.git import git_co_change_counts, git_related_paths
+from codescent.services.git import (
+    git_changed_paths,
+    git_co_change_counts,
+    git_related_paths,
+)
+from codescent.services.search_support import frecency_scores, recent_query_paths
 from codescent.services.status import RepoStatusService
 from codescent.services.symbols import (
     ensure_symbols_indexed,
@@ -276,6 +281,7 @@ class ContextService:
             relative_path,
             _persisted_file_likely_tests(repo_root, relative_path),
         )
+        _apply_personal_signals(repo_root, reasons)
 
         rows = _related_rows(reasons, relative_path)
         visible_rows = rows[page.offset : page.offset + page.limit]
@@ -617,6 +623,28 @@ def _persisted_risk_notes(repo_root: Path, path: str) -> tuple[str, ...]:
     if low_confidence_rows:
         return ("low-confidence references omitted from caller/callee claims",)
     return ()
+
+
+def _apply_personal_signals(repo_root: Path, reasons: dict[str, set[str]]) -> None:
+    """Float up already-related files THIS developer is touching.
+
+    Adds the frecency / query-history / git-status reasons to existing related
+    paths so a recently or frequently touched (or git-modified) related file
+    ranks above an equally-related untouched one. Never introduces unrelated
+    paths; a cold/missing store is a no-op (neutral).
+    """
+    if not reasons:
+        return
+    git_modified = git_changed_paths(repo_root)
+    recent_queries = recent_query_paths(repo_root)
+    frecency = frecency_scores(repo_root)
+    for path in list(reasons):
+        if path in git_modified:
+            add_related_reason(reasons, path, "git_modified")
+        if path in recent_queries:
+            add_related_reason(reasons, path, "recent_query")
+        if frecency.get(path, 0.0) > 0:
+            add_related_reason(reasons, path, "frecency")
 
 
 def _related_rows(

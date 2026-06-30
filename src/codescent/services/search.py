@@ -5,44 +5,78 @@ from typing import TYPE_CHECKING
 
 from codescent.core.models import PageOptions
 from codescent.core.paths import resolve_repo_root
+from codescent.core.symbol_formatter import CollapsedSymbol, collapse_line
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.search import rank_path
-from codescent.engine.source_read import read_source_lines
+from codescent.engine.search.multi_grep import multi_grep
 from codescent.services.config import ConfigService
+from codescent.services.fff_backend import select_search_backend
+from codescent.services.quality_signals import quality_annotation_for
+from codescent.services.search_collapse import (
+    content_signals,
+    file_spans,
+)
 from codescent.services.search_queries import (
     TestSearchRequest,
     search_tests_for_repo,
     search_todos_for_repo,
 )
+from codescent.services.search_run import (
+    RetrievalContext,
+    build_constraint_filter,
+    content_results,
+    file_results,
+)
 from codescent.services.search_support import (
     CHANGED_FILE_BONUS,
     DEFAULT_LIMIT,
     DEFAULT_LINE_BUDGET,
-    FRECENCY_BONUS_MULTIPLIER,
     MAX_LIMIT,
     SearchPagePayload,
     SearchResultPayload,
     TestSearchResultPayload,
     TodoSearchResultPayload,
     changed_file_reasons,
-    changed_files,
     cursor_to_offset,
-    frecency_scores,
-    match_text,
     merge_reasons,
     page_results,
+    ranking_signals_for,
     record_frecency,
+    searchable_lines,
     snippet,
     sort_results,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
+
+    from codescent.engine.search import PathQuality
+    from codescent.services.fff_backend import FffClient
+
+
+def _annotate_quality(
+    results: tuple[SearchResultPayload, ...],
+    quality: Mapping[str, PathQuality],
+) -> tuple[SearchResultPayload, ...]:
+    """Attach the bounded inline quality annotation to each result."""
+    for result in results:
+        annotation = quality_annotation_for(result["path"], quality)
+        if annotation is not None:
+            result["quality"] = annotation
+    return results
 
 
 @dataclass(frozen=True, slots=True)
 class SearchService:
     repo_root: Path | str
+    # Optional pre-built fff engine (tests). Routed through
+    # ``select_search_backend`` so an unhealthy client falls back to native; the
+    # default (``None``) detects fff and returns native when it is absent.
+    fff_client: FffClient | None = None
+
+    def _backend(self, repo_root: Path) -> FffClient | None:
+        return select_search_backend(repo_root, client=self.fff_client)
 
     def search_files(
         self,
@@ -50,39 +84,20 @@ class SearchService:
         *,
         limit: int = DEFAULT_LIMIT,
         offset: int = 0,
+        constraints: str = "",
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
-        config = ConfigService(repo_root).load()
-        changed = changed_files(repo_root)
-        frecency = frecency_scores(repo_root)
-        results: list[SearchResultPayload] = []
-
-        for item in build_file_inventory(repo_root, config=config):
-            rank = rank_path(item.path, query)
-            if rank is None:
-                continue
-            score = rank.score
-            reasons = rank.reasons
-            if item.path in changed:
-                score += CHANGED_FILE_BONUS
-                reasons = (*reasons, "changed_file")
-            frecency_score = frecency.get(item.path, 0.0)
-            if frecency_score > 0:
-                score += min(frecency_score, 5.0) * FRECENCY_BONUS_MULTIPLIER
-                reasons = (*reasons, "frecency")
-            results.append(
-                {
-                    "path": item.path,
-                    "score": score,
-                    "reasons": reasons,
-                    "snippet": None,
-                },
-            )
-
+        context = RetrievalContext(
+            repo_root=repo_root,
+            config=ConfigService(repo_root).load(),
+            signals=ranking_signals_for(repo_root),
+            allow=build_constraint_filter(repo_root, constraints),
+        )
+        results = file_results(context, query, backend=self._backend(repo_root))
         page = PageOptions(limit=limit, offset=offset)
         selected = tuple(sort_results(results)[page.offset : page.offset + page.limit])
         record_frecency(repo_root, query, tuple(result["path"] for result in selected))
-        return selected
+        return _annotate_quality(selected, context.signals.quality)
 
     def search_files_page(
         self,
@@ -90,60 +105,52 @@ class SearchService:
         *,
         limit: int = DEFAULT_LIMIT,
         cursor: str | None = None,
+        constraints: str = "",
     ) -> SearchPagePayload:
         offset = cursor_to_offset(cursor)
-        results = self.search_files(query, limit=MAX_LIMIT, offset=0)
+        results = self.search_files(
+            query, limit=MAX_LIMIT, offset=0, constraints=constraints
+        )
         return page_results(results, limit=limit, offset=offset)
 
-    def search_content(
+    def search_content(  # noqa: PLR0913 - additive constraints prefilter knob.
         self,
         query: str,
         *,
         limit: int = DEFAULT_LIMIT,
         line_budget: int = DEFAULT_LINE_BUDGET,
         offset: int = 0,
+        expand: bool = False,
+        constraints: str = "",
     ) -> tuple[SearchResultPayload, ...]:
         repo_root = resolve_repo_root(self.repo_root)
-        config = ConfigService(repo_root).load()
-        changed = changed_files(repo_root)
-        frecency = frecency_scores(repo_root)
-        results: list[SearchResultPayload] = []
-
-        for item in build_file_inventory(repo_root, config=config):
-            lines = _searchable_lines(repo_root, item.path)
-            for line_number, line in enumerate(lines):
-                if match_text(line, query) is None:
-                    continue
-                score = 100.0
-                reasons = ("content_match",)
-                if item.path in changed:
-                    score += CHANGED_FILE_BONUS
-                    reasons = (*reasons, "changed_file")
-                frecency_score = frecency.get(item.path, 0.0)
-                if frecency_score > 0:
-                    score += min(frecency_score, 5.0) * FRECENCY_BONUS_MULTIPLIER
-                    reasons = (*reasons, "frecency")
-                results.append(
-                    {
-                        "path": item.path,
-                        "score": score,
-                        "reasons": reasons,
-                        "snippet": snippet(lines, line_number, line_budget),
-                    },
-                )
-
+        context = RetrievalContext(
+            repo_root=repo_root,
+            config=ConfigService(repo_root).load(),
+            signals=ranking_signals_for(repo_root),
+            allow=build_constraint_filter(repo_root, constraints),
+        )
+        results = content_results(
+            context,
+            query,
+            backend=self._backend(repo_root),
+            line_budget=line_budget,
+            expand=expand,
+        )
         page = PageOptions(limit=limit, offset=offset)
         selected = tuple(sort_results(results)[page.offset : page.offset + page.limit])
         record_frecency(repo_root, query, tuple(result["path"] for result in selected))
-        return selected
+        return _annotate_quality(selected, context.signals.quality)
 
-    def search_content_page(
+    def search_content_page(  # noqa: PLR0913 - additive constraints prefilter knob.
         self,
         query: str,
         *,
         limit: int = DEFAULT_LIMIT,
         cursor: str | None = None,
         line_budget: int = DEFAULT_LINE_BUDGET,
+        expand: bool = False,
+        constraints: str = "",
     ) -> SearchPagePayload:
         offset = cursor_to_offset(cursor)
         results = self.search_content(
@@ -151,6 +158,8 @@ class SearchService:
             limit=MAX_LIMIT,
             offset=0,
             line_budget=line_budget,
+            expand=expand,
+            constraints=constraints,
         )
         return page_results(results, limit=limit, offset=offset)
 
@@ -160,6 +169,8 @@ class SearchService:
         *,
         limit: int = DEFAULT_LIMIT,
         line_budget: int = DEFAULT_LINE_BUDGET,
+        expand: bool = False,
+        constraints: str = "",
     ) -> tuple[SearchResultPayload, ...]:
         page = PageOptions(limit=limit)
         if not queries:
@@ -167,47 +178,45 @@ class SearchService:
 
         repo_root = resolve_repo_root(self.repo_root)
         config = ConfigService(repo_root).load()
-        changed = changed_files(repo_root)
-        frecency = frecency_scores(repo_root)
+        signals = ranking_signals_for(repo_root)
+        allow = build_constraint_filter(repo_root, constraints)
         merged: dict[str, SearchResultPayload] = {}
 
         for item in build_file_inventory(repo_root, config=config):
-            lines = _searchable_lines(repo_root, item.path)
+            if allow is not None and not allow(item.path):
+                continue
+            lines = searchable_lines(repo_root, item.path)
+            line_matches = multi_grep(queries, lines)
+            if not any(line_matches.values()):
+                continue
+            spans, confidence = file_spans(repo_root, item, expand=expand)
+            score, base_reasons = content_signals(item.path, signals)
             for query in queries:
-                for line_number, line in enumerate(lines):
-                    if match_text(line, query) is None:
-                        continue
-                    score = 100.0
-                    reasons = ("content_match",)
-                    if item.path in changed:
-                        score += CHANGED_FILE_BONUS
-                        reasons = (*reasons, "changed_file")
-                    frecency_score = frecency.get(item.path, 0.0)
-                    if frecency_score > 0:
-                        score += min(frecency_score, 5.0) * FRECENCY_BONUS_MULTIPLIER
-                        reasons = (*reasons, "frecency")
-                    result: SearchResultPayload = {
-                        "path": item.path,
-                        "score": score,
-                        "reasons": reasons,
-                        "snippet": snippet(lines, line_number, line_budget),
-                    }
-
-                    existing = merged.get(result["path"])
-                    reasons = merge_reasons(result["reasons"], (f"query:{query}",))
+                for index in line_matches.get(query, ()):
+                    if expand:
+                        hit_snippet = snippet(lines, index, line_budget)
+                        hit_symbol: CollapsedSymbol | None = None
+                    else:
+                        hit = collapse_line(lines, index + 1, spans, confidence)
+                        hit_snippet = hit["snippet"]
+                        hit_symbol = hit["symbol"]
+                    reasons = merge_reasons(base_reasons, (f"query:{query}",))
+                    existing = merged.get(item.path)
                     if existing is None:
-                        merged[result["path"]] = {
-                            "path": result["path"],
-                            "score": result["score"],
+                        merged[item.path] = {
+                            "path": item.path,
+                            "score": score,
                             "reasons": reasons,
-                            "snippet": result["snippet"],
+                            "snippet": hit_snippet,
+                            "symbol": hit_symbol,
                         }
                         continue
-                    merged[result["path"]] = {
-                        "path": existing["path"],
-                        "score": max(existing["score"], result["score"]),
+                    merged[item.path] = {
+                        "path": item.path,
+                        "score": max(existing["score"], score),
                         "reasons": merge_reasons(existing["reasons"], reasons),
-                        "snippet": existing["snippet"] or result["snippet"],
+                        "snippet": existing["snippet"] or hit_snippet,
+                        "symbol": existing["symbol"] or hit_symbol,
                     }
 
         selected = tuple(sort_results(list(merged.values()))[: page.limit])
@@ -218,7 +227,7 @@ class SearchService:
                 if f"query:{query}" in result["reasons"]
             )
             record_frecency(repo_root, query, query_paths)
-        return selected
+        return _annotate_quality(selected, signals.quality)
 
     def search_changed_files(
         self,
@@ -249,6 +258,7 @@ class SearchService:
                     "score": score,
                     "reasons": reasons,
                     "snippet": None,
+                    "symbol": None,
                 },
             )
 
@@ -283,8 +293,3 @@ class SearchService:
         )
         config = ConfigService(repo_root).load()
         return search_tests_for_repo(repo_root, request, config=config)
-
-
-def _searchable_lines(repo_root: Path, relative_path: str) -> list[str]:
-    source = read_source_lines(repo_root / relative_path)
-    return list(source.lines or ())

@@ -16,6 +16,14 @@ class ToolSearchResult(BaseModel):
     score: float = Field(ge=0)
     reasons: tuple[str, ...]
     snippet: str | None = None
+    symbol: dict[str, object] | None = None
+
+
+class MatchCountPayload(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    total_matches: int = Field(ge=0)
+    file_count: int = Field(ge=0)
 
 
 class SearchToolPayload(BaseModel):
@@ -24,8 +32,10 @@ class SearchToolPayload(BaseModel):
     ok: bool
     query: str
     limit: int = Field(ge=1, le=20)
+    output_mode: str = "content"
     next_cursor: str | None = None
     results: tuple[ToolSearchResult, ...]
+    count: MatchCountPayload | None = None
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
@@ -37,7 +47,9 @@ class MultiSearchToolPayload(BaseModel):
     ok: bool
     queries: tuple[str, ...]
     limit: int = Field(ge=1, le=20)
+    output_mode: str = "content"
     results: tuple[ToolSearchResult, ...]
+    count: MatchCountPayload | None = None
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
@@ -146,9 +158,19 @@ async def test_search_tools_include_ranking_reasons(tmp_path: Path) -> None:
     assert content_payload.ok is True
     assert content_payload.confidence == "high"
     assert content_payload.warnings == ()
+    # output_mode (U5) defaults to the collapse-aware content shape with no tally.
+    assert content_payload.output_mode == "content"
+    assert content_payload.count is None
     assert content_payload.results[0].path == "src/app.py"
     assert "content_match" in content_payload.results[0].reasons
-    assert content_payload.results[0].snippet == "# TODO: handle billing"
+    # The match is the in-body marker comment; collapse-to-symbol (U4) returns
+    # the enclosing function signature instead of the bare line.
+    assert "collapsed_to_symbol" in content_payload.results[0].reasons
+    assert content_payload.results[0].snippet == "def run() -> None:"
+    symbol = content_payload.results[0].symbol
+    assert symbol is not None
+    assert symbol["name"] == "run"
+    assert symbol["confidence"] == "exact"
 
 
 @pytest.mark.anyio

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, TypedDict, cast
 
 from codescent.core.models import EnvelopeMode, ResponseEnvelope
@@ -353,3 +355,198 @@ def _float_field(result: Mapping[str, object], key: str) -> float:
     if isinstance(value, int | float):
         return float(value)
     return 0.0
+
+
+# --- Collapse-to-symbol engine ------------------------------------------------
+#
+# Map a content/grep match line to its enclosing function/class and return that
+# symbol's signature instead of the bare line. Python ranges come from the AST
+# (confidence="exact"); TS/Go ranges come from the regex packs, so those hits are
+# labelled confidence="heuristic". A match with no enclosing symbol (module level)
+# degrades gracefully to the bounded raw line.
+
+EXACT_CONFIDENCE: Final = "exact"
+HEURISTIC_CONFIDENCE: Final = "heuristic"
+MAX_COLLAPSE_LINE_CHARS: Final = 200
+_TRUNCATION_MARKER: Final = "..."
+_IMPORT_LINE_RE: Final[re.Pattern[str]] = re.compile(
+    r"^\s*(?:import\b|from\s+\S+\s+import\b)",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class SymbolSpan:
+    """Minimal enclosing-symbol record (kept core-local to avoid an engine dep)."""
+
+    name: str
+    qualified_name: str
+    kind: str
+    start_line: int
+    end_line: int
+
+
+class CollapsedSymbol(TypedDict):
+    # Lean on purpose: the signature lives in the result's ``snippet`` (collapsed
+    # results set snippet = signature), so it is not duplicated here. This keeps
+    # the per-hit metadata small, which is the whole point of the unit.
+    name: str
+    kind: str
+    start_line: int
+    end_line: int
+    confidence: str
+    match_count: int
+
+
+class CollapsedHit(TypedDict):
+    snippet: str
+    symbol: CollapsedSymbol | None
+    match_lines: tuple[int, ...]
+
+
+def truncate_line(text: str, *, char_bound: int = MAX_COLLAPSE_LINE_CHARS) -> str:
+    stripped = text.strip()
+    if len(stripped) <= char_bound:
+        return stripped
+    keep = max(char_bound - len(_TRUNCATION_MARKER), 0)
+    return stripped[:keep] + _TRUNCATION_MARKER
+
+
+def is_import_only_line(text: str) -> bool:
+    return _IMPORT_LINE_RE.match(text) is not None
+
+
+def enclosing_symbol(
+    symbols: Sequence[SymbolSpan],
+    line_number: int,
+) -> SymbolSpan | None:
+    best: SymbolSpan | None = None
+    for symbol in symbols:
+        if symbol.start_line <= line_number <= symbol.end_line and (
+            best is None or _is_inner(symbol, best)
+        ):
+            best = symbol
+    return best
+
+
+def _is_inner(candidate: SymbolSpan, current: SymbolSpan) -> bool:
+    candidate_span = candidate.end_line - candidate.start_line
+    current_span = current.end_line - current.start_line
+    if candidate_span != current_span:
+        return candidate_span < current_span
+    return candidate.start_line > current.start_line
+
+
+def signature_for(
+    lines: Sequence[str],
+    symbol: SymbolSpan,
+    *,
+    char_bound: int = MAX_COLLAPSE_LINE_CHARS,
+) -> str:
+    return truncate_line(_line_text(lines, symbol.start_line), char_bound=char_bound)
+
+
+def build_collapsed_symbol(
+    symbol: SymbolSpan,
+    confidence: str,
+    *,
+    match_count: int = 1,
+) -> CollapsedSymbol:
+    return {
+        "name": symbol.name,
+        "kind": symbol.kind,
+        "start_line": symbol.start_line,
+        "end_line": symbol.end_line,
+        "confidence": confidence,
+        "match_count": match_count,
+    }
+
+
+def collapse_line(
+    lines: Sequence[str],
+    line_number: int,
+    symbols: Sequence[SymbolSpan],
+    confidence: str,
+    *,
+    char_bound: int = MAX_COLLAPSE_LINE_CHARS,
+) -> CollapsedHit:
+    """Collapse a single match line to its enclosing symbol (or a bounded line)."""
+    symbol = enclosing_symbol(symbols, line_number)
+    if symbol is None:
+        return {
+            "snippet": truncate_line(
+                _line_text(lines, line_number),
+                char_bound=char_bound,
+            ),
+            "symbol": None,
+            "match_lines": (line_number,),
+        }
+    return {
+        "snippet": signature_for(lines, symbol, char_bound=char_bound),
+        "symbol": build_collapsed_symbol(symbol, confidence),
+        "match_lines": (line_number,),
+    }
+
+
+def collapse_file_matches(
+    *,
+    lines: Sequence[str],
+    match_lines: Sequence[int],
+    symbols: Sequence[SymbolSpan],
+    confidence: str,
+    char_bound: int = MAX_COLLAPSE_LINE_CHARS,
+) -> tuple[CollapsedHit, ...]:
+    """Collapse every match line in one file to its enclosing symbol.
+
+    Multiple matches inside the same definition collapse to a single hit (the
+    token win). Module-level matches degrade to bounded raw lines, and any
+    import-only module-level match is dropped once a real definition is shown.
+
+    Args:
+        lines: The file's lines (0-indexed; ``match_lines`` are 1-based).
+        match_lines: 1-based line numbers that matched the query.
+        symbols: Enclosing-symbol spans for the file.
+        confidence: ``"exact"`` (Python AST) or ``"heuristic"`` (regex packs).
+        char_bound: Per-line character cap for signatures and raw lines.
+
+    Returns:
+        Ordered, deduped collapsed hits for the file.
+    """
+    ordered = sorted(dict.fromkeys(match_lines))
+    has_symbol_hit = any(
+        enclosing_symbol(symbols, line) is not None for line in ordered
+    )
+    hits: list[CollapsedHit] = []
+    position_by_symbol: dict[tuple[int, str], int] = {}
+    for line in ordered:
+        symbol = enclosing_symbol(symbols, line)
+        if symbol is None:
+            if has_symbol_hit and is_import_only_line(_line_text(lines, line)):
+                continue
+            hits.append(
+                collapse_line(lines, line, symbols, confidence, char_bound=char_bound)
+            )
+            continue
+        key = (symbol.start_line, symbol.qualified_name)
+        position = position_by_symbol.get(key)
+        if position is None:
+            position_by_symbol[key] = len(hits)
+            hits.append(
+                collapse_line(lines, line, symbols, confidence, char_bound=char_bound),
+            )
+            continue
+        _append_match(hits[position], line)
+    return tuple(hits)
+
+
+def _append_match(hit: CollapsedHit, line_number: int) -> None:
+    hit["match_lines"] = (*hit["match_lines"], line_number)
+    payload = hit["symbol"]
+    if payload is not None:
+        payload["match_count"] = len(hit["match_lines"])
+
+
+def _line_text(lines: Sequence[str], line_number: int) -> str:
+    index = line_number - 1
+    if 0 <= index < len(lines):
+        return lines[index]
+    return ""

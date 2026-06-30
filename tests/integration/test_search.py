@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 from pathlib import Path
 from typing import ClassVar
@@ -22,8 +23,17 @@ class SearchPayload(BaseModel):
     snippet: str | None = None
 
 
-def test_search_files_exact_and_fuzzy() -> None:
-    service = SearchService("tests/fixtures/python-basic")
+def test_search_files_exact_and_fuzzy(tmp_path: Path) -> None:
+    # Hermetic copy of the fixture: the committed .codescent accumulates frecency
+    # and findings written by other tests in the same run, which would otherwise
+    # make this exact-ordering assertion depend on shared, mutating signal state.
+    repo = tmp_path / "python-basic"
+    _ = shutil.copytree(
+        "tests/fixtures/python-basic",
+        repo,
+        ignore=shutil.ignore_patterns(".codescent"),
+    )
+    service = SearchService(repo)
 
     exact = service.search_files("config", limit=5)
     fuzzy = service.search_files("cnfig", limit=5)

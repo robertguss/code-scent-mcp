@@ -8,6 +8,41 @@ CodeScent is a local, MCP-first codebase improvement server for coding agents.
 The package is Python 3.12+, distributed as `codescent`, and exposes a Typer
 CLI, a FastMCP stdio server, and a local dashboard backed by `.codescent` state.
 
+## NAVIGATOR NORTH STAR
+
+CodeScent is the **quality-aware navigator** for a coding agent's codebase: it
+finds the right code, knows which code is healthy or risky, and feeds the model
+a tight, trustworthy bundle — fewer tokens, sharper focus. The single yardstick
+for every decision: _does it get the right code into the model with fewer tokens
+and tighter focus?_
+
+- **Native is the always-on floor.** stdlib `ast`, health rules, and the import
+  graph never fail and never require a network. The navigator always works on
+  native alone.
+- **fff / cbm / LLM are optional accelerators.** Present, they upgrade the
+  answer; absent, the navigator degrades gracefully to native. Removing any one
+  must not break the tool.
+- **Facts stay deterministic.** Where-is-X, who-calls-Y, the smells, and the CI
+  gate are reproducible facts — always the floor and the fallback. Never let an
+  LLM call into `scan_code_health` or the CI gate.
+- **Judgment may use the opt-in LLM layer.** Rank, summarize, suggest, and
+  vague-ask understanding may use the LLM — but only opt-in, cached, and labeled
+  "subjective", with a deterministic fallback when it is off or fails. The LLM
+  augments the fact layer; it never replaces it.
+
+### Anti-drift checklist
+
+Before shipping any navigator change, confirm:
+
+- [ ] **Facts stay deterministic** — no LLM/network in indexing, scan, search,
+      context, or eval paths; reproducibility and calibration preserved.
+- [ ] **LLM layer is opt-in, cached, labeled** — every probabilistic result is
+      marked "subjective" and falls back to deterministic when off or failing.
+- [ ] **Stay bounded** — every answer keeps its explicit bound and a result
+      handle; no unbounded payloads.
+- [ ] **Engines stay optional** — remove fff, cbm, or the network and the
+      navigator still works on native alone.
+
 ## STRUCTURE
 
 ```text
@@ -104,3 +139,100 @@ uv run python scripts/prove_source_read_only.py --repo tests/fixtures/python-bas
   chat context for product behavior.
 - The TypeScript/React/Next tree under `tests/fixtures/ts-react-next-basic` is a
   fixture inside a Python repo, not a top-level frontend app.
+
+<!-- bv-agent-instructions-v2 -->
+
+---
+
+## Beads Workflow Integration
+
+This project uses [beads_rust](https://github.com/Dicklesworthstone/beads_rust) (`br`) for issue tracking and [beads_viewer](https://github.com/Dicklesworthstone/beads_viewer) (`bv`) for graph-aware triage. Issues are stored in `.beads/` and tracked in git.
+
+### Using bv as an AI sidecar
+
+bv is a graph-aware triage engine for Beads projects (.beads/beads.jsonl). Instead of parsing JSONL or hallucinating graph traversal, use robot flags for deterministic, dependency-aware outputs with precomputed metrics (PageRank, betweenness, critical path, cycles, HITS, eigenvector, k-core).
+
+**Scope boundary:** bv handles *what to work on* (triage, priority, planning). `br` handles creating, modifying, and closing beads.
+
+**CRITICAL: Use ONLY --robot-* flags. Bare bv launches an interactive TUI that blocks your session.**
+
+#### The Workflow: Start With Triage
+
+**`bv --robot-triage` is your single entry point.** It returns everything you need in one call:
+- `quick_ref`: at-a-glance counts + top 3 picks
+- `recommendations`: ranked actionable items with scores, reasons, unblock info
+- `quick_wins`: low-effort high-impact items
+- `blockers_to_clear`: items that unblock the most downstream work
+- `project_health`: status/type/priority distributions, graph metrics
+- `commands`: copy-paste shell commands for next steps
+
+```bash
+bv --robot-triage        # THE MEGA-COMMAND: start here
+bv --robot-next          # Minimal: just the single top pick + claim command
+
+# Token-optimized output (TOON) for lower LLM context usage:
+bv --robot-triage --format toon
+```
+
+Before claiming, verify current state with `br show <id> --json` or `br ready --json`. `recommendations` can include graph-important blocked or assigned work; only `quick_ref.top_picks` and non-empty `claim_command` fields represent claimable work.
+
+#### Other bv Commands
+
+| Command | Returns |
+|---------|---------|
+| `--robot-plan` | Parallel execution tracks with unblocks lists |
+| `--robot-priority` | Priority misalignment detection with confidence |
+| `--robot-insights` | Full metrics: PageRank, betweenness, HITS, eigenvector, critical path, cycles, k-core |
+| `--robot-alerts` | Stale issues, blocking cascades, priority mismatches |
+| `--robot-suggest` | Hygiene: duplicates, missing deps, label suggestions, cycle breaks |
+| `--robot-diff --diff-since <ref>` | Changes since ref: new/closed/modified issues |
+| `--robot-graph [--graph-format=json\|dot\|mermaid]` | Dependency graph export |
+
+#### Scoping & Filtering
+
+```bash
+bv --robot-plan --label backend              # Scope to label's subgraph
+bv --robot-insights --as-of HEAD~30          # Historical point-in-time
+bv --recipe actionable --robot-plan          # Pre-filter: ready to work (no blockers)
+bv --recipe high-impact --robot-triage       # Pre-filter: top PageRank scores
+```
+
+### br Commands for Issue Management
+
+```bash
+br ready              # Show issues ready to work (no blockers)
+br list --status=open # All open issues
+br show <id>          # Full issue details with dependencies
+br create --title="..." --type=task --priority=2
+br update <id> --status=in_progress
+br close <id> --reason="Completed"
+br close <id1> <id2>  # Close multiple issues at once
+br sync --flush-only  # Export DB to JSONL
+```
+
+### Workflow Pattern
+
+1. **Triage**: Run `bv --robot-triage` to find the highest-impact actionable work
+2. **Claim**: Use `br update <id> --status=in_progress`
+3. **Work**: Implement the task
+4. **Complete**: Use `br close <id>`
+5. **Sync**: Always run `br sync --flush-only` at session end
+
+### Key Concepts
+
+- **Dependencies**: Issues can block other issues. `br ready` shows only unblocked work.
+- **Priority**: P0=critical, P1=high, P2=medium, P3=low, P4=backlog (use numbers 0-4, not words)
+- **Types**: task, bug, feature, epic, chore, docs, question
+- **Blocking**: `br dep add <issue> <depends-on>` to add dependencies
+
+### Session Protocol
+
+```bash
+git status              # Check what changed
+git add <files>         # Stage code changes
+br sync --flush-only    # Export beads changes to JSONL
+git commit -m "..."     # Commit everything
+git push                # Push to remote
+```
+
+<!-- end-bv-agent-instructions -->
