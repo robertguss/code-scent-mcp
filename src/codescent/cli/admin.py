@@ -4,20 +4,15 @@ import json
 import shutil
 import sys
 import time
-from typing import Annotated, NoReturn, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Annotated, NoReturn, Protocol, runtime_checkable
 
 import typer
 
 from codescent.core.errors import CodeScentError
 from codescent.core.paths import resolve_repo_root
-from codescent.services.config import ConfigService
-from codescent.services.repo_index import (
-    IndexResult,
-    ReindexDebouncer,
-    RepoIndexService,
-)
-from codescent.services.rules import RulesService
-from codescent.services.status import RepoStatusService
+
+if TYPE_CHECKING:
+    from codescent.services.repo_index import IndexResult
 
 
 @runtime_checkable
@@ -73,6 +68,8 @@ def config(
         typer.Option("--json", help="Print JSON project config."),
     ] = False,
 ) -> None:
+    from codescent.services.config import ConfigService  # noqa: PLC0415
+
     project_config = ConfigService(repo).load()
     payload = project_config.model_dump(mode="json")
     if json_output:
@@ -88,6 +85,8 @@ def rules(
         typer.Option("--json", help="Print JSON rule configuration."),
     ] = False,
 ) -> None:
+    from codescent.services.rules import RulesService  # noqa: PLC0415
+
     report_data = RulesService(repo).get_rules()
     payload = {
         "enabled_rule_packs": list(report_data.enabled_rule_packs),
@@ -121,6 +120,12 @@ def watch(
         typer.Option("--json", help="Print JSON watch result."),
     ] = False,
 ) -> None:
+    from codescent.services.repo_index import (  # noqa: PLC0415
+        ReindexDebouncer,
+        RepoIndexService,
+    )
+    from codescent.services.status import RepoStatusService  # noqa: PLC0415
+
     if once:
         result = RepoIndexService(repo).index_repo()
         _emit_watch(_watch_payload(result, mode="once"), json_output=json_output)

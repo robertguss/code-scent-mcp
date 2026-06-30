@@ -5,19 +5,13 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, TypedDict
 
 import typer
 
-from codescent.services.ci import (
-    BaselineUpdateResult,
-    ChangedFileSummary,
-    CiReport,
-    CiService,
-    ci_github_annotations,
-    ci_sarif_document,
-)
-from codescent.services.findings import FindingsService
-from codescent.services.precision import PrecisionReport, PrecisionService
-from codescent.services.reports import ReportService
-
 if TYPE_CHECKING:
+    from codescent.services.ci import (
+        BaselineUpdateResult,
+        ChangedFileSummary,
+        CiReport,
+    )
+    from codescent.services.precision import PrecisionReport
     from codescent.storage.repositories import FindingRow
 
 INVALID_FORMAT_MESSAGE = "format must be json or markdown"
@@ -124,8 +118,9 @@ def report(
         typer.Option("--provider", help="Subjective review provider."),
     ] = "fake",
 ) -> None:
-    # Lazy: subjective_review pulls the heavy ``mcp`` package; keep it off the
-    # cold CLI-import path so ``hook-augment`` stays fast (R20).
+    # Lazy: these services pull the heavy findings/ci import graph; keep them off
+    # the cold CLI-import path so ``hook-augment`` stays fast (R20).
+    from codescent.services.findings import FindingsService  # noqa: PLC0415
     from codescent.services.subjective_review import (  # noqa: PLC0415
         SubjectiveReviewService,
         subjective_findings_payload,
@@ -156,6 +151,8 @@ def export(
         typer.Option("--format", help="Output format: json or markdown."),
     ] = "json",
 ) -> None:
+    from codescent.services.findings import FindingsService  # noqa: PLC0415
+
     report_data = FindingsService(repo).get_smell_report()
     payload: CliReportPayload = {
         "open_count": report_data.open_count,
@@ -175,6 +172,8 @@ def findings(
         typer.Option("--json", help="Print JSON findings."),
     ] = False,
 ) -> None:
+    from codescent.services.findings import FindingsService  # noqa: PLC0415
+
     rows = FindingsService(repo).get_smell_report().findings
     payload = {"findings": [_finding_row_payload(finding) for finding in rows]}
     if json_output:
@@ -191,6 +190,8 @@ def next_improvement(
         typer.Option("--json", help="Print JSON next improvement."),
     ] = False,
 ) -> None:
+    from codescent.services.findings import FindingsService  # noqa: PLC0415
+
     finding = FindingsService(repo).get_next_improvement()
     payload = None if finding is None else _finding_row_payload(finding)
     if json_output:
@@ -207,6 +208,8 @@ def explain(
         typer.Option("--json", help="Print JSON score explanation."),
     ] = False,
 ) -> None:
+    from codescent.services.reports import ReportService  # noqa: PLC0415
+
     explanation = ReportService(repo).explain_score(finding_id)
     payload = {
         "finding_id": explanation.finding_id,
@@ -228,6 +231,8 @@ def precision(
         typer.Option("--format", help="Output format: json or markdown."),
     ] = "json",
 ) -> None:
+    from codescent.services.precision import PrecisionService  # noqa: PLC0415
+
     report_data = PrecisionService(repo).get_precision()
     _emit_precision_report(_precision_payload(report_data), format_name)
 
@@ -267,6 +272,8 @@ def ci(  # noqa: PLR0913 - CLI command exposes distinct options.
         ),
     ] = False,
 ) -> None:
+    from codescent.services.ci import CiService  # noqa: PLC0415
+
     service = CiService(repo)
     if update_baseline:
         result = service.update_baseline()
@@ -289,6 +296,8 @@ def review_diff(
         ),
     ] = "json",
 ) -> None:
+    from codescent.services.ci import CiService  # noqa: PLC0415
+
     report_data = CiService(repo).run(threshold="high")
     _emit_ci_report(report_data, format_name)
 
@@ -394,6 +403,11 @@ def _precision_rule_line(rule: RulePrecisionPayload) -> str:
 
 
 def _emit_ci_report(report_data: CiReport, format_name: str) -> None:
+    from codescent.services.ci import (  # noqa: PLC0415
+        ci_github_annotations,
+        ci_sarif_document,
+    )
+
     if format_name == "sarif":
         typer.echo(json.dumps(ci_sarif_document(report_data)))
         return

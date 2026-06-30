@@ -5,17 +5,11 @@ from typing import TYPE_CHECKING
 
 from codescent.core.models import PageOptions
 from codescent.core.paths import resolve_repo_root
-from codescent.core.symbol_formatter import CollapsedSymbol, collapse_line
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.search import rank_path
-from codescent.engine.search.multi_grep import multi_grep
 from codescent.services.config import ConfigService
 from codescent.services.fff_backend import select_search_backend
 from codescent.services.quality_signals import quality_annotation_for
-from codescent.services.search_collapse import (
-    content_signals,
-    file_spans,
-)
 from codescent.services.search_queries import (
     TestSearchRequest,
     search_tests_for_repo,
@@ -25,6 +19,7 @@ from codescent.services.search_run import (
     RetrievalContext,
     build_constraint_filter,
     content_results,
+    content_results_for_queries,
     file_results,
 )
 from codescent.services.search_support import (
@@ -42,8 +37,6 @@ from codescent.services.search_support import (
     page_results,
     ranking_signals_for,
     record_frecency,
-    searchable_lines,
-    snippet,
     sort_results,
 )
 
@@ -172,54 +165,41 @@ class SearchService:
         expand: bool = False,
         constraints: str = "",
     ) -> tuple[SearchResultPayload, ...]:
-        page = PageOptions(limit=limit)
         if not queries:
             return ()
 
         repo_root = resolve_repo_root(self.repo_root)
-        config = ConfigService(repo_root).load()
-        signals = ranking_signals_for(repo_root)
-        allow = build_constraint_filter(repo_root, constraints)
+        context = RetrievalContext(
+            repo_root=repo_root,
+            config=ConfigService(repo_root).load(),
+            signals=ranking_signals_for(repo_root),
+            allow=build_constraint_filter(repo_root, constraints),
+        )
+        per_query = content_results_for_queries(
+            context,
+            queries,
+            backend=self._backend(repo_root),
+            line_budget=line_budget,
+            expand=expand,
+        )
+
         merged: dict[str, SearchResultPayload] = {}
+        for query, results in per_query.items():
+            for result in results:
+                reasons = merge_reasons(result["reasons"], (f"query:{query}",))
+                existing = merged.get(result["path"])
+                if existing is None:
+                    merged[result["path"]] = {**result, "reasons": reasons}
+                    continue
+                merged[result["path"]] = {
+                    "path": result["path"],
+                    "score": max(existing["score"], result["score"]),
+                    "reasons": merge_reasons(existing["reasons"], reasons),
+                    "snippet": existing["snippet"] or result["snippet"],
+                    "symbol": existing["symbol"] or result["symbol"],
+                }
 
-        for item in build_file_inventory(repo_root, config=config):
-            if allow is not None and not allow(item.path):
-                continue
-            lines = searchable_lines(repo_root, item.path)
-            line_matches = multi_grep(queries, lines)
-            if not any(line_matches.values()):
-                continue
-            spans, confidence = file_spans(repo_root, item, expand=expand)
-            score, base_reasons = content_signals(item.path, signals)
-            for query in queries:
-                for index in line_matches.get(query, ()):
-                    if expand:
-                        hit_snippet = snippet(lines, index, line_budget)
-                        hit_symbol: CollapsedSymbol | None = None
-                    else:
-                        hit = collapse_line(lines, index + 1, spans, confidence)
-                        hit_snippet = hit["snippet"]
-                        hit_symbol = hit["symbol"]
-                    reasons = merge_reasons(base_reasons, (f"query:{query}",))
-                    existing = merged.get(item.path)
-                    if existing is None:
-                        merged[item.path] = {
-                            "path": item.path,
-                            "score": score,
-                            "reasons": reasons,
-                            "snippet": hit_snippet,
-                            "symbol": hit_symbol,
-                        }
-                        continue
-                    merged[item.path] = {
-                        "path": item.path,
-                        "score": max(existing["score"], score),
-                        "reasons": merge_reasons(existing["reasons"], reasons),
-                        "snippet": existing["snippet"] or hit_snippet,
-                        "symbol": existing["symbol"] or hit_symbol,
-                    }
-
-        selected = tuple(sort_results(list(merged.values()))[: page.limit])
+        selected = tuple(sort_results(list(merged.values()))[:limit])
         for query in queries:
             query_paths = tuple(
                 result["path"]
@@ -227,7 +207,7 @@ class SearchService:
                 if f"query:{query}" in result["reasons"]
             )
             record_frecency(repo_root, query, query_paths)
-        return _annotate_quality(selected, signals.quality)
+        return _annotate_quality(selected, context.signals.quality)
 
     def search_changed_files(
         self,

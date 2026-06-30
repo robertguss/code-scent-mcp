@@ -121,6 +121,48 @@ def content_results(
     )
 
 
+def content_results_for_queries(
+    context: RetrievalContext,
+    queries: tuple[str, ...],
+    *,
+    backend: FffClient | None,
+    line_budget: int,
+    expand: bool,
+) -> dict[str, list[SearchResultPayload]]:
+    """Per-query content results sharing one inventory build.
+
+    Same fff-then-native routing as :func:`content_results`, but the file
+    inventory is built once and reused across every query so a multi-query
+    search does not pay the walk N times.
+    """
+    items = build_file_inventory(context.repo_root, config=context.config)
+    if context.allow is not None:
+        items = tuple(item for item in items if context.allow(item.path))
+    items_by_path = {item.path: item for item in items}
+    results: dict[str, list[SearchResultPayload]] = {}
+    for query in queries:
+        routed: list[SearchResultPayload] | None = None
+        if backend is not None:
+            routed = _fff_content_results(
+                backend,
+                context,
+                query,
+                items_by_path=items_by_path,
+                line_budget=line_budget,
+                expand=expand,
+            )
+        if routed is None:
+            routed = _native_content_results(
+                context,
+                items,
+                query,
+                line_budget=line_budget,
+                expand=expand,
+            )
+        results[query] = routed
+    return results
+
+
 def _path_result(
     path: str,
     score: float,

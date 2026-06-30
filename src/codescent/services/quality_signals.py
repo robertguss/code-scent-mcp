@@ -11,6 +11,8 @@ finding, and degrades to neutral (``{}``) when a repo has no persisted findings.
 
 from __future__ import annotations
 
+import sqlite3
+from contextlib import closing
 from typing import TYPE_CHECKING, TypedDict
 
 from codescent.core.json_decode import decode_json_object
@@ -21,7 +23,7 @@ from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import FindingRepository
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
     from pathlib import Path
 
     from codescent.engine.search.ranking import QualityFlag
@@ -126,8 +128,21 @@ def _active_findings(repo_root: Path) -> tuple[FindingRow, ...]:
 
 
 def _flags_for(finding: FindingRow, churn: Mapping[str, int]) -> set[QualityFlag]:
+    return _flags_from(
+        finding.rule_id,
+        finding.file_path,
+        finding.evidence_json,
+        churn,
+    )
+
+
+def _flags_from(
+    rule_id: str,
+    file_path: str,
+    evidence_json: str,
+    churn: Mapping[str, int],
+) -> set[QualityFlag]:
     flags: set[QualityFlag] = set()
-    rule_id = finding.rule_id
     if rule_id in _DEAD_RULES:
         flags.add("dead_code")
     if rule_id in _DUPLICATE_RULES:
@@ -136,11 +151,54 @@ def _flags_for(finding: FindingRow, churn: Mapping[str, int]) -> set[QualityFlag
         flags.add("complex")
     if (
         rule_id in _SIZE_RULES
-        and churn.get(finding.file_path, 0) > 0
-        and _line_count(finding.evidence_json) > 0
+        and churn.get(file_path, 0) > 0
+        and _line_count(evidence_json) > 0
     ):
         flags.add("hotspot")
     return flags
+
+
+def quality_flags_for_paths(
+    repo_root: Path,
+    paths: Iterable[str],
+) -> dict[str, tuple[str, ...]]:
+    """Active quality flags for a SMALL set of paths, via a path-filtered query.
+
+    The hook health surface needs flags only for the handful of git-modified
+    matched files, so this folds findings for just those paths instead of
+    loading the whole findings store like :func:`quality_signals_for` (R8). A
+    missing index or absent path yields no entry; never scans, never writes.
+    """
+    selected = tuple(dict.fromkeys(path for path in paths if path))
+    if not selected:
+        return {}
+    database = repo_root / ".codescent" / "index.sqlite"
+    if not database.exists():
+        return {}
+    churn = git_change_counts(repo_root)
+    placeholders = ",".join("?" * len(selected))
+    try:
+        with closing(sqlite3.connect(database)) as connection:
+            rows: list[tuple[str, str, str, str]] = connection.execute(
+                f"""
+                select findings.rule_id, files.path, findings.evidence_json,
+                    findings.status
+                from findings
+                join files on files.id = findings.file_id
+                where files.path in ({placeholders})
+                """,  # noqa: S608 - placeholders are bound params, not interpolated values
+                selected,
+            ).fetchall()
+    except sqlite3.DatabaseError:
+        return {}
+    flags_by_path: dict[str, set[QualityFlag]] = {}
+    for rule_id, path, evidence_json, status in rows:
+        if FindingStatus(status) not in _ACTIVE_STATUSES:
+            continue
+        flags = _flags_from(rule_id, path, evidence_json or "{}", churn)
+        if flags:
+            flags_by_path.setdefault(path, set()).update(flags)
+    return {path: tuple(sorted(flags)) for path, flags in flags_by_path.items()}
 
 
 def _twin_for(finding: FindingRow) -> str | None:
