@@ -63,6 +63,7 @@ def init(
         typer.echo(json.dumps({"state_dir": str(state.state_dir)}))
         return
     typer.echo(f"Initialized CodeScent state at {state.state_dir}")
+    typer.echo("Next: run `codescent install-hook` to enable search-enrichment hooks.")
 
 
 @app.command()
