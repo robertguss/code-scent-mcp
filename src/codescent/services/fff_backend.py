@@ -28,10 +28,13 @@ from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 from pydantic import TypeAdapter, ValidationError
 
 from codescent.core.paths import resolve_repo_root
+from codescent.services.fff_shared import CODE_CONSTRAINT, build_finder
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
+
+    import fff
 
 LOGGER = logging.getLogger("codescent.fff_backend")
 FFF_COMMAND_ENV = "CODESCENT_FFF_CMD"
@@ -39,6 +42,15 @@ FFF_CANDIDATES = ("fff", "fff-search")
 FFF_PACKAGE_CANDIDATES = ("fff_search", "fff")
 # Capability names a detected fff client may expose; see ``probe_capabilities``.
 FFF_CAPABILITIES = ("fuzzy_paths", "grep_content", "multi_grep", "frecency")
+# Candidate bounds for the wheel client's content grep: enough candidates for
+# the ranker to work with, capped so a broad pattern stays bounded.
+_GREP_MAX_MATCHES_PER_FILE = 20
+_GREP_PAGE_LIMIT = 200
+# fff fuzzy path search returns every approximate match, including scattered
+# noise (a file sharing one or two characters with the query). Keep only paths
+# scoring within this fraction of the top hit so path search stays as precise as
+# the native rapidfuzz floor it replaces — the native path gated weak matches.
+_FUZZY_PATH_KEEP_RATIO = 0.5
 
 
 class FffClientError(RuntimeError):
@@ -138,6 +150,90 @@ class FffCliClient:
         return self.runner(subcommand, *args)
 
 
+class FffPackageClient:
+    """Real ``FffClient`` backed by the ``fff-search`` wheel (local, read-only).
+
+    Wraps a shared ``fff.FileFinder`` and exposes the four ``FffClient``
+    capabilities. Construction is lazy — the finder is built on first use, so
+    detection never scans — and every method degrades to an empty result rather
+    than raising, honoring the optional-backend rule that a backend failure must
+    never reach the caller.
+    """
+
+    def __init__(self, repo_root: Path) -> None:
+        """Store the repo root; the finder is built lazily on first use."""
+        self.repo_root: Path = repo_root
+        self._finder: fff.FileFinder | None = None
+        self._failed: bool = False
+
+    def _finder_or_none(self) -> fff.FileFinder | None:
+        if self._finder is None and not self._failed:
+            try:
+                self._finder = build_finder(self.repo_root)
+            except Exception:  # noqa: BLE001 - optional backend never raises to caller
+                self._failed = True
+        return self._finder
+
+    def healthy(self) -> bool:
+        return self._finder_or_none() is not None
+
+    def fuzzy_paths(self, query: str) -> tuple[str, ...]:
+        finder = self._finder_or_none()
+        if finder is None:
+            return ()
+        try:
+            result = finder.search(query)
+        except Exception:  # noqa: BLE001 - optional backend never raises to caller
+            return ()
+        items = result.items
+        scores = result.scores
+        if not items:
+            return ()
+        top = max((score.total for score in scores), default=0.0)
+        if top <= 0:
+            return tuple(item.relative_path for item in items)
+        threshold = top * _FUZZY_PATH_KEEP_RATIO
+        return tuple(
+            item.relative_path
+            for item, score in zip(items, scores, strict=False)
+            if score.total >= threshold
+        )
+
+    def grep_content(self, pattern: str) -> tuple[ContentHit, ...]:
+        return self._content((pattern,))
+
+    def multi_grep(self, patterns: Sequence[str]) -> tuple[ContentHit, ...]:
+        return self._content(tuple(patterns))
+
+    def frecency(self) -> Mapping[str, float]:
+        # ponytail: repo-wide frecency from fff is a follow-up (KTD4); an empty
+        # map is a present-but-neutral capability, not a missing one.
+        return {}
+
+    def _content(self, patterns: tuple[str, ...]) -> tuple[ContentHit, ...]:
+        finder = self._finder_or_none()
+        if finder is None or not patterns:
+            return ()
+        try:
+            result = finder.multi_grep(
+                list(patterns),
+                constraints=CODE_CONSTRAINT,
+                smart_case=True,
+                max_matches_per_file=_GREP_MAX_MATCHES_PER_FILE,
+                page_limit=_GREP_PAGE_LIMIT,
+            )
+        except Exception:  # noqa: BLE001 - optional backend never raises to caller
+            return ()
+        return tuple(
+            ContentHit(
+                path=match.relative_path,
+                line=match.line_number,
+                text=match.line_content,
+            )
+            for match in result.items
+        )
+
+
 def probe_capabilities(client: object) -> frozenset[str]:
     """Return the ``FffClient`` capabilities a detected client actually exposes.
 
@@ -187,6 +283,7 @@ def detect_fff(
     Returns:
         An ``FffClient`` when an fff engine is detected, else ``None``.
     """
+    resolved_root = resolve_repo_root(repo_root)
     command = os.environ.get(FFF_COMMAND_ENV)
     if command is None:
         for candidate in FFF_CANDIDATES:
@@ -194,16 +291,17 @@ def detect_fff(
             if found is not None:
                 command = found
                 break
-    package = _fff_package_available() if command is None else False
-    if command is None and not package:
-        LOGGER.debug("fff not detected; using native rapidfuzz search")
-        return None
-    LOGGER.info("fff engine detected (command=%s, package=%s)", command, package)
-    return FffCliClient(
-        command=command,
-        repo_root=resolve_repo_root(repo_root),
-        runner=runner,
-    )
+    # An env/binary command, or an injected runner (test transport), routes
+    # through the CLI client; otherwise the importable wheel drives the real
+    # in-process engine.
+    if command is not None or runner is not None:
+        LOGGER.info("fff engine detected via command/runner (command=%s)", command)
+        return FffCliClient(command=command, repo_root=resolved_root, runner=runner)
+    if _fff_package_available():
+        LOGGER.info("fff engine detected via fff-search wheel")
+        return FffPackageClient(resolved_root)
+    LOGGER.debug("fff not detected; using native rapidfuzz search")
+    return None
 
 
 def select_search_backend(

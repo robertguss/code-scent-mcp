@@ -236,6 +236,12 @@
       "file": "src/codescent/services/coverage.py",
       "symbol": "services.coverage.coverage_findings"
     },
+    "python.large_file:e11633b00a01": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/fff_backend.py",
+      "symbol": null
+    },
     "python.large_file:bf74b988e976": {
       "rule_id": "python.large_file",
       "severity": "warning",
@@ -253,6 +259,12 @@
       "severity": "warning",
       "file": "src/codescent/services/git.py",
       "symbol": "services.git.git_co_change_counts"
+    },
+    "python.large_function:fdb3d34ec091": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/hook_retrieval.py",
+      "symbol": "services.hook_retrieval.ranked_matches"
     },
     "python.large_function:22d6a7664291": {
       "rule_id": "python.large_function",
@@ -289,6 +301,12 @@
       "severity": "warning",
       "file": "src/codescent/services/search.py",
       "symbol": "services.search.SearchService.multi_search_content"
+    },
+    "python.large_file:383f11c91901": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/search_run.py",
+      "symbol": null
     },
     "python.deep_nesting:802ce6cdca2a": {
       "rule_id": "python.deep_nesting",

@@ -8,6 +8,7 @@ license = { text = "MIT" }
 dependencies = [
     "defusedxml>=0.7",
     "fastmcp>=2.12",
+    "fff-search>=0.9.6",
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "rapidfuzz>=3.0",

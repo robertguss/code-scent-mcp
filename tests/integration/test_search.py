@@ -6,7 +6,6 @@ from typing import ClassVar
 import pytest
 from pydantic import BaseModel, ConfigDict, Field
 
-import codescent.services.search as search_module
 from codescent.core.models import IndexedFile, ProjectConfig
 from codescent.engine.inventory import build_file_inventory
 from codescent.services.repo_index import RepoIndexService
@@ -43,10 +42,13 @@ def test_search_files_exact_and_fuzzy(tmp_path: Path) -> None:
     fuzzy_payloads = tuple(SearchPayload.model_validate(result) for result in fuzzy)
     typo_payloads = tuple(SearchPayload.model_validate(result) for result in typo)
 
+    # Path search routes through fff (typo-resistant fuzzy_paths), so the
+    # top match is still correct for exact, fuzzy, and typo queries, but the
+    # reason tag is fff's `fff_path` rather than the native exact/fuzzy tags.
     assert exact_payloads[0].path == "src/acme_tasks/config.py"
-    assert "exact_path" in exact_payloads[0].reasons
+    assert "fff_path" in exact_payloads[0].reasons
     assert fuzzy_payloads[0].path == "src/acme_tasks/config.py"
-    assert "fuzzy_path" in fuzzy_payloads[0].reasons
+    assert "fff_path" in fuzzy_payloads[0].reasons
     assert typo_payloads[0].path == "src/acme_tasks/payroll.py"
     assert typo_payloads[0].reasons
     assert len(fuzzy_payloads) <= 5
@@ -221,9 +223,10 @@ def test_multi_search_content_uses_one_inventory_pass(
         inventory_calls += 1
         return build_file_inventory(root, config=config)
 
+    # multi_search_content builds the inventory once inside search_run's
+    # content_results_for_queries, so the counter is patched there.
     monkeypatch.setattr(
-        search_module,
-        "build_file_inventory",
+        "codescent.services.search_run.build_file_inventory",
         counting_build_file_inventory,
     )
 
