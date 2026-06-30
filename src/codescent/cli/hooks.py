@@ -16,15 +16,16 @@ from __future__ import annotations
 
 import contextlib
 import json
+import shutil
 import signal
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Annotated, Final, cast
+
+import typer
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-    import typer
 
 # Cap stdin so a malformed or hostile payload cannot make the hook read forever
 # (R23). Hook JSON for a search is tiny; 64 KiB is generous headroom.
@@ -170,6 +171,67 @@ def _run_hook_reindex() -> None:
     _ = RepoIndexService(repo_root).index_repo(full=False)
 
 
+def _settings_path(*, is_global: bool) -> Path:
+    base = Path.home() if is_global else Path.cwd()
+    return base / ".claude" / "settings.json"
+
+
+def _resolve_entrypoint() -> str:
+    """Absolute path to the ``codescent`` binary, or the bare name as fallback.
+
+    An absolute path is robust regardless of how Claude Code's ``sh -c`` PATH is
+    set up; the bare name relies on ``codescent`` being on PATH at hook runtime.
+    """
+    return shutil.which("codescent") or "codescent"
+
+
+def _load_settings(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    loaded = cast("object", json.loads(path.read_text(encoding="utf-8")))
+    if isinstance(loaded, dict):
+        return cast("dict[str, object]", loaded)
+    return {}
+
+
+def _write_settings(path: Path, settings: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    serialized = json.dumps(settings, indent=2) + "\n"
+    tmp = path.with_name(path.name + ".tmp")
+    _ = tmp.write_text(serialized, encoding="utf-8")
+    _ = tmp.replace(path)
+
+
+def install_hook(
+    *,
+    is_global: Annotated[
+        bool,
+        typer.Option("--global", help="Write ~/.claude/settings.json instead of cwd."),
+    ] = False,
+    remove: Annotated[
+        bool,
+        typer.Option("--remove", help="Remove codescent's hook entries."),
+    ] = False,
+) -> None:
+    """Register (or remove) codescent's search-enrichment hooks in settings.json."""
+    from codescent.services.hook_install import (  # noqa: PLC0415 - lazy (R20)
+        merge_codescent_hooks,
+        remove_codescent_hooks,
+    )
+
+    target = _settings_path(is_global=is_global)
+    settings = _load_settings(target)
+    if remove:
+        updated = remove_codescent_hooks(settings)
+        action = "Removed codescent hooks from"
+    else:
+        updated = merge_codescent_hooks(settings, _resolve_entrypoint())
+        action = "Installed codescent hooks in"
+    _write_settings(target, updated)
+    typer.echo(f"{action} {target}")
+
+
 def register_hook_commands(app: typer.Typer) -> None:
     _ = app.command(name="hook-augment")(hook_augment)
     _ = app.command(name="hook-reindex")(hook_reindex)
+    _ = app.command(name="install-hook")(install_hook)
