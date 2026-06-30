@@ -26,6 +26,9 @@ from codescent.services.search_support import ranking_signals_for, searchable_li
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from codescent.core.models import IndexedFile
+    from codescent.engine.search import RankingSignals
+
 
 @dataclass(frozen=True, slots=True)
 class HookMatch:
@@ -61,36 +64,44 @@ def ranked_matches(
 
     matches: list[HookMatch] = []
     for item in build_file_inventory(root, config=config):
-        lines = searchable_lines(root, item.path)
-        indexes = multi_grep((pattern,), lines).get(pattern, ())
-        if not indexes:
-            continue
-        spans, confidence = file_spans(root, item, expand=False)
-        score, _reasons = content_signals(item.path, signals)
-        git_modified = item.path in signals.git_modified
-        health: tuple[str, ...] = ()
-        if git_modified:
-            annotation = quality_annotation_for(item.path, signals.quality)
-            health = annotation["flags"] if annotation is not None else ()
-        hits = collapse_file_matches(
-            lines=lines,
-            match_lines=tuple(index + 1 for index in indexes),
-            symbols=spans,
-            confidence=confidence,
-        )
-        for hit in hits:
-            symbol = hit["symbol"]
-            matches.append(
-                HookMatch(
-                    path=item.path,
-                    line=hit["match_lines"][0],
-                    symbol_name=symbol["name"] if symbol else None,
-                    symbol_kind=symbol["kind"] if symbol else None,
-                    score=score,
-                    git_modified=git_modified,
-                    health=health,
-                ),
-            )
-
+        matches.extend(_file_matches(root, item, pattern, signals))
     matches.sort(key=lambda match: (-match.score, match.path, match.line))
     return tuple(matches[:limit])
+
+
+def _file_matches(
+    root: Path,
+    item: IndexedFile,
+    pattern: str,
+    signals: RankingSignals,
+) -> list[HookMatch]:
+    """Collapsed, ranked hits for ``pattern`` within one file (read-only)."""
+    lines = searchable_lines(root, item.path)
+    indexes = multi_grep((pattern,), lines).get(pattern, ())
+    if not indexes:
+        return []
+    spans, confidence = file_spans(root, item, expand=False)
+    score, _reasons = content_signals(item.path, signals)
+    git_modified = item.path in signals.git_modified
+    health: tuple[str, ...] = ()
+    if git_modified:
+        annotation = quality_annotation_for(item.path, signals.quality)
+        health = annotation["flags"] if annotation is not None else ()
+    hits = collapse_file_matches(
+        lines=lines,
+        match_lines=tuple(index + 1 for index in indexes),
+        symbols=spans,
+        confidence=confidence,
+    )
+    return [
+        HookMatch(
+            path=item.path,
+            line=hit["match_lines"][0],
+            symbol_name=hit["symbol"]["name"] if hit["symbol"] else None,
+            symbol_kind=hit["symbol"]["kind"] if hit["symbol"] else None,
+            score=score,
+            git_modified=git_modified,
+            health=health,
+        )
+        for hit in hits
+    ]
