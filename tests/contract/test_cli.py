@@ -70,6 +70,23 @@ def test_init_index_status_doctor_round_trip(tmp_path: Path) -> None:
     assert doctor_payload.checks.config_ok is True
 
 
+def test_init_prints_install_hook_hint(tmp_path: Path) -> None:
+    # Covers R19: init hints at install-hook but registers no hooks itself.
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    _ = (repo / "src" / "app.py").write_text("value = 1\n")
+
+    human = RUNNER.invoke(app, ["init", "--repo", str(repo)])
+    assert human.exit_code == 0
+    assert "install-hook" in human.output
+    assert not (repo / ".claude").exists()
+
+    json_result = RUNNER.invoke(app, ["init", "--repo", str(repo), "--json"])
+    assert json_result.exit_code == 0
+    assert "install-hook" not in json_result.output
+    _ = json.loads(json_result.output)  # JSON branch stays clean, hint absent
+
+
 def test_report_findings_next_explain_and_export_commands(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     source = repo / "src" / "pkg" / "config.py"
@@ -347,7 +364,8 @@ def test_serve_delegates_to_mcp_runner(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run_mcp() -> None:
         calls.append("run")
 
-    monkeypatch.setattr("codescent.cli.main.run_mcp", fake_run_mcp)
+    # serve() now imports the runner lazily (R20); patch it at the source.
+    monkeypatch.setattr("codescent.mcp.server.run", fake_run_mcp)
 
     result = RUNNER.invoke(app, ["serve"])
 

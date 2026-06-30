@@ -7,16 +7,24 @@ import typer
 
 from codescent import __version__
 from codescent.cli.admin import register_admin_commands
+from codescent.cli.hooks import register_hook_commands
 from codescent.cli.reporting import register_reporting_commands
 from codescent.core.errors import CodeScentError
-from codescent.mcp.server import mcp_available
-from codescent.mcp.server import run as run_mcp
-from codescent.services.code_health import CodeHealthService
-from codescent.services.repo_index import RepoIndexService
-from codescent.services.status import RepoStatusService
-from codescent.storage import initialize_storage
 
 __all__ = ["app", "mcp_available"]
+
+
+def mcp_available() -> bool:
+    """Lazy proxy for the MCP availability probe.
+
+    Defined here so importing the CLI (and the cold ``hook-augment`` path, R20)
+    does not pull ``fastmcp`` and the whole MCP tool graph — a ~2s import —
+    while keeping ``codescent.cli.main.mcp_available`` a stable, patchable name.
+    """
+    from codescent.mcp.server import mcp_available as _mcp_available  # noqa: PLC0415
+
+    return _mcp_available()
+
 
 app = typer.Typer(
     add_completion=False,
@@ -45,6 +53,8 @@ def init(
         typer.Option("--json", help="Print JSON initialization result."),
     ] = False,
 ) -> None:
+    from codescent.storage import initialize_storage  # noqa: PLC0415
+
     try:
         state = initialize_storage(repo)
     except CodeScentError as error:
@@ -53,6 +63,7 @@ def init(
         typer.echo(json.dumps({"state_dir": str(state.state_dir)}))
         return
     typer.echo(f"Initialized CodeScent state at {state.state_dir}")
+    typer.echo("Next: run `codescent install-hook` to enable search-enrichment hooks.")
 
 
 @app.command()
@@ -70,6 +81,8 @@ def index(
         typer.Option("--json", help="Print JSON index result."),
     ] = False,
 ) -> None:
+    from codescent.services.repo_index import RepoIndexService  # noqa: PLC0415
+
     try:
         result = RepoIndexService(repo).index_repo(full=full)
     except CodeScentError as error:
@@ -102,6 +115,8 @@ def status(
         typer.Option("--json", help="Print JSON status."),
     ] = False,
 ) -> None:
+    from codescent.services.status import RepoStatusService  # noqa: PLC0415
+
     try:
         repo_status = RepoStatusService(repo).get_status()
     except CodeScentError as error:
@@ -129,6 +144,8 @@ def scan(
         typer.Option("--json", help="Print JSON scan result."),
     ] = False,
 ) -> None:
+    from codescent.services.code_health import CodeHealthService  # noqa: PLC0415
+
     try:
         result = CodeHealthService(repo).scan()
     except CodeScentError as error:
@@ -166,6 +183,8 @@ def scan(
 
 @app.command()
 def serve() -> None:
+    from codescent.mcp.server import run as run_mcp  # noqa: PLC0415
+
     run_mcp()
 
 
@@ -179,3 +198,4 @@ def _exit_with_error(error: CodeScentError, *, json_output: bool = False) -> NoR
 
 register_admin_commands(app)
 register_reporting_commands(app)
+register_hook_commands(app)

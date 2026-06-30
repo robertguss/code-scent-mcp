@@ -16,10 +16,6 @@ from codescent.services.ci import (
 from codescent.services.findings import FindingsService
 from codescent.services.precision import PrecisionReport, PrecisionService
 from codescent.services.reports import ReportService
-from codescent.services.subjective_review import (
-    SubjectiveReviewService,
-    subjective_findings_payload,
-)
 
 if TYPE_CHECKING:
     from codescent.storage.repositories import FindingRow
@@ -128,6 +124,13 @@ def report(
         typer.Option("--provider", help="Subjective review provider."),
     ] = "fake",
 ) -> None:
+    # Lazy: subjective_review pulls the heavy ``mcp`` package; keep it off the
+    # cold CLI-import path so ``hook-augment`` stays fast (R20).
+    from codescent.services.subjective_review import (  # noqa: PLC0415
+        SubjectiveReviewService,
+        subjective_findings_payload,
+    )
+
     report_data = FindingsService(repo).get_smell_report()
     subjective = SubjectiveReviewService(repo).review(
         provider_name=provider,
