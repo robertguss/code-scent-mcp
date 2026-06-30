@@ -19,6 +19,7 @@ from codescent.core.symbol_formatter import collapse_file_matches
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.search.multi_grep import multi_grep
 from codescent.services.config import ConfigService
+from codescent.services.quality_signals import quality_annotation_for
 from codescent.services.search_collapse import content_signals, file_spans
 from codescent.services.search_support import ranking_signals_for, searchable_lines
 
@@ -36,6 +37,9 @@ class HookMatch:
     symbol_kind: str | None
     score: float
     git_modified: bool
+    # Read-only quality flags (hotspot/dead_code/duplicate/complex), populated
+    # only for git-modified matches — the v1 health surface (R8). Empty otherwise.
+    health: tuple[str, ...]
 
 
 def ranked_matches(
@@ -64,6 +68,10 @@ def ranked_matches(
         spans, confidence = file_spans(root, item, expand=False)
         score, _reasons = content_signals(item.path, signals)
         git_modified = item.path in signals.git_modified
+        health: tuple[str, ...] = ()
+        if git_modified:
+            annotation = quality_annotation_for(item.path, signals.quality)
+            health = annotation["flags"] if annotation is not None else ()
         hits = collapse_file_matches(
             lines=lines,
             match_lines=tuple(index + 1 for index in indexes),
@@ -80,6 +88,7 @@ def ranked_matches(
                     symbol_kind=symbol["kind"] if symbol else None,
                     score=score,
                     git_modified=git_modified,
+                    health=health,
                 ),
             )
 
