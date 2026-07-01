@@ -18,6 +18,16 @@ if TYPE_CHECKING:
 EXPLAIN_SNIPPET_LINE_CAP: Final = 40
 MAX_SNIPPET_CHARS: Final = 4000
 
+# Returned in place of a source snippet when a finding has no resolvable file
+# location. The message and evidence still carry the actionable detail.
+_NO_LOCATION_SNIPPET: Final[dict[str, str | int]] = {
+    "path": "",
+    "start_line": 0,
+    "end_line": 0,
+    "source": "",
+    "note": "no resolvable source location; see message and evidence",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class FindingExplanation:
@@ -54,13 +64,21 @@ class ExplainService:
         finding = _repository(self.repo_root).get_finding(finding_id)
         evidence = decode_json_object(finding.evidence_json)
         start_line, end_line = _line_range(evidence)
-        snippet, truncated = _bounded_snippet(
-            resolve_repo_root(self.repo_root),
-            finding.file_path,
-            start_line=start_line,
-            end_line=end_line,
-            line_cap=line_cap,
-        )
+        if finding.file_path:
+            snippet, truncated = _bounded_snippet(
+                resolve_repo_root(self.repo_root),
+                finding.file_path,
+                start_line=start_line,
+                end_line=end_line,
+                line_cap=line_cap,
+            )
+        else:
+            # A finding with no resolvable source location (e.g. a generic-pack
+            # finding on a non-indexed file not yet rescanned) still has a useful
+            # message/evidence/fix. Degrade to a note instead of reading source
+            # from an empty path, which would raise and surface as a
+            # non-recoverable internal error.
+            snippet, truncated = _NO_LOCATION_SNIPPET, False
         return FindingExplanation(
             finding_id=finding.id,
             rule_id=finding.rule_id,

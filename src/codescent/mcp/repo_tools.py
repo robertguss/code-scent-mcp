@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Final, TypedDict
 
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
+from codescent.mcp.session_context import resolve_session_id
 from codescent.services.bootstrap import (
     BootstrapNote,  # noqa: TC001  (runtime: fastmcp builds the TypedDict schema)
 )
@@ -44,9 +45,11 @@ class RepoStatusToolPayload(TypedDict):
     indexed_files: int
     changed_files: tuple[str, ...]
     finding_count: int
+    unresolved_finding_count: int
     database_ok: bool
     git_available: bool
     git_status: str
+    warnings: tuple[str, ...]
 
 
 class StartTaskToolPayload(TypedDict):
@@ -139,14 +142,16 @@ def start_task(
 
 def resume_task(
     repo: str = ".",
-    session_id: str = "default",
+    session_id: str = "",
     project_id: str | None = None,
 ) -> ResumeTaskToolPayload:
+    # Default to the live server session so a post-compaction resume with no
+    # arguments reconstructs the session whose tool calls were actually recorded.
     resolved_project_id = project_id or f"repo:{resolve_repo_root(repo).as_posix()}"
     return _resume_brief_payload(
         SessionResumeService(repo).resume_task(
             project_id=resolved_project_id,
-            session_id=session_id,
+            session_id=resolve_session_id(session_id),
         ),
     )
 
@@ -213,6 +218,12 @@ def get_repo_status(repo: str = ".") -> RepoStatusToolPayload:
     stored_hashes = _stored_hashes(database_path)
     changed_files = _changed_files(inventory_hashes, stored_hashes)
     git_state = detect_git_state(repo_root)
+    unresolved = _unresolved_finding_count(database_path)
+    rescan_hint = (
+        f"{unresolved} open finding(s) have no resolvable file path "
+        "(stale index); run rescan to re-locate them."
+    )
+    warnings: tuple[str, ...] = (rescan_hint,) if unresolved else ()
 
     return {
         "ok": True,
@@ -225,9 +236,11 @@ def get_repo_status(repo: str = ".") -> RepoStatusToolPayload:
         "indexed_files": len(stored_hashes),
         "changed_files": changed_files[:CHANGED_FILE_LIMIT],
         "finding_count": _finding_count(database_path),
+        "unresolved_finding_count": unresolved,
         "database_ok": database_path.exists(),
         "git_available": git_state.available,
         "git_status": git_state.status,
+        "warnings": warnings,
     }
 
 
@@ -267,6 +280,30 @@ def _finding_count(database_path: Path) -> int:
         with closing(sqlite3.connect(database_path)) as connection:
             rows: list[tuple[int]] = connection.execute(
                 "select id from findings",
+            ).fetchall()
+    except sqlite3.DatabaseError:
+        return 0
+    return len(rows)
+
+
+def _unresolved_finding_count(database_path: Path) -> int:
+    """Open/regressed findings whose file location did not resolve.
+
+    A non-empty count means findings were persisted by older logic (or on files
+    not re-scanned since the file_path fix) and can't be located or explained
+    until a rescan re-persists their path. Surfaced as a rescan hint so an agent
+    is not left with silently empty file paths under a fresh-looking index.
+    """
+    if not database_path.exists():
+        return 0
+    try:
+        with closing(sqlite3.connect(database_path)) as connection:
+            rows: list[tuple[int]] = connection.execute(
+                """
+                select 1 from findings
+                where status in ('open', 'regressed')
+                    and (file_path is null or file_path = '')
+                """,
             ).fetchall()
     except sqlite3.DatabaseError:
         return 0

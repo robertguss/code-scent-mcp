@@ -43,6 +43,35 @@ def test_mark_finding_persists_status(tmp_path: Path) -> None:
     assert report.findings[0].events[-1].event_type == "status_changed"
 
 
+def test_non_code_finding_persists_resolvable_file_path(tmp_path: Path) -> None:
+    # Regression: generic-pack findings fire on non-indexed files (docs/.md,
+    # .html, .json), which have no `files` row, so file_id persisted NULL and
+    # file_path read back empty -- which then crashed the snippet tools. The
+    # path is now stored on the finding row and round-trips through the DB.
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    _ = (repo / "src" / "app.py").write_text("VALUE = 1\n")
+    _ = (repo / "NOTES.md").write_text(
+        "# notes\n" + "\n".join(f"line {index}" for index in range(400)),
+    )
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
+    )
+    _ = CodeHealthService(repo).scan()
+
+    repository = FindingRepository(RepositoryStorage(initialize_storage(repo)))
+    generic = [
+        finding
+        for finding in repository.list_findings()
+        if finding.rule_id.startswith("generic.")
+    ]
+    assert generic, "expected a generic-pack finding on the non-code file"
+    assert all(finding.file_path for finding in generic), (
+        "a non-code finding lost its file_path on the DB round-trip"
+    )
+    assert any(finding.file_path == "NOTES.md" for finding in generic)
+
+
 def test_finding_repository_records_verification_runs(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     finding_id = "needs-evidence"

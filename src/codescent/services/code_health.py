@@ -200,6 +200,7 @@ class CodeHealthService:
                         rule_id,
                         file_id,
                         symbol_id,
+                        file_path,
                         severity,
                         confidence,
                         status,
@@ -211,9 +212,10 @@ class CodeHealthService:
                         provenance_json,
                         first_seen_scan_id,
                         last_seen_scan_id
-                    ) values (?, ?, ?, ?, null, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) values (?, ?, ?, ?, null, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     on conflict(stable_key) do update set
                         file_id = excluded.file_id,
+                        file_path = excluded.file_path,
                         last_seen_scan_id = excluded.last_seen_scan_id,
                         evidence_json = excluded.evidence_json,
                         confidence = excluded.confidence,
@@ -235,6 +237,7 @@ class CodeHealthService:
                         finding.stable_key,
                         finding.rule_id,
                         file_ids.get(finding.file_path),
+                        finding.file_path,
                         finding.severity,
                         finding.confidence,
                         status,

@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+from codescent.mcp import context_tools, repo_tools, session_stats_tools
+from codescent.services.repo_index import RepoIndexService
 from codescent.services.session_stats import (
     ContextStatsService,
     record_backend_resolution,
@@ -12,6 +14,32 @@ from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import SessionEventRepository, SessionEventWrite
 
 SENTINEL_TEXT = "SECRET_SOURCE_SENTINEL"
+
+
+def test_tool_call_records_telemetry_without_explicit_session_id(
+    tmp_path: Path,
+) -> None:
+    # Regression: emitters early-returned when session_id was None (what an agent
+    # that never passes one produces), so nothing was recorded and context_stats
+    # reported all zeros. Tool calls now record under the ambient live session,
+    # and context_stats / resume_task default to that same session.
+    repo = tmp_path / "repo"
+    (repo / "pkg").mkdir(parents=True)
+    _ = (repo / "pkg" / "__init__.py").write_text("")
+    _ = (repo / "pkg" / "auth.py").write_text(
+        "class LoginService:\n    def login(self) -> int:\n        return 1\n",
+    )
+    initialize_storage(repo)
+    RepoIndexService(str(repo)).index_repo()
+
+    # No session_id passed -- exactly how an agent calls these tools.
+    _ = context_tools.find_symbol(query="LoginService", repo=str(repo))
+    stats = session_stats_tools.context_stats(repo=str(repo))
+    resume = repo_tools.resume_task(repo=str(repo))
+
+    assert stats["tool_calls"] >= 1
+    assert "find_symbol" in stats["most_used_tools"]
+    assert "find_symbol" in resume["recent_tools"]
 
 
 def test_context_stats_aggregates_bounded_session_events(tmp_path: Path) -> None:

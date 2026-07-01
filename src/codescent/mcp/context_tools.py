@@ -10,6 +10,7 @@ from codescent.core.fuzzy import nearest_matches
 from codescent.core.paths import resolve_repo_root
 from codescent.core.preservation import estimate_token_usage
 from codescent.core.symbol_formatter import format_symbol_search_results
+from codescent.mcp.session_context import resolve_session_id
 from codescent.services.cbm_backend import select_graph_backend
 from codescent.services.context import (
     ContextService,
@@ -388,13 +389,11 @@ def _record_tool_called(
     query: str,
     result_count: int,
 ) -> None:
-    if session_id is None:
-        return
     _record_session_event(
         repo=repo,
         event=SessionEventWrite(
             project_id=_project_id(repo, project_id),
-            session_id=session_id,
+            session_id=resolve_session_id(session_id),
             event_type="tool_called",
             tool_name="find_symbol",
             payload={
@@ -417,13 +416,11 @@ def _record_large_result_summarized(  # noqa: PLR0913
     returned_tokens: int,
     result_count: int,
 ) -> None:
-    if session_id is None:
-        return
     _record_session_event(
         repo=repo,
         event=SessionEventWrite(
             project_id=_project_id(repo, project_id),
-            session_id=session_id,
+            session_id=resolve_session_id(session_id),
             event_type="large_result_summarized",
             tool_name="find_symbol",
             result_id=result_id,
@@ -453,13 +450,11 @@ def _record_backend_resolved(
     # native, so context_stats can report the cbm-present rate. Resolution is the
     # same cheap check the service makes (shutil.which when cbm is absent); the
     # ponytail double-resolve avoids leaking the backend into the tool payload.
-    if session_id is None:
-        return
     repo_root = resolve_repo_root(repo)
     record_backend_resolution(
         repo_root=repo_root,
         project_id=_project_id(repo, project_id),
-        session_id=session_id,
+        session_id=resolve_session_id(session_id),
         backend_name=select_graph_backend(repo_root).name(),
     )
 

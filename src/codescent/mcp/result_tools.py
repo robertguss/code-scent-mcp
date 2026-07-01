@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Literal, cast
 
 from codescent.core.paths import resolve_repo_root
 from codescent.core.preservation import estimate_token_usage
+from codescent.mcp.session_context import resolve_session_id
 from codescent.services.result_store import (
     DEFAULT_RETRIEVE_LIMIT,
     ResultStoreError,
@@ -89,8 +90,6 @@ def _record_result_retrieved(  # noqa: PLR0913 - Mirrors MCP tool parameters.
     symbol: str | None,
     payload: ResultToolPayload,
 ) -> None:
-    if session_id is None:
-        return
     returned_tokens = estimate_token_usage(
         json.dumps(payload, sort_keys=True, default=str),
     ).tokens
@@ -100,7 +99,7 @@ def _record_result_retrieved(  # noqa: PLR0913 - Mirrors MCP tool parameters.
         repo=repo,
         event=SessionEventWrite(
             project_id=_project_id(repo, project_id),
-            session_id=session_id,
+            session_id=resolve_session_id(session_id),
             event_type="result_retrieved",
             tool_name="retrieve_result",
             result_id=result_id,

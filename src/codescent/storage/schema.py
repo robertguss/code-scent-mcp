@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Final
 
-SCHEMA_VERSION: Final = 10
+SCHEMA_VERSION: Final = 11
 
 BASE_TABLE_STATEMENTS: Final[tuple[str, ...]] = (
     "create table if not exists schema_version (version integer not null)",
@@ -75,6 +75,7 @@ BASE_TABLE_STATEMENTS: Final[tuple[str, ...]] = (
         rule_id text not null,
         file_id integer references files(id) on delete set null,
         symbol_id integer references symbols(id) on delete set null,
+        file_path text not null default '',
         severity text not null,
         confidence real not null,
         status text not null,
@@ -344,6 +345,12 @@ RECONCILED_COLUMNS: Final[tuple[tuple[str, str, str], ...]] = (
         "confidence_tier text not null default 'heuristic'",
     ),
     ("findings", "provenance_json", "provenance_json text not null default '{}'"),
+    # A finding's location is authoritative on the row itself. `file_id` only
+    # resolves for *indexed* (code) files; generic-pack findings on non-code
+    # files (docs/.md, .html, .json) legitimately have no `files` row, so a
+    # FK-only location came back empty and crashed the snippet tools. The path
+    # string is always known at build time, so we persist it directly.
+    ("findings", "file_path", "file_path text not null default ''"),
 )
 
 
@@ -355,11 +362,33 @@ def migrate(connection: sqlite3.Connection) -> None:
         for statement in MIGRATION_STATEMENTS.get(version, ()):
             _ = connection.execute(statement)
     _reconcile_columns(connection)
+    _backfill_finding_file_paths(connection)
     _ = connection.execute(f"pragma user_version = {SCHEMA_VERSION}")
     _ = connection.execute("delete from schema_version")
     _ = connection.execute(
         "insert into schema_version (version) values (?)",
         (SCHEMA_VERSION,),
+    )
+
+
+def _backfill_finding_file_paths(connection: sqlite3.Connection) -> None:
+    """Populate `findings.file_path` for existing rows from their `file_id`.
+
+    Runs after `_reconcile_columns` (so the column is guaranteed present) and is
+    idempotent: it only touches rows that still have an empty `file_path` and a
+    resolvable `file_id`. Rows whose `file_id` is NULL (non-code findings written
+    before this column existed) stay empty until their next rescan re-persists
+    the real path; the snippet tools guard that case instead of crashing.
+    """
+    _ = connection.execute(
+        """
+        update findings
+        set file_path = coalesce(
+            (select path from files where files.id = findings.file_id),
+            file_path
+        )
+        where (file_path is null or file_path = '') and file_id is not null
+        """,
     )
 
 

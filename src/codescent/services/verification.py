@@ -44,11 +44,18 @@ class VerificationService:
     auto_refresh: bool = True
 
     def suggest_tests(self, file_path: str) -> SuggestedTests:
-        context = ContextService(
-            self.repo_root,
-            auto_refresh=self.auto_refresh,
-        ).get_file_context(file_path)
-        likely_tests = context["likely_tests"]
+        # A finding can reference a file that is not in the code index (empty
+        # path or a non-indexed doc/.md file); get_file_context raises LookupError
+        # for those. Degrade to no likely tests rather than crashing the tool.
+        try:
+            likely_tests = (
+                ContextService(self.repo_root, auto_refresh=self.auto_refresh)
+                .get_file_context(file_path)["likely_tests"]
+                if file_path
+                else ()
+            )
+        except LookupError:
+            likely_tests = ()
         commands = tuple(f"pytest {path}" for path in likely_tests)
         return SuggestedTests(
             commands=commands or ("pytest",),
