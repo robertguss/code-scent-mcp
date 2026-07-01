@@ -53,6 +53,7 @@ async def run_deterministic_dimensions(
     dimensions: list[DimensionResult] = [
         await manifest_token_cost(client),
         await error_recovery(client, repo),
+        await constraint_drop(client, repo),
     ]
     return tuple(dimensions)
 
@@ -198,4 +199,66 @@ async def manifest_token_cost(
         value=float(total),
         unit="tokens",
         breakdown=breakdown,
+    )
+
+
+# --- R5: constraint-drop detection ---------------------------------------
+
+_CONSTRAINT_SEARCH_TOOLS: tuple[tuple[str, dict[str, object]], ...] = (
+    ("search_files", {"query": "load"}),
+    ("search_content", {"query": "load"}),
+    ("multi_search_content", {"queries": ["load"]}),
+)
+_MALFORMED_CONSTRAINTS: tuple[str, ...] = (
+    "size:banana",
+    "mtime:soon",
+    "git:nonsense",
+    "bogus:1",
+)
+
+
+def constraint_surfaced(payload: dict[str, object], token: str) -> bool:
+    """Return whether a dropped constraint ``token`` is surfaced to the caller.
+
+    Passes only when the token appears in ``constraint_warnings`` and the
+    result ``confidence`` was downgraded off ``high`` -- i.e. the malformed
+    filter was reported, not silently applied as no filter (F2 / AE2).
+    """
+    warnings = payload.get("constraint_warnings")
+    if not isinstance(warnings, list):
+        return False
+    mentioned = any(
+        isinstance(entry, str) and token in entry
+        for entry in cast("list[object]", warnings)
+    )
+    return mentioned and payload.get("confidence") != "high"
+
+
+async def constraint_drop(
+    client: Client[FastMCPTransport],
+    repo: Path,
+) -> DimensionResult:
+    """Score R5: malformed constraint tokens surface, never silently drop (AE2)."""
+    passed = 0
+    notes: list[str] = []
+    for tool, base_args in _CONSTRAINT_SEARCH_TOOLS:
+        for token in _MALFORMED_CONSTRAINTS:
+            args: dict[str, object] = {
+                **base_args,
+                "repo": str(repo),
+                "constraints": token,
+            }
+            payload = await call_tool_json(client, tool, args)
+            if constraint_surfaced(payload, token):
+                passed += 1
+            else:
+                notes.append(f"{tool}: {token} not surfaced")
+    total = len(_CONSTRAINT_SEARCH_TOOLS) * len(_MALFORMED_CONSTRAINTS)
+    return DimensionResult(
+        name="constraint_drop",
+        value=passed / total,
+        unit="share",
+        passed=passed,
+        total=total,
+        notes=tuple(notes),
     )
