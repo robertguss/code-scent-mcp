@@ -29,6 +29,7 @@ class RefactorPlanPayload(BaseModel):
     non_goals: tuple[str, ...]
     affected_files: tuple[str, ...]
     verification_recommendations: tuple[str, ...]
+    next_tools: tuple[str, ...]
 
 
 class SuggestedTestsPayload(BaseModel):
@@ -38,6 +39,7 @@ class SuggestedTestsPayload(BaseModel):
     commands: tuple[str, ...]
     likely_tests: tuple[str, ...]
     executes_in_v1: bool
+    next_tools: tuple[str, ...]
 
 
 class ScaffoldFieldPayload(BaseModel):
@@ -79,6 +81,7 @@ class VerifyChangePayload(BaseModel):
     recommended_commands: tuple[str, ...]
     likely_tests: tuple[str, ...]
     missing_characterization_tests: tuple[str, ...]
+    next_tools: tuple[str, ...]
 
 
 class ImpactPayload(BaseModel):
@@ -148,8 +151,10 @@ async def test_planning_tools_are_bounded_and_do_not_execute(tmp_path: Path) -> 
     assert plan.ok is True
     assert plan.non_goals
     assert plan.verification_recommendations == ("pytest tests/test_config.py",)
+    assert plan.next_tools == ("suggest_tests", "get_impact")
     assert suggested.ok is True
     assert suggested.executes_in_v1 is False
+    assert suggested.next_tools == ("verify_change",)
     assert selected.ok is True
     assert selected.changed_files == ("src/pkg/config.py",)
     assert selected.test_files == ("tests/test_config.py",)
@@ -207,6 +212,7 @@ async def test_verify_change_records_recommendations_without_execution(
     assert payload.ok is True
     assert payload.executes is False
     assert payload.recommendation_id > 0
+    assert payload.next_tools == ("record_verification", "mark_finding")
     assert payload.recommended_commands == ("pytest tests/test_config.py",)
     assert payload.likely_tests == ("tests/test_config.py",)
     assert payload.missing_characterization_tests == ()

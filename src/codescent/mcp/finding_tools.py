@@ -238,6 +238,7 @@ def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
             "rule_id": None,
             "file_path": None,
             "suggested_action": None,
+            "next_tools": (),
         }
     return {
         "ok": True,
@@ -245,6 +246,7 @@ def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
         "rule_id": finding.rule_id,
         "file_path": finding.file_path,
         "suggested_action": finding.suggested_action,
+        "next_tools": ("get_finding_context", "plan_refactor"),
     }
 
 
@@ -348,6 +350,7 @@ def mark_finding(
         "requested_status": result.requested_status.value,
         "gated": result.gated,
         "message": result.message,
+        "next_tools": ("rescan", "get_next_improvement"),
     }
 
 
@@ -372,6 +375,7 @@ def record_verification(
         "exit_code": verification.exit_code,
         "output_summary": verification.output_summary,
         "output_truncated": verification.output_truncated,
+        "next_tools": ("mark_finding",),
     }
 
 

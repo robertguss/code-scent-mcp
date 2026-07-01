@@ -57,6 +57,7 @@ class RefactorPlanToolPayload(TypedDict):
     fallback: str
     expected_behavior_preservation: tuple[str, ...]
     verification_recommendations: tuple[str, ...]
+    next_tools: tuple[str, ...]
 
 
 class ScaffoldToolPayload(TypedDict):
@@ -76,6 +77,7 @@ class SuggestedTestsToolPayload(TypedDict):
     likely_tests: tuple[str, ...]
     executes_in_v1: bool
     scaffold: NotRequired[ScaffoldToolPayload]
+    next_tools: tuple[str, ...]
 
 
 class SelectTestsToolPayload(TypedDict):
@@ -93,6 +95,7 @@ class VerifyChangeToolPayload(TypedDict):
     recommended_commands: tuple[str, ...]
     likely_tests: tuple[str, ...]
     missing_characterization_tests: tuple[str, ...]
+    next_tools: tuple[str, ...]
 
 
 class ImpactToolPayload(TypedDict):
@@ -347,6 +350,7 @@ def _plan_payload(plan: SafeRefactorPlan) -> RefactorPlanToolPayload:
         "fallback": plan.fallback,
         "expected_behavior_preservation": plan.expected_behavior_preservation,
         "verification_recommendations": plan.verification_recommendations,
+        "next_tools": ("suggest_tests", "get_impact"),
     }
 
 
@@ -356,6 +360,7 @@ def _tests_payload(suggested: SuggestedTests) -> SuggestedTestsToolPayload:
         "commands": suggested.commands,
         "likely_tests": suggested.likely_tests,
         "executes_in_v1": suggested.executes_in_v1,
+        "next_tools": ("verify_change",),
     }
 
 
@@ -456,6 +461,7 @@ def _verify_change_payload(
         "missing_characterization_tests": (
             recommendation.missing_characterization_tests
         ),
+        "next_tools": ("record_verification", "mark_finding"),
     }
 
 

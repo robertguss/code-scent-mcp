@@ -172,6 +172,7 @@ class NextImprovementToolPayload(TypedDict):
     rule_id: str | None
     file_path: str | None
     suggested_action: str | None
+    next_tools: tuple[str, ...]
 
 
 class ProgressToolPayload(TypedDict):
@@ -190,6 +191,7 @@ class MarkFindingToolPayload(TypedDict):
     requested_status: str
     gated: bool
     message: str
+    next_tools: tuple[str, ...]
 
 
 class RecordVerificationToolPayload(TypedDict):
@@ -200,6 +202,7 @@ class RecordVerificationToolPayload(TypedDict):
     exit_code: int
     output_summary: str
     output_truncated: bool
+    next_tools: tuple[str, ...]
 
 
 def severity_rank(severity: str) -> int:

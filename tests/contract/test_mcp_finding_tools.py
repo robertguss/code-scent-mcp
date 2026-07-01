@@ -122,6 +122,7 @@ class MarkToolPayload(BaseModel):
     requested_status: str
     gated: bool
     message: str
+    next_tools: tuple[str, ...]
 
 
 class RecordVerificationPayload(BaseModel):
@@ -134,6 +135,7 @@ class RecordVerificationPayload(BaseModel):
     exit_code: int
     output_summary: str
     output_truncated: bool
+    next_tools: tuple[str, ...]
 
 
 class FindingDetailPayload(BaseModel):
@@ -256,6 +258,7 @@ async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
     assert mark_payload.requested_status == "in_progress"
     assert mark_payload.gated is False
     assert mark_payload.message == ""
+    assert mark_payload.next_tools == ("rescan", "get_next_improvement")
     assert detail_payload.ok is True
     assert detail_payload.finding_id == scan_payload.finding_ids[0]
     assert detail_payload.evidence
@@ -305,6 +308,7 @@ async def test_record_verification_tool_records_caller_supplied_result(
     assert record_payload.exit_code == 0
     assert record_payload.output_truncated is True
     assert len(record_payload.output_summary) == 1000
+    assert record_payload.next_tools == ("mark_finding",)
     assert mark_payload.status == "resolved"
     assert mark_payload.gated is False
     assert source_snapshot(repo) == before
