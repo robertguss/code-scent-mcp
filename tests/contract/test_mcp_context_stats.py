@@ -142,7 +142,7 @@ async def test_mcp_lists_context_stats_as_bounded_stats_tool() -> None:
     tool = {item.name: item for item in tools}["context_stats"]
     description = tool.description or ""
 
-    assert "bounded MCP context and token savings stats" in description
+    assert "MCP context and token-savings stats" in description
     assert "sanitized .codescent event data" in description
     assert "never returns raw source" in description
 

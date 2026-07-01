@@ -128,52 +128,61 @@ class RelatedFilesToolPayload(TypedDict):
 def register_context_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent before reading a whole file. Returns bounded file "
-            "context with summaries, likely tests, source ranges, freshness "
-            "metadata, warnings, confidence, and next tools."
+            "Bounded file context before reading a whole file: summary, "
+            "symbols, imports, likely tests, source ranges, freshness metadata, "
+            "warnings, confidence, and next tools. e.g. "
+            "get_file_context(path='src/app/auth.py'). Read-only for source."
         ),
     )(get_file_context)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent before broad grep to find symbols by name or qualified "
-            "name. Returns bounded matches with confidence, warnings, freshness "
-            "metadata, and line ranges."
+            "Locate symbols by name or qualified name before a broad grep: "
+            "bounded matches with confidence, warnings, freshness metadata, and "
+            "line ranges. The qualified_name it returns feeds get_symbol_context. "
+            "e.g. find_symbol(query='TaskBriefService'). Read-only for source."
         ),
     )(find_symbol)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent before reading callers or callees. Returns bounded "
-            "symbol context with likely tests and source ranges, not whole files."
+            "Bounded symbol context (likely tests and source ranges, not whole "
+            "files) before reading callers or callees. Pass a qualified_name "
+            "from find_symbol. e.g. get_symbol_context(qualified_name="
+            "'codescent.services.task_brief.TaskBriefService'). Read-only for "
+            "source."
         ),
     )(get_symbol_context)
 
     _ = mcp.tool(
         description=(
-            "Find bounded persisted references for a symbol or identifier with "
-            "confidence labels."
+            "Bounded persisted references for a symbol or identifier, with "
+            "confidence labels. e.g. find_references(query='resolve_repo_root'). "
+            "Read-only for source."
         ),
     )(find_references)
 
     _ = mcp.tool(
         description=(
-            "Find bounded persisted callers of a symbol or identifier with "
-            "confidence labels."
+            "Bounded persisted callers of a symbol or identifier, with "
+            "confidence labels. e.g. find_callers(query='build_guide'). "
+            "Read-only for source."
         ),
     )(find_callers)
 
     _ = mcp.tool(
         description=(
-            "Find bounded persisted callees from a symbol or function with "
-            "confidence labels."
+            "Bounded persisted callees from a symbol or function, with "
+            "confidence labels. e.g. find_callees(query='start_task'). "
+            "Read-only for source."
         ),
     )(find_callees)
 
     _ = mcp.tool(
         description=(
-            "Find bounded related files with reasons from imports, tests, "
-            "directory proximity, search similarity, and git history."
+            "Bounded related files with reasons drawn from imports, tests, "
+            "directory proximity, search similarity, and git history. e.g. "
+            "get_related_files(path='src/app/auth.py'). Read-only for source."
         ),
     )(get_related_files)
 

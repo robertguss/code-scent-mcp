@@ -98,6 +98,12 @@
       "file": "src/codescent/engine/rules/test_quality.py",
       "symbol": null
     },
+    "python.large_file:628f4ebdc4cd": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/engine/search/constraints.py",
+      "symbol": null
+    },
     "python.large_file:ab8d97a28e1e": {
       "rule_id": "python.large_file",
       "severity": "warning",
@@ -163,6 +169,12 @@
       "severity": "warning",
       "file": "src/codescent/mcp/search_tools.py",
       "symbol": null
+    },
+    "python.large_function:4e3b404ff656": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/mcp/search_tools.py",
+      "symbol": "mcp.search_tools.register_search_tools"
     },
     "python.large_file:de19decec6ee": {
       "rule_id": "python.large_file",

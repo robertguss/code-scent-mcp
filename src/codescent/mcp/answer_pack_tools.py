@@ -32,13 +32,14 @@ class AnswerPackToolPayload(TypedDict):
 def register_answer_pack_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent to assemble ONE bounded, deduped answer pack for a "
-            "task: top files, key symbols, related tests, in-scope findings, and "
-            "related files composed into a single object (a file shared across "
-            "sources appears once). Pass max_tokens to fit a token budget; when "
-            "content is dropped a ctx_ result id is returned so you can expand the "
-            "full set with retrieve_result without rerunning retrieval. Read-only "
-            "for analyzed source; bounded output."
+            "Token-budgeted, deduped answer pack for ONE specific question: "
+            "top files, key symbols, related tests, in-scope findings, and "
+            "related files in a single object. Pass max_tokens to fit a budget; "
+            "when content is dropped a ctx_ result id is returned to expand the "
+            "full set via retrieve_result. Prefer start_task to open fresh work; "
+            "reach for answer_pack when a specific question must fit a token "
+            "budget. e.g. answer_pack(query='how does login work', "
+            "max_tokens=4000). Read-only for source; bounded output."
         ),
     )(answer_pack)
 

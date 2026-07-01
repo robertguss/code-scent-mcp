@@ -5,8 +5,21 @@ from fastmcp import Client
 from mcp.types import ContentBlock, TextContent
 from pydantic import BaseModel, ConfigDict
 
+from codescent.core.models import FindingStatus
 from codescent.mcp.finding_payloads import INLINE_ITEM_LIMIT
 from codescent.mcp.server import mcp
+
+# Each id/name consumer must name where its required id/name comes from; the
+# value is the set of acceptable source phrases (any one suffices). Asserted on
+# this subset only, per the plan, to avoid brittle whole-surface matching.
+ID_SOURCE_REQUIREMENTS: dict[str, tuple[str, ...]] = {
+    "get_finding": ("get_next_improvement", "get_backlog"),
+    "get_symbol_context": ("find_symbol",),
+    "plan_refactor": ("get_next_improvement", "get_backlog"),
+    "get_impact": ("find_symbol", "get_next_improvement", "get_backlog"),
+    "mark_finding": ("get_next_improvement", "get_backlog"),
+    "retrieve_result": ("answer_pack", "get_backlog", "get_smell_report"),
+}
 
 ABSENT_POST_MVP_TOOL_NAMES = {
     "project_guidance",
@@ -178,6 +191,74 @@ async def test_tool_outputs_match_bounded_schema_snapshots() -> None:
     }
     assert "source_ranges" not in report.model_dump_json()
     assert "source_content" not in report.model_dump_json()
+
+
+@pytest.mark.anyio
+async def test_no_description_leads_with_use_codescent() -> None:
+    async with Client(mcp) as client:
+        tools = await client.list_tools()
+
+    offenders = [
+        tool.name
+        for tool in tools
+        if (tool.description or "").startswith("Use CodeScent")
+    ]
+    assert offenders == []
+
+
+@pytest.mark.anyio
+async def test_every_description_is_non_empty() -> None:
+    async with Client(mcp) as client:
+        tools = await client.list_tools()
+
+    for tool in tools:
+        assert (tool.description or "").strip(), tool.name
+
+
+@pytest.mark.anyio
+async def test_enum_params_are_enumerated_inline() -> None:
+    descriptions = await _descriptions()
+
+    mark = descriptions["mark_finding"]
+    for status in FindingStatus:
+        assert status.value in mark, status.value
+
+    impact = descriptions["get_impact"]
+    for target_type in ("file", "symbol", "finding"):
+        assert target_type in impact, target_type
+
+
+@pytest.mark.anyio
+async def test_id_consumers_name_where_the_id_comes_from() -> None:
+    descriptions = await _descriptions()
+
+    for tool, sources in ID_SOURCE_REQUIREMENTS.items():
+        description = descriptions[tool]
+        assert any(source in description for source in sources), tool
+
+
+@pytest.mark.anyio
+async def test_id_consumers_carry_a_concrete_example() -> None:
+    descriptions = await _descriptions()
+
+    for tool in ID_SOURCE_REQUIREMENTS:
+        assert "e.g." in descriptions[tool].lower(), tool
+
+
+@pytest.mark.anyio
+async def test_confusable_pairs_carry_a_prefer_sibling_steer() -> None:
+    descriptions = await _descriptions()
+
+    assert "answer_pack" in descriptions["start_task"]
+    assert "start_task" in descriptions["answer_pack"]
+    assert "rescan" in descriptions["scan_code_health"]
+    assert "scan_code_health" in descriptions["rescan"]
+
+
+async def _descriptions() -> dict[str, str]:
+    async with Client(mcp) as client:
+        tools = await client.list_tools()
+    return {tool.name: tool.description or "" for tool in tools}
 
 
 def _text_content(content: list[ContentBlock]) -> str:

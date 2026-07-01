@@ -121,50 +121,56 @@ class TestSearchToolPayload(TypedDict):
 def register_search_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent before broad grep or large reads to search paths with "
-            "bounded results and ranking reasons. This read-only tool returns "
-            "paths, reasons, confidence, and warnings, never source content."
+            "Search paths before broad grep or large reads: bounded results "
+            "with ranking reasons, confidence, and warnings — returns paths, "
+            "never source content. Read-only. e.g. "
+            "search_files(query='auth middleware')."
         ),
     )(search_files)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent before broad grep or large reads to search content "
-            "with bounded results and ranking reasons. Collapses each match to "
-            "its enclosing function/class signature (exact for Python, heuristic "
-            "for TS/JS); pass expand=True for full lines. output_mode picks the "
-            "shape: content (default), files, count, or usage. constraints (see "
-            "get_schema) prefilters candidates, e.g. 'src/ *.py git:modified'."
+            "Search content before broad grep or large reads: bounded results "
+            "with ranking reasons, each match collapsed to its enclosing "
+            "function/class signature (exact for Python, heuristic for TS/JS); "
+            "pass expand=True for full lines. output_mode picks the shape: "
+            "content (default), files, count, or usage. constraints (see "
+            "get_schema) prefilters candidates, e.g. 'src/ *.py git:modified'. "
+            "e.g. search_content(query='def login', output_mode='usage')."
         ),
     )(search_content)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent to search multiple content queries with bounded, "
-            "deduped snippets and query-level ranking reasons. output_mode picks "
-            "the shape: content, files, count, or usage."
+            "Search several content queries at once: bounded, deduped snippets "
+            "with query-level ranking reasons. output_mode picks the shape: "
+            "content, files, count, or usage. e.g. "
+            "multi_search_content(queries=('login', 'logout'), "
+            "output_mode='files')."
         ),
     )(multi_search_content)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent to list changed files from git status and local "
-            "index drift with bounded ranking reasons. This read-only tool "
-            "excludes CodeScent runtime state and generated paths."
+            "List changed files from git status and local index drift with "
+            "bounded ranking reasons; excludes CodeScent runtime state and "
+            "generated paths. Read-only. e.g. search_changed_files(query='auth')."
         ),
     )(search_changed_files)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent to find TODO, FIXME, and HACK comments with bounded "
-            "one-line snippets, marker grouping, and ranking reasons."
+            "Find TODO, FIXME, and HACK comments with bounded one-line "
+            "snippets, marker grouping, and ranking reasons. e.g. "
+            "search_todos(query='auth')."
         ),
     )(search_todos)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent to find likely tests for a query, file path, symbol, "
-            "or finding id with bounded ranking reasons."
+            "Find likely tests for a query, file path, symbol, or finding id "
+            "with bounded ranking reasons. e.g. "
+            "search_tests(path='src/app/auth.py')."
         ),
     )(search_tests)
 

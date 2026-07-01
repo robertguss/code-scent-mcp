@@ -72,13 +72,13 @@ async def test_mcp_lists_repo_tools() -> None:
     assert {"get_repo_map", "get_repo_status", "start_task"} <= repo_tools.keys()
     for tool_name in ("get_repo_map", "get_repo_status"):
         description = repo_tools[tool_name].description or ""
-        assert "CodeScent before broad grep" in description
+        assert "before broad grep" in description
         assert "large reads" in description
-        assert "read-only" in description
+        assert "Read-only" in description
     start_task_description = repo_tools["start_task"].description or ""
-    assert "CodeScent FIRST" in start_task_description
+    assert "FIRST" in start_task_description
     assert "bounded brief" in start_task_description
-    assert "auto-refresh metadata" in start_task_description
+    assert "auto-refresh" in start_task_description
     assert "Read-only" in start_task_description
 
 
