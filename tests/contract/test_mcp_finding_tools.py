@@ -383,7 +383,9 @@ async def test_diff_risk_tools_report_changed_file_health_locally(
     assert health.suggested_tests == ("tests/test_config.py",)
     assert health.recommended_commands == ("pytest tests/test_config.py",)
     assert any("changed" in note for note in health.risk_notes)
-    assert unchanged.ok is False
+    # A successful health check is ok=True even for an unchanged file (R6); the
+    # not-changed status is a note, not a failure signal.
+    assert unchanged.ok is True
     assert any("not currently changed" in note for note in unchanged.risk_notes)
     assert source_snapshot(repo)["src/pkg/config.py"].endswith(
         "RISK_SENTINEL = True\n",

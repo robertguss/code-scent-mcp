@@ -77,3 +77,94 @@ def test_malformed_python_file_does_not_abort_repo_extraction(tmp_path: Path) ->
     assert files["src/pkg/service.py"].symbols[0].qualified_name == "pkg.service.ok"
     assert files["src/pkg/broken.py"].parse_error is not None
     assert files["src/pkg/broken.py"].symbols == ()
+
+
+def test_type_annotation_references_are_captured(tmp_path: Path) -> None:
+    source = tmp_path / "src" / "models.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """class Foo:
+    pass
+
+
+class Bar:
+    pass
+
+
+class Baz:
+    pass
+
+
+class Qux:
+    pass
+
+
+def handler(x: Foo, items: tuple[Bar, ...]) -> Baz:
+    value: Qux = x
+    return value
+""",
+    )
+
+    parsed = parse_python_file(source, "src/models.py")
+    names = {reference.name for reference in parsed.references}
+
+    # Return (Baz), parameter (Foo), nested-generic (Bar), and variable (Qux)
+    # annotations each contribute their type name.
+    assert {"Foo", "Bar", "Baz", "Qux"} <= names
+
+
+def test_non_annotation_references_are_unchanged(tmp_path: Path) -> None:
+    source = tmp_path / "src" / "svc.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """def run():
+    helper()
+    obj.method()
+""",
+    )
+
+    parsed = parse_python_file(source, "src/svc.py")
+
+    assert sorted(reference.name for reference in parsed.references) == [
+        "helper",
+        "method",
+    ]
+
+
+def test_qualified_annotation_does_not_leak_namespace(tmp_path: Path) -> None:
+    source = tmp_path / "src" / "typed.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """def f(x: typing.Optional[int], y: collections.abc.Sequence) -> mod.MyType:
+    return x
+""",
+    )
+
+    names = [
+        reference.name
+        for reference in parse_python_file(source, "src/typed.py").references
+    ]
+
+    # Only the referenced type names -- the dotted-name qualifiers (which are
+    # namespaces, not types) must not pollute the reference set.
+    assert {"MyType", "Optional", "Sequence"} <= set(names)
+    assert not ({"mod", "typing", "collections", "abc"} & set(names))
+
+
+def test_call_inside_annotation_is_not_double_counted(tmp_path: Path) -> None:
+    source = tmp_path / "src" / "ann.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text(
+        """def f(z: Annotated[int, Field()]) -> None:
+    return None
+""",
+    )
+
+    names = [
+        reference.name
+        for reference in parse_python_file(source, "src/ann.py").references
+    ]
+
+    # ``Field()`` is emitted once by visit_Call; the annotation walker must not
+    # count it a second time.
+    assert names.count("Field") == 1

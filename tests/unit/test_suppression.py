@@ -3,10 +3,60 @@ from __future__ import annotations
 from codescent.engine.rules.model import CodeHealthFinding, FindingSpec, build_finding
 from codescent.engine.suppression import (
     finding_candidate_lines,
+    is_scan_time_suppressed,
     match_suppressions,
     parse_ignore_directives,
     suppressing_directive,
 )
+
+
+def test_scan_time_suppresses_precision_corpus_for_all_rules() -> None:
+    assert is_scan_time_suppressed(
+        "python.duplicate_literal",
+        "evals/precision_corpus/pkg/x.py",
+        is_test=False,
+    )
+    assert is_scan_time_suppressed(
+        "python.assertion_free_test",
+        "evals/precision_corpus/pkg/x.py",
+        is_test=False,
+    )
+
+
+def test_scan_time_suppresses_noise_rules_in_test_scope() -> None:
+    for rule_id in (
+        "python.duplicate_literal",
+        "generic.duplicate_literal",
+        "python.missing_nearby_test",
+        "python.large_file",
+    ):
+        assert is_scan_time_suppressed(rule_id, "tests/test_x.py", is_test=True)
+
+
+def test_scan_time_keeps_test_quality_rules_in_test_scope() -> None:
+    assert not is_scan_time_suppressed(
+        "python.assertion_free_test",
+        "tests/test_x.py",
+        is_test=True,
+    )
+    assert not is_scan_time_suppressed(
+        "python.over_mocked_test",
+        "tests/test_x.py",
+        is_test=True,
+    )
+
+
+def test_scan_time_keeps_noise_rules_in_source_scope() -> None:
+    assert not is_scan_time_suppressed(
+        "python.duplicate_literal",
+        "src/app.py",
+        is_test=False,
+    )
+    assert not is_scan_time_suppressed(
+        "python.large_file",
+        "src/app.py",
+        is_test=False,
+    )
 
 
 def _finding(

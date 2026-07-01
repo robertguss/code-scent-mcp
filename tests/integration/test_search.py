@@ -294,6 +294,96 @@ def test_frecency_and_pagination_affect_rank_without_unbounded_results(
     assert all("beta_target" not in signal for _, signal, _ in rows)
 
 
+def _disable_fff(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Force the native floor so the empty-result fuzzy fallback is exercised
+    # deterministically; fff runs its own fuzzy matching that would otherwise
+    # answer these NL queries before the native fallback ever fires.
+    def _no_backend(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(
+        "codescent.services.search.select_search_backend",
+        _no_backend,
+    )
+
+
+def test_search_content_fuzzy_fallback_tags_results(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _disable_fff(monkeypatch)
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    _ = (repo / "src" / "hooks.py").write_text(
+        """\
+def build_hook_payload(event):
+    # augment the payload with metadata
+    payload = {}
+    return payload
+""",
+    )
+
+    results = SearchService(repo).search_content("hook augment payload", limit=20)
+
+    assert results
+    assert any("fuzzy" in result["reasons"] for result in results)
+
+
+def test_search_files_fuzzy_fallback_tags_results(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _disable_fff(monkeypatch)
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    for name in ("payroll_ledger.py", "config_loader.py", "widget_factory.py"):
+        _ = (repo / "src" / name).write_text("def run() -> int:\n    return 1\n")
+
+    results = SearchService(repo).search_files(
+        "monthly staff payroll disbursement schedule",
+        limit=20,
+    )
+    by_path = {result["path"]: result for result in results}
+
+    assert "src/payroll_ledger.py" in by_path
+    assert "fuzzy" in by_path["src/payroll_ledger.py"]["reasons"]
+
+
+def test_search_content_no_fuzzy_fallback_on_literal_hit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _disable_fff(monkeypatch)
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    _ = (repo / "src" / "hooks.py").write_text(
+        """\
+def build_hook_payload(event):
+    # augment the payload here
+    return {}
+""",
+    )
+
+    results = SearchService(repo).search_content("augment the payload", limit=20)
+
+    assert results
+    assert all("fuzzy" not in result["reasons"] for result in results)
+
+
+def test_search_absent_term_returns_empty_without_fuzzy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _disable_fff(monkeypatch)
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    _ = (repo / "src" / "hooks.py").write_text("def run() -> int:\n    return 1\n")
+
+    results = SearchService(repo).search_content("zzqqxx7f3a9b4c2e", limit=20)
+
+    assert results == ()
+
+
 def _run_git(repo: Path, *args: str) -> None:
     _ = subprocess.run(
         ["git", "-C", str(repo), *args],

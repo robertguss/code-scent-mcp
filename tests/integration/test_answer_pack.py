@@ -15,6 +15,8 @@ from codescent.services.result_store import ResultStoreService
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import pytest
+
     from codescent.services.answer_pack import AnswerPack
 
 
@@ -211,3 +213,21 @@ def test_mod0() -> None:
     )
     _ = CodeHealthService(repo).scan()
     return repo
+
+
+def test_answer_pack_inherits_fuzzy_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _no_backend(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(
+        "codescent.services.search.select_search_backend",
+        _no_backend,
+    )
+    repo = _linked_repo(tmp_path)
+
+    pack = AnswerPackService(repo).answer_pack("alphaview rendering helper function")
+
+    assert "src/app/alphaview.py" in pack.top_files

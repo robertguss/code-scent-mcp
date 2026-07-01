@@ -20,13 +20,14 @@ type SessionEventType = Literal[
     "agent_repeated_query",
     "agent_requested_exact_large_result",
     "server_warning_returned",
+    "structural_backend_resolved",
 ]
 
 type JsonScalar = str | int | float | bool | None
 type SanitizedPayload = dict[str, JsonScalar]
 
 SAFE_STRING_KEYS: Final = frozenset(
-    {"query_fingerprint", "input_fingerprint", "warning_code"},
+    {"query_fingerprint", "input_fingerprint", "warning_code", "backend_name"},
 )
 METRIC_KEYS: Final = frozenset(
     {

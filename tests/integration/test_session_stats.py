@@ -4,7 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from codescent.services.session_stats import ContextStatsService
+from codescent.services.session_stats import (
+    ContextStatsService,
+    record_backend_resolution,
+)
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import SessionEventRepository, SessionEventWrite
 
@@ -215,3 +218,137 @@ def test_session_event_payloads_persist_fingerprints_not_source(
     assert "source_content" not in persisted_payload_json
     assert "raw_result" not in persisted_payload_json
     assert attempts == []
+
+
+def _record_backend_events(
+    repo: Path,
+    *,
+    session_id: str,
+    backends: tuple[str, ...],
+) -> None:
+    state = initialize_storage(repo)
+    events = SessionEventRepository(RepositoryStorage(state))
+    for index, backend_name in enumerate(backends):
+        _ = events.record_event(
+            SessionEventWrite(
+                project_id="project-a",
+                session_id=session_id,
+                event_type="structural_backend_resolved",
+                payload={"backend_name": backend_name},
+                created_at=f"2026-06-13T00:00:0{index}+00:00",
+            ),
+        )
+
+
+def test_context_stats_reports_cbm_backend_split(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _record_backend_events(repo, session_id="cbm", backends=("cbm", "cbm"))
+
+    stats = ContextStatsService(repo).context_stats(
+        project_id="project-a",
+        session_id="cbm",
+    )
+
+    assert stats.backend_resolutions == 2
+    assert stats.cbm_resolutions == 2
+    assert stats.to_payload()["cbm_present_rate"] == 1.0
+
+
+def test_context_stats_reports_native_fallback(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _record_backend_events(repo, session_id="native", backends=("native", "native"))
+
+    stats = ContextStatsService(repo).context_stats(
+        project_id="project-a",
+        session_id="native",
+    )
+
+    assert stats.backend_resolutions == 2
+    assert stats.cbm_resolutions == 0
+    assert stats.to_payload()["cbm_present_rate"] == 0.0
+
+
+def test_context_stats_mixed_backend_rate(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _record_backend_events(repo, session_id="mix", backends=("cbm", "native", "cbm"))
+
+    stats = ContextStatsService(repo).context_stats(
+        project_id="project-a",
+        session_id="mix",
+    )
+
+    assert stats.backend_resolutions == 3
+    assert stats.cbm_resolutions == 2
+    # Same float division the payload runs -> exact, no approx needed.
+    assert stats.to_payload()["cbm_present_rate"] == 2 / 3
+
+
+def test_context_stats_excludes_non_structural_sessions_from_rate(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    state = initialize_storage(repo)
+    events = SessionEventRepository(RepositoryStorage(state))
+    _ = events.record_event(
+        SessionEventWrite(
+            project_id="project-a",
+            session_id="quiet",
+            event_type="tool_called",
+            tool_name="find_symbol",
+            payload={"query": "x", "broad_query": False},
+        ),
+    )
+
+    stats = ContextStatsService(repo).context_stats(
+        project_id="project-a",
+        session_id="quiet",
+    )
+
+    # No structural resolution -> zero denominator, rate is a well-defined 0.0.
+    assert stats.backend_resolutions == 0
+    assert stats.to_payload()["cbm_present_rate"] == 0.0
+
+
+def test_record_backend_resolution_helper_is_sanitized(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    record_backend_resolution(
+        repo_root=repo,
+        project_id="project-a",
+        session_id="seam",
+        backend_name="cbm",
+    )
+
+    state = initialize_storage(repo)
+    events = SessionEventRepository(RepositoryStorage(state))
+    stored = events.list_events(
+        project_id="project-a",
+        session_id="seam",
+        limit=10,
+    )
+
+    assert len(stored) == 1
+    # Only the low-cardinality backend slug is stored -- no source, no paths.
+    assert stored[0].payload == {"backend_name": "cbm"}
+
+
+def test_cbm_optional_decision_note_is_discoverable() -> None:
+    adr = Path("docs/decisions/0001-cbm-optional-by-default.md")
+    assert adr.exists()
+    text = adr.read_text()
+
+    # Decision + the four-part rationale + a concrete revisit threshold (R11/R12).
+    assert "cbm remains optional" in text.lower()
+    for keyword in ("Latency", "Identity", "Native path", "release cadence"):
+        assert keyword in text
+    assert "85%" in text
+    assert "cbm_present_rate" in text
+    # Discoverable from the README documentation index.
+    assert (
+        "docs/decisions/0001-cbm-optional-by-default.md"
+        in Path("README.md").read_text()
+    )
