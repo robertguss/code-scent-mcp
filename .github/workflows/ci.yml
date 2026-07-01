@@ -56,5 +56,8 @@ jobs:
       - name: Eval precision gate
         run: uv run python evals/run_precision.py --check
 
+      - name: Agent-experience gate
+        run: uv run python evals/run_agent_ux.py --check
+
       - name: Dogfood gate (CodeScent scans CodeScent)
         run: uv run python scripts/dogfood_scan.py

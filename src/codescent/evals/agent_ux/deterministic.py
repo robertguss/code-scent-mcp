@@ -86,21 +86,30 @@ def _arg_values(repo: Path, finding_id: str, result_id: str) -> dict[str, object
 
 
 def _build_args(schema_json: str, values: dict[str, object]) -> dict[str, object]:
-    """Fill a tool's required params from ``values``, always including ``repo``.
+    """Fill a tool's accepted params from ``values`` off its JSON schema.
 
-    Reads the ``required`` list from the tool's JSON schema so every tool gets a
-    representative call without a hand-authored per-tool map. A required param
-    with no known value is left out; the tool then returns a (conforming) error
-    envelope rather than a success shape.
+    Reads ``properties``/``required`` so every tool gets a representative call
+    without a hand-authored per-tool map: ``repo`` is passed only to tools that
+    declare it (so tools that don't aren't handed an unexpected kwarg), plus any
+    required param with a known value. A required param with no known value is
+    left out; the tool then returns a (conforming) error envelope.
     """
-    args: dict[str, object] = {"repo": values["repo"]}
+    args: dict[str, object] = {}
     parsed = cast("object", json.loads(schema_json))
-    if isinstance(parsed, dict):
-        required = cast("dict[str, object]", parsed).get("required")
-        if isinstance(required, list):
-            for param in cast("list[object]", required):
-                if isinstance(param, str) and param in values:
-                    args[param] = values[param]
+    if not isinstance(parsed, dict):
+        return args
+    schema = cast("dict[str, object]", parsed)
+    properties = schema.get("properties")
+    accepts_repo = isinstance(properties, dict) and "repo" in cast(
+        "dict[str, object]", properties
+    )
+    if accepts_repo:
+        args["repo"] = values["repo"]
+    required = schema.get("required")
+    if isinstance(required, list):
+        for param in cast("list[object]", required):
+            if isinstance(param, str) and param in values:
+                args[param] = values[param]
     return args
 
 
