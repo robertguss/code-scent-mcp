@@ -8,6 +8,14 @@ type EvidenceValue = int | float | str | bool
 type ProvenanceValue = str | bool
 type Provenance = dict[str, ProvenanceValue]
 
+# `confidence_tier` and `confidence` are two ORTHOGONAL axes, by design:
+#   - tier       = how the finding was *derived* -- "verified" iff an AST pack
+#                  resolved a concrete symbol, else "heuristic" (regex-derived).
+#   - confidence = how *strong* the finding signal is (0.0-1.0).
+# They do not track each other. A `"verified"` finding with `confidence: 0.6`
+# is valid and meaningful ("the AST is sure this symbol is real; we are only
+# moderately sure it is a real problem"), NOT a contradiction to normalize away.
+# See test_scan_cache / test_finding_confidence_e2e, which assert this pairing.
 CONFIDENCE_TIER_VERIFIED: Final = "verified"
 CONFIDENCE_TIER_HEURISTIC: Final = "heuristic"
 
