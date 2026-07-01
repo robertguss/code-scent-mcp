@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Final
 
-SCHEMA_VERSION: Final = 9
+SCHEMA_VERSION: Final = 10
 
 BASE_TABLE_STATEMENTS: Final[tuple[str, ...]] = (
     "create table if not exists schema_version (version integer not null)",
@@ -306,6 +306,24 @@ MIGRATION_STATEMENTS: Final[dict[int, tuple[str, ...]]] = {
         """,
         "create index if not exists idx_findings_file_id on findings(file_id)",
         "create index if not exists idx_findings_symbol_id on findings(symbol_id)",
+    ),
+    # Same missing-FK-index defect on the children of `findings`. Not exercised
+    # by a reindex (findings survive it), but `delete from findings` would fire
+    # the same O(findings x children) cascade, and these columns also back the
+    # read path that loads a finding's events / verifications by finding_id.
+    10: (
+        """
+        create index if not exists idx_finding_events_finding_id
+            on finding_events(finding_id)
+        """,
+        """
+        create index if not exists idx_suggested_verifications_finding_id
+            on suggested_verifications(finding_id)
+        """,
+        """
+        create index if not exists idx_verification_runs_finding_id
+            on verification_runs(finding_id)
+        """,
     ),
 }
 

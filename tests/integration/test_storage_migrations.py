@@ -146,6 +146,9 @@ def test_migration_indexes_foreign_key_child_columns(tmp_path: Path) -> None:
         "idx_call_edges_callee_symbol_id",
         "idx_findings_file_id",
         "idx_findings_symbol_id",
+        "idx_finding_events_finding_id",
+        "idx_suggested_verifications_finding_id",
+        "idx_verification_runs_finding_id",
     }
     with RepositoryStorage(state).read_connection() as connection:
         rows: list[tuple[str]] = connection.execute(
