@@ -14,9 +14,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from codescent.core.public_surface import PUBLIC_SURFACE
+from codescent.core.public_surface import PUBLIC_SURFACE, registered_mcp_tool_names
 from codescent.core.token_estimate import estimate_tokens
 from codescent.evals.agent_ux._client import call_tool_json, list_tools_manifest
+from codescent.evals.agent_ux._graph import EXPECTED_EDGES, bfs, collect_next_tools
 from codescent.evals.agent_ux.models import BreakdownEntry, DimensionResult
 
 if TYPE_CHECKING:
@@ -54,8 +55,53 @@ async def run_deterministic_dimensions(
         await manifest_token_cost(client),
         await error_recovery(client, repo),
         await constraint_drop(client, repo),
+        await loop_connectivity(client, repo),
     ]
     return tuple(dimensions)
+
+
+# --- R3: guided-loop connectivity ----------------------------------------
+
+
+async def loop_connectivity(
+    client: Client[FastMCPTransport],
+    repo: Path,
+) -> DimensionResult:
+    """Score R3: the improvement spine forms a connected next_tools chain (AE3).
+
+    Scores 1.0 only when BFS from ``scan_code_health`` reaches both
+    ``mark_finding`` and ``record_verification``, no spine tool is a dead end,
+    and every emitted target resolves against the registry. Otherwise the
+    dead-ends and dangling targets are reported as notes.
+    """
+    finding_id = await _todo_finding_id(client, repo)
+    graph = await collect_next_tools(client, repo, finding_id)
+    registered = registered_mcp_tool_names()
+    reachable = bfs("scan_code_health", graph)
+
+    reaches_spine = "mark_finding" in reachable and "record_verification" in reachable
+    dead_ends = [tool for tool in EXPECTED_EDGES if not graph.get(tool)]
+    dangling = [
+        f"{source}->{target}"
+        for source, targets in graph.items()
+        for target in targets
+        if target.split(":", 1)[0] not in registered
+    ]
+    connected = reaches_spine and not dead_ends and not dangling
+
+    notes: list[str] = []
+    if not reaches_spine:
+        notes.append("spine does not reach mark_finding/record_verification")
+    notes.extend(f"dead-end: {tool}" for tool in dead_ends)
+    notes.extend(f"dangling: {edge}" for edge in dangling)
+    return DimensionResult(
+        name="loop_connectivity",
+        value=1.0 if connected else 0.0,
+        unit="share",
+        passed=1 if connected else 0,
+        total=1,
+        notes=tuple(notes),
+    )
 
 
 # --- R2: error-recovery readiness ----------------------------------------
