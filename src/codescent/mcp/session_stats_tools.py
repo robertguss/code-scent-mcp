@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from codescent.core.paths import resolve_repo_root
+from codescent.mcp.session_context import resolve_session_id
 from codescent.services.session_stats import ContextStatsService
 
 if TYPE_CHECKING:
@@ -21,13 +22,18 @@ def register_session_stats_tools(mcp: FastMCP) -> None:
 
 
 def context_stats(
-    session_id: str,
+    session_id: str = "",
     repo: str = ".",
-    project_id: str = "default",
+    project_id: str | None = None,
 ) -> dict[str, object]:
+    # Default to the live server session and the repo-derived project id -- the
+    # same identity the tool-call emitters key events under -- so a caller that
+    # passes nothing still reads its own activity instead of an empty "default"
+    # bucket. Explicit arguments are honored.
     repo_root = resolve_repo_root(repo)
+    resolved_project_id = project_id or f"repo:{repo_root.as_posix()}"
     stats = ContextStatsService(repo_root).context_stats(
-        project_id=project_id,
-        session_id=session_id,
+        project_id=resolved_project_id,
+        session_id=resolve_session_id(session_id),
     )
     return stats.to_payload()

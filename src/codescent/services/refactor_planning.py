@@ -81,9 +81,36 @@ class RefactorPlanningService:
 
     def get_finding_context(self, finding_id: str) -> FindingContext:
         finding = _repository(self.repo_root).get_finding(finding_id)
-        file_context = ContextService(self.repo_root).get_file_context(
-            finding.file_path,
-        )
+        # A finding can point at a file that is not in the code index -- an empty
+        # path (stale row not yet rescanned) or a real-but-non-indexed file
+        # (generic-pack findings on docs/.md/.html/.json). get_file_context reads
+        # the index and raises LookupError for those; degrade to the finding's own
+        # detail instead of letting it surface as a non-recoverable internal error.
+        try:
+            file_context = (
+                ContextService(self.repo_root).get_file_context(finding.file_path)
+                if finding.file_path
+                else None
+            )
+        except LookupError:
+            file_context = None
+        if file_context is None:
+            no_context_note = (
+                "no indexed source context for this finding's file; "
+                "see message and evidence"
+            )
+            return FindingContext(
+                finding_id=finding.id,
+                rule_id=finding.rule_id,
+                summary=_summary(finding),
+                affected_files=(finding.file_path,) if finding.file_path else (),
+                relevant_symbols=(),
+                relevant_tests=(),
+                source_ranges=(),
+                risk_notes=(no_context_note,),
+                suggested_action=finding.suggested_action,
+                next_tools=("get_finding", "suggest_tests"),
+            )
         return FindingContext(
             finding_id=finding.id,
             rule_id=finding.rule_id,
@@ -104,9 +131,12 @@ class RefactorPlanningService:
     def plan_refactor(self, finding_id: str) -> SafeRefactorPlan:
         context = self.get_finding_context(finding_id)
         suggested = self.suggest_tests(finding_id)
+        location = (
+            context.affected_files[0] if context.affected_files else "the finding"
+        )
         return SafeRefactorPlan(
             finding_id=finding_id,
-            goal=f"Address {context.rule_id} in {context.affected_files[0]}.",
+            goal=f"Address {context.rule_id} in {location}.",
             non_goals=(
                 "Do not edit source files automatically.",
                 "Do not change public behavior without tests.",
@@ -158,18 +188,21 @@ class RefactorPlanningService:
             file_path = symbol["path"]
 
         context = ContextService(self.repo_root, auto_refresh=False)
-        file_context = context.get_file_context(file_path)
-        related = context.get_related_files(file_path, limit=10)
-        related_files = tuple(item["path"] for item in related["results"])
+        likely_tests_seed, related_results = _impact_file_signals(
+            context,
+            file_path,
+            tolerate_missing=finding_id is not None,
+        )
+        related_files = tuple(item["path"] for item in related_results)
         likely_tests = _dedupe(
             (
-                *file_context["likely_tests"],
+                *likely_tests_seed,
                 *tuple(path for path in related_files if path.startswith("tests/")),
             ),
         )
         affected_files = _dedupe((file_path, *related_files))
         risk_notes = _impact_risk_notes(
-            related["results"],
+            related_results,
             git_changed_paths(resolve_repo_root(self.repo_root)),
         )
         return ImpactReport(
@@ -178,7 +211,7 @@ class RefactorPlanningService:
             affected_files=affected_files,
             likely_tests=likely_tests,
             risk_notes=risk_notes,
-            confidence=_impact_confidence(related["results"]),
+            confidence=_impact_confidence(related_results),
         )
 
 
@@ -216,6 +249,32 @@ def _risk(rule_id: str) -> str:
 
 def _dedupe(items: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(item for item in items if item))
+
+
+def _impact_file_signals(
+    context: ContextService,
+    file_path: str,
+    *,
+    tolerate_missing: bool,
+) -> tuple[tuple[str, ...], tuple[RelatedFilePayload, ...]]:
+    """Return (likely_tests, related_files) for a target file's blast radius.
+
+    A non-indexed file (e.g. a generic-pack finding on a doc/.md file) makes
+    get_file_context / get_related_files raise LookupError. When
+    ``tolerate_missing`` (a finding target, which is a real file), degrade to
+    empty signals rather than crashing the tool. An explicit file/symbol target
+    keeps raising so callers like refactor_preflight can surface "not indexed".
+    """
+    if not file_path:
+        return (), ()
+    try:
+        likely_tests = context.get_file_context(file_path)["likely_tests"]
+        related = context.get_related_files(file_path, limit=10)["results"]
+    except LookupError:
+        if not tolerate_missing:
+            raise
+        return (), ()
+    return likely_tests, related
 
 
 def _impact_risk_notes(

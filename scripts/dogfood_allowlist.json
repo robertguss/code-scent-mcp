@@ -170,6 +170,12 @@
       "file": "src/codescent/mcp/planning_tools.py",
       "symbol": "mcp.planning_tools.register_planning_tools"
     },
+    "python.large_file:593d49af8348": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/mcp/repo_tools.py",
+      "symbol": null
+    },
     "python.large_file:6b9d9582ee79": {
       "rule_id": "python.large_file",
       "severity": "warning",

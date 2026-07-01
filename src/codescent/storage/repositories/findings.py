@@ -79,7 +79,7 @@ class FindingRepository:
                     findings.id,
                     findings.stable_key,
                     findings.rule_id,
-                    files.path,
+                    coalesce(nullif(findings.file_path, ''), files.path),
                     findings.severity,
                     findings.confidence,
                     findings.status,

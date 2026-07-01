@@ -1,3 +1,5 @@
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import ClassVar
 
@@ -38,9 +40,11 @@ class RepoStatusPayload(BaseModel):
     indexed_files: int = Field(ge=0)
     changed_files: tuple[str, ...]
     finding_count: int = Field(ge=0)
+    unresolved_finding_count: int = Field(ge=0)
     database_ok: bool
     git_available: bool
     git_status: str
+    warnings: tuple[str, ...]
 
 
 class StartTaskPayload(BaseModel):
@@ -113,7 +117,6 @@ async def test_get_repo_map_and_status_are_bounded(tmp_path: Path) -> None:
         "tests/test_cli.py",
     }
     assert "SECRET_SENTINEL" not in repo_map.model_dump_json()
-
     assert repo_status.ok is True
     assert repo_status.read_only is True
     assert repo_status.index_fresh is False
@@ -123,7 +126,41 @@ async def test_get_repo_map_and_status_are_bounded(tmp_path: Path) -> None:
         "tests/test_cli.py",
     )
     assert repo_status.database_ok is False
+    # No CodeScent state -> no unresolved findings and no rescan hint.
+    assert repo_status.unresolved_finding_count == 0
+    assert repo_status.warnings == ()
     assert not (repo / ".codescent").exists()
+
+
+@pytest.mark.anyio
+async def test_get_repo_status_flags_unresolved_findings(tmp_path: Path) -> None:
+    # Regression: findings persisted by older logic could have no resolvable file
+    # path while index_fresh reported true, leaving an agent with silently empty
+    # paths and no signal to rescan. get_repo_status now surfaces the count and a
+    # rescan hint.
+    repo = tmp_path / "repo"
+    source = repo / "src" / "pkg" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("VALUE = 1\n")
+    _ = CodeHealthService(repo).scan()
+
+    # Simulate a stale row: a finding whose location did not resolve.
+    database = repo / ".codescent" / "index.sqlite"
+    with closing(sqlite3.connect(database)) as connection:
+        _ = connection.execute(
+            "update findings set file_path = '', file_id = NULL "
+            "where status in ('open', 'regressed')",
+        )
+        connection.commit()
+
+    async with Client(mcp) as client:
+        status_result = await client.call_tool("get_repo_status", {"repo": str(repo)})
+    status = RepoStatusPayload.model_validate_json(
+        _text_content(status_result.content),
+    )
+
+    assert status.unresolved_finding_count >= 1
+    assert any("rescan" in warning for warning in status.warnings)
 
 
 @pytest.mark.anyio

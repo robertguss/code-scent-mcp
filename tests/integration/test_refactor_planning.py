@@ -3,7 +3,42 @@ from pathlib import Path
 from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.services.code_health import CodeHealthService
 from codescent.services.config import ConfigService
+from codescent.services.explain import ExplainService
 from codescent.services.refactor_planning import RefactorPlanningService
+from codescent.storage import RepositoryStorage, initialize_storage
+from codescent.storage.repositories import FindingRepository
+
+
+def test_snippet_tools_degrade_on_non_indexed_finding(tmp_path: Path) -> None:
+    # Regression: explain_finding / get_finding_context / plan_refactor crashed
+    # with a non-recoverable internal error for findings on non-indexed files
+    # (get_file_context / source_range raise on a path absent from the index).
+    # They must degrade gracefully instead.
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    _ = (repo / "src" / "app.py").write_text("VALUE = 1\n")
+    _ = (repo / "NOTES.md").write_text(
+        "# notes\n" + "\n".join(f"line {index}" for index in range(400)),
+    )
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
+    )
+    _ = CodeHealthService(repo).scan()
+    repository = FindingRepository(RepositoryStorage(initialize_storage(repo)))
+    generic = next(
+        finding
+        for finding in repository.list_findings()
+        if finding.rule_id.startswith("generic.")
+    )
+
+    planning = RefactorPlanningService(repo)
+    # None of these raise -- each returns a usable, degraded result.
+    assert ExplainService(repo).explain_finding(generic.id).finding_id == generic.id
+    context = planning.get_finding_context(generic.id)
+    assert context.finding_id == generic.id
+    assert planning.plan_refactor(generic.id).goal
+    assert planning.suggest_tests(generic.id).commands
+    assert planning.get_impact(finding_id=generic.id).target == generic.id
 
 
 def test_finding_context_is_minimal_and_actionable(tmp_path: Path) -> None:
