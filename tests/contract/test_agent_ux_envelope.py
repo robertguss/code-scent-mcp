@@ -8,7 +8,7 @@ import pytest
 from fastmcp import Client
 
 from codescent.evals.agent_ux import build_smelly_repo, call_tool_json
-from codescent.evals.agent_ux.deterministic import envelope_conformance
+from codescent.evals.agent_ux.envelope import envelope_conformance
 from codescent.evals.agent_ux.schemas import validates_exactly_one
 from codescent.mcp.server import mcp
 

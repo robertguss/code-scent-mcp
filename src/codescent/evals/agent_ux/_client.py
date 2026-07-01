@@ -88,6 +88,27 @@ async def call_tool_json(
     return _payload(result.content)
 
 
+async def todo_finding_id(
+    client: Client[FastMCPTransport],
+    repo: Path,
+) -> str:
+    """Return the fixture's ``python.todo_cluster`` finding id via the surface.
+
+    Shared by the error-recovery, envelope, and loop-connectivity dimensions so
+    each reuses the same live finding rather than re-deriving it.
+    """
+    scan = await call_tool_json(client, "scan_code_health", {"repo": str(repo)})
+    ids = scan.get("finding_ids")
+    if not isinstance(ids, list):
+        msg = "scan payload has no finding_ids list"
+        raise TypeError(msg)
+    for item in cast("list[object]", ids):
+        if isinstance(item, str) and item.startswith("python.todo_cluster"):
+            return item
+    msg = "no python.todo_cluster finding in the fixture"
+    raise ValueError(msg)
+
+
 async def list_tools_manifest(
     client: Client[FastMCPTransport],
 ) -> list[ToolInfo]:

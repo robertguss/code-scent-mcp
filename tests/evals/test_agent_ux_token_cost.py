@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from codescent.evals.agent_ux import build_agent_ux_report
-from codescent.evals.agent_ux.deterministic import manifest_cost
+from codescent.evals.agent_ux.token_cost import manifest_cost
 from codescent.evals.agent_ux.models import ToolInfo
 
 
