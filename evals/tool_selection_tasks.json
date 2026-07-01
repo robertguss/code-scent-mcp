@@ -1,0 +1,98 @@
+[
+  {
+    "task": "find source files whose name matches auth",
+    "intended_tool": "search_files",
+    "cluster": "search",
+    "confusable_with": ["search_content", "multi_search_content"]
+  },
+  {
+    "task": "search the code for the string TODO across every file",
+    "intended_tool": "search_content",
+    "cluster": "search",
+    "confusable_with": ["search_files", "search_todos"]
+  },
+  {
+    "task": "list all the TODO and FIXME comments in the repo",
+    "intended_tool": "search_todos",
+    "cluster": "search",
+    "confusable_with": ["search_content"]
+  },
+  {
+    "task": "run several content searches in one call",
+    "intended_tool": "multi_search_content",
+    "cluster": "search",
+    "confusable_with": ["search_content"]
+  },
+  {
+    "task": "find the test files that cover the parser",
+    "intended_tool": "search_tests",
+    "cluster": "search",
+    "confusable_with": ["search_files", "select_tests"]
+  },
+  {
+    "task": "search only the files changed in this branch",
+    "intended_tool": "search_changed_files",
+    "cluster": "search",
+    "confusable_with": ["search_files", "get_changed_file_health"]
+  },
+  {
+    "task": "get the details of a specific finding by its id",
+    "intended_tool": "get_finding",
+    "cluster": "findings",
+    "confusable_with": ["get_finding_context", "get_backlog"]
+  },
+  {
+    "task": "get the full context around a finding so I can fix it",
+    "intended_tool": "get_finding_context",
+    "cluster": "findings",
+    "confusable_with": ["get_finding", "get_file_context"]
+  },
+  {
+    "task": "what should I improve next in this codebase",
+    "intended_tool": "get_next_improvement",
+    "cluster": "findings",
+    "confusable_with": ["get_backlog", "get_improvement_plan"]
+  },
+  {
+    "task": "mark a finding as resolved",
+    "intended_tool": "mark_finding",
+    "cluster": "findings",
+    "confusable_with": ["record_verification"]
+  },
+  {
+    "task": "where is the function load_config defined",
+    "intended_tool": "find_symbol",
+    "cluster": "symbols",
+    "confusable_with": ["get_symbol_context", "find_references"]
+  },
+  {
+    "task": "what calls the function save",
+    "intended_tool": "find_callers",
+    "cluster": "symbols",
+    "confusable_with": ["find_callees", "find_references"]
+  },
+  {
+    "task": "what functions does save call",
+    "intended_tool": "find_callees",
+    "cluster": "symbols",
+    "confusable_with": ["find_callers"]
+  },
+  {
+    "task": "find every reference to the ConfigService class",
+    "intended_tool": "find_references",
+    "cluster": "symbols",
+    "confusable_with": ["find_callers", "find_symbol"]
+  },
+  {
+    "task": "get the surrounding context for a symbol",
+    "intended_tool": "get_symbol_context",
+    "cluster": "context",
+    "confusable_with": ["get_file_context", "find_symbol"]
+  },
+  {
+    "task": "record that I ran the tests and they passed",
+    "intended_tool": "record_verification",
+    "cluster": "verify",
+    "confusable_with": ["mark_finding", "verify_change"]
+  }
+]

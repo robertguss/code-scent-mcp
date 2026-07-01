@@ -1,0 +1,118 @@
+{
+  "repo": "agent-ux-fixture",
+  "surface_tool_count": 48,
+  "dimensions": [
+    {
+      "name": "manifest_token_cost",
+      "value": 7713.0,
+      "unit": "tokens",
+      "passed": 0,
+      "total": 0,
+      "notes": [],
+      "breakdown": [
+        {
+          "label": "context",
+          "value": 1579.0
+        },
+        {
+          "label": "guidance",
+          "value": 220.0
+        },
+        {
+          "label": "health",
+          "value": 1883.0
+        },
+        {
+          "label": "planning",
+          "value": 1480.0
+        },
+        {
+          "label": "repository",
+          "value": 1119.0
+        },
+        {
+          "label": "risk",
+          "value": 201.0
+        },
+        {
+          "label": "search",
+          "value": 1231.0
+        }
+      ]
+    },
+    {
+      "name": "error_recovery",
+      "value": 1.0,
+      "unit": "share",
+      "passed": 4,
+      "total": 4,
+      "notes": [],
+      "breakdown": []
+    },
+    {
+      "name": "constraint_drop",
+      "value": 1.0,
+      "unit": "share",
+      "passed": 12,
+      "total": 12,
+      "notes": [],
+      "breakdown": []
+    },
+    {
+      "name": "loop_connectivity",
+      "value": 1.0,
+      "unit": "share",
+      "passed": 1,
+      "total": 1,
+      "notes": [],
+      "breakdown": []
+    },
+    {
+      "name": "envelope_conformance",
+      "value": 0.6666666666666666,
+      "unit": "share",
+      "passed": 32,
+      "total": 48,
+      "notes": [
+        "get_repo_map",
+        "get_repo_status",
+        "get_symbol_context",
+        "get_architecture",
+        "get_finding",
+        "explain_score",
+        "get_calibration",
+        "get_progress",
+        "select_tests",
+        "get_impact",
+        "refactor_preflight",
+        "review_diff_risk",
+        "get_changed_file_health",
+        "context_stats",
+        "how_to_use",
+        "get_schema"
+      ],
+      "breakdown": []
+    },
+    {
+      "name": "tool_selection",
+      "value": 0.3125,
+      "unit": "accuracy",
+      "passed": 5,
+      "total": 16,
+      "notes": [
+        "'search the code for the string TODO acro': chose search_tests, wanted search_content",
+        "'find the test files that cover the parse': chose suggest_tests, wanted search_tests",
+        "'get the details of a specific finding by': chose start_task, wanted get_finding",
+        "'what should I improve next in this codeb': chose find_callees, wanted get_next_improvement",
+        "'mark a finding as resolved': chose get_next_improvement, wanted mark_finding",
+        "'where is the function load_config define': chose find_callees, wanted find_symbol",
+        "'what calls the function save': chose subjective_review, wanted find_callers",
+        "'what functions does save call': chose search_content, wanted find_callees",
+        "'find every reference to the ConfigServic': chose get_schema, wanted find_references",
+        "'get the surrounding context for a symbol': chose get_finding_context, wanted get_symbol_context",
+        "'record that I ran the tests and they pas': chose suggest_tests, wanted record_verification"
+      ],
+      "breakdown": []
+    }
+  ]
+}
