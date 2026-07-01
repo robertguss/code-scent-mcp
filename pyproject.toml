@@ -134,6 +134,9 @@ pythonpath = ["."]
 addopts = ["-ra", "--strict-config", "--strict-markers"]
 norecursedirs = ["tests/fixtures/python-basic"]
 filterwarnings = ["error"]
+markers = [
+    "live_model: opt-in R1 tool-selection eval that calls a live model (needs credentials)",
+]
 
 [tool.coverage.run]
 source = ["src"]
