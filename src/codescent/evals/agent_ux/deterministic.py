@@ -12,7 +12,7 @@ the repo's deterministic-floor invariant (``AGENTS.md``).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from codescent.core.public_surface import PUBLIC_SURFACE
 from codescent.core.token_estimate import estimate_tokens
@@ -52,8 +52,105 @@ async def run_deterministic_dimensions(
     _ = await call_tool_json(client, "scan_code_health", {"repo": str(repo)})
     dimensions: list[DimensionResult] = [
         await manifest_token_cost(client),
+        await error_recovery(client, repo),
     ]
     return tuple(dimensions)
+
+
+# --- R2: error-recovery readiness ----------------------------------------
+
+
+def recoverable_with_hint(
+    payload: dict[str, object],
+    expected_code: str,
+    recovery_key: str,
+) -> bool:
+    """Return whether ``payload`` is a recoverable error with actionable data.
+
+    A malformed-input call passes only when the error boundary marked it
+    recoverable (a domain error, not ``internal``), the code matches, and the
+    recovery bag carries both the site-specific key (``available_options`` /
+    ``valid_values`` / ``suggestions``) and a ``fix_hint`` -- everything an
+    agent needs to reach a valid next call without an out-of-band failure.
+    """
+    if payload.get("ok") is not False or payload.get("recoverable") is not True:
+        return False
+    if payload.get("code") != expected_code:
+        return False
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        return False
+    typed = cast("dict[str, object]", data)
+    return bool(typed.get(recovery_key)) and bool(typed.get("fix_hint"))
+
+
+async def _todo_finding_id(
+    client: Client[FastMCPTransport],
+    repo: Path,
+) -> str:
+    """Return the fixture's ``python.todo_cluster`` finding id via the surface."""
+    scan = await call_tool_json(client, "scan_code_health", {"repo": str(repo)})
+    ids = scan.get("finding_ids")
+    if not isinstance(ids, list):
+        msg = "scan payload has no finding_ids list"
+        raise TypeError(msg)
+    for item in cast("list[object]", ids):
+        if isinstance(item, str) and item.startswith("python.todo_cluster"):
+            return item
+    msg = "no python.todo_cluster finding in the fixture"
+    raise ValueError(msg)
+
+
+async def error_recovery(
+    client: Client[FastMCPTransport],
+    repo: Path,
+) -> DimensionResult:
+    """Score R2: the four malformed-input sites return recoverable errors (AE4)."""
+    finding_id = await _todo_finding_id(client, repo)
+    cases: tuple[tuple[str, dict[str, object], str, str], ...] = (
+        (
+            "get_finding",
+            {"repo": str(repo), "finding_id": "does-not-exist"},
+            "not_found",
+            "available_options",
+        ),
+        (
+            "mark_finding",
+            {"repo": str(repo), "finding_id": finding_id, "status": "banana"},
+            "invalid_value",
+            "valid_values",
+        ),
+        (
+            "get_symbol_context",
+            {"repo": str(repo), "qualified_name": "pkg.config.load_confib"},
+            "not_found",
+            "suggestions",
+        ),
+        (
+            "get_file_context",
+            {"repo": str(repo), "path": "src/pkg/confgi.py"},
+            "not_found",
+            "suggestions",
+        ),
+    )
+    passed = 0
+    notes: list[str] = []
+    for tool, args, expected_code, recovery_key in cases:
+        payload = await call_tool_json(client, tool, args)
+        if recoverable_with_hint(payload, expected_code, recovery_key):
+            passed += 1
+        else:
+            code = payload.get("code")
+            notes.append(f"{tool}: no recoverable {recovery_key} (code={code})")
+    total = len(cases)
+    return DimensionResult(
+        name="error_recovery",
+        value=passed / total,
+        unit="share",
+        passed=passed,
+        total=total,
+        notes=tuple(notes),
+    )
 
 
 # --- R6: manifest & description token cost -------------------------------
