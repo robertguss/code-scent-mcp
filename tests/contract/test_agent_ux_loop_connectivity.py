@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from fastmcp import Client
@@ -13,7 +14,7 @@ from codescent.evals.agent_ux.deterministic import loop_connectivity
 from codescent.mcp.server import mcp
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from fastmcp.client.transports import FastMCPTransport
 
 
 @pytest.mark.anyio
@@ -25,6 +26,32 @@ async def test_loop_connectivity_scores_connected(tmp_path: Path) -> None:
     assert dimension.name == "loop_connectivity"
     assert dimension.value == 1.0  # AE3: the spine connects at baseline
     assert dimension.notes == ()
+
+
+@pytest.mark.anyio
+async def test_loop_connectivity_flags_a_disconnected_spine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Drive the async scorer's disconnect wiring (dead-ends + notes + value=0),
+    # which the happy-path test never reaches, via a broken graph.
+    async def _broken(
+        client: Client[FastMCPTransport], repo: Path, finding_id: str
+    ) -> dict[str, tuple[str, ...]]:
+        _ = (client, repo, finding_id)
+        return {
+            "scan_code_health": ("get_next_improvement",),
+            "get_next_improvement": (),  # dead-ends before mark/record
+        }
+
+    monkeypatch.setattr(
+        "codescent.evals.agent_ux.deterministic.collect_next_tools", _broken
+    )
+    dimension = await loop_connectivity(
+        cast("Client[FastMCPTransport]", None), Path("unused"), finding_id="x"
+    )
+    assert dimension.value == 0.0
+    assert dimension.passed == 0
+    assert dimension.notes  # reports the disconnection
 
 
 def test_bfs_reaches_action_tools_through_synthetic_spine() -> None:

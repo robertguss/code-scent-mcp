@@ -112,15 +112,21 @@ async def envelope_conformance(
     notes: list[str] = []
     for tool in manifest:
         args = _build_args(tool.input_schema_json, values)
-        payload = await call_tool_json(client, tool.name, args)
-        if validates_exactly_one(payload):
+        try:
+            payload = await call_tool_json(client, tool.name, args)
+            conforms = validates_exactly_one(payload)
+        except (TypeError, ValueError):
+            # A non-dict / multi-block payload is the most severe envelope
+            # non-conformance -- score it as such, never crash the gated run.
+            conforms = False
+        if conforms:
             conforming += 1
         else:
             notes.append(tool.name)
     total = len(manifest)
     return DimensionResult(
         name="envelope_conformance",
-        value=conforming / total,
+        value=conforming / total if total else 0.0,
         unit="share",
         passed=conforming,
         total=total,

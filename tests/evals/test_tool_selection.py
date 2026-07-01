@@ -66,7 +66,10 @@ def test_score_tool_selection_computes_accuracy() -> None:
     assert dimension.name == "tool_selection"
     assert dimension.unit == "accuracy"
     assert dimension.total == 2
-    assert 0.0 <= dimension.value <= 1.0
+    # Both tasks paraphrase their tool's description, so the proxy must pick both.
+    # accuracy is advisory (never gated), so this is the only guard on the counter.
+    assert dimension.passed == 2
+    assert dimension.value == 1.0
 
 
 def test_live_model_selector_delegates_to_the_seam() -> None:
@@ -81,8 +84,12 @@ def test_live_model_selector_delegates_to_the_seam() -> None:
 
 @pytest.mark.live_model
 def test_live_model_smoke_is_opt_in() -> None:
-    if not os.getenv("CODESCENT_LIVE_MODEL"):
-        pytest.skip("live-model credentials not set")
-    pytest.skip(
-        "live-model provider wiring is deferred to the owner (see Open Questions)"
+    # Collected only under `-m live_model`; skips cleanly with no network. No
+    # provider is wired yet (deferred to the owner), so it is always a no-op --
+    # the env check documents the opt-in trigger the owner will honor at U16.
+    reason = (
+        "live-model credentials not set"
+        if not os.getenv("CODESCENT_LIVE_MODEL")
+        else "live-model provider wiring is deferred to the owner (see Open Questions)"
     )
+    pytest.skip(reason)

@@ -7,9 +7,11 @@ authoritative score comes from a live model, reached through the narrow
 behind the ``live_model`` pytest marker and a credentials check.
 
 This module is the one place in the suite allowed to reach a network model, and
-only via the opt-in ``LiveModelToolSelector``. It must never be imported by
-``deterministic.py`` or the default ``--check`` -- that boundary keeps the
-deterministic floor compliant with the repo's no-network invariant.
+only via the opt-in ``LiveModelToolSelector``. The default ``--check`` path may
+import the offline pieces (``load_selection_tasks`` / ``HeuristicToolSelector``),
+but must never construct or reach a live ``ModelClient`` -- that boundary, not
+the import itself, keeps the deterministic floor compliant with the repo's
+no-network invariant. ``deterministic.py`` imports nothing from here at all.
 ``RecordedToolSelector`` was dropped in review: a replay is valid only for the
 surface hash it was recorded on, so every phase-two merge invalidates it, and
 the heuristic proxy already fills the offline slot.

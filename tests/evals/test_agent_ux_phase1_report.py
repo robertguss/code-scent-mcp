@@ -32,6 +32,12 @@ async def test_report_covers_all_six_dimensions() -> None:
     report = await build_agent_ux_report(tasks=tasks)
     names = {dimension.name for dimension in report.dimensions}
     assert names == _EXPECTED_DIMENSIONS
+    # Every emitted unit must be one the gate knows how to route (else it raises).
+    assert {dimension.unit for dimension in report.dimensions} <= {
+        "share",
+        "tokens",
+        "accuracy",
+    }
 
 
 @pytest.mark.anyio

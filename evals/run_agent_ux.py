@@ -28,17 +28,11 @@ from typing import Annotated
 
 import typer
 
-# R2/R4 deliberately call tools with malformed args to prove they return
-# recoverable error envelopes; FastMCP logs each caught error at ERROR level.
-# Disable globally (survives FastMCP re-configuring its own logger) so the
-# eval's own JSON is the only output.
-logging.disable(logging.ERROR)
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from codescent.evals.agent_ux import AgentUxReport, build_agent_ux_report  # noqa: E402
-from codescent.evals.agent_ux.gate import find_regressions  # noqa: E402
-from codescent.evals.agent_ux.tool_selection import load_selection_tasks  # noqa: E402
+from codescent.evals.agent_ux import AgentUxReport, build_agent_ux_report
+from codescent.evals.agent_ux.gate import find_regressions
+from codescent.evals.agent_ux.tool_selection import load_selection_tasks
 
 DEFAULT_BASELINES_PATH = Path(__file__).resolve().parent / "agent_ux_baselines.json"
 DEFAULT_TASKS_PATH = Path(__file__).resolve().parent / "tool_selection_tasks.json"
@@ -56,7 +50,19 @@ def main(
     ] = False,
 ) -> None:
     tasks = load_selection_tasks(tasks_path)
-    report = asyncio.run(build_agent_ux_report(tasks=tasks))
+    if not tasks:
+        msg = f"no tool-selection tasks in {tasks_path} -- R1 coverage would vanish"
+        raise typer.BadParameter(msg)
+
+    # R2/R4 deliberately call tools with malformed args to prove they return
+    # recoverable error envelopes; FastMCP logs each caught error at ERROR level.
+    # Disable for the run only (a global that survives FastMCP re-configuring its
+    # own logger), then restore -- so importing this module never mutes logging.
+    logging.disable(logging.ERROR)
+    try:
+        report = asyncio.run(build_agent_ux_report(tasks=tasks))
+    finally:
+        logging.disable(logging.NOTSET)
 
     if update_baseline:
         _ = baselines.write_text(report.model_dump_json(indent=2) + "\n")

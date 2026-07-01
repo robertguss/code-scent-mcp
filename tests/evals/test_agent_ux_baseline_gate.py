@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from codescent.evals.agent_ux.gate import find_regressions
 from codescent.evals.agent_ux.models import AgentUxReport, DimensionResult
 
@@ -62,3 +64,21 @@ def test_vanished_dimension_is_a_regression() -> None:
     regressions = find_regressions(current, baseline)
     assert len(regressions) == 1
     assert regressions[0]["reason"] == "vanished"
+
+
+def test_vanished_advisory_dimension_is_still_flagged() -> None:
+    # A present accuracy dim never gates on value drift, but a *vanished* one is
+    # structural -- so silently dropping R1 can't read as a pass.
+    baseline = _report(
+        DimensionResult(name="tool_selection", value=0.3, unit="accuracy")
+    )
+    regressions = find_regressions(_report(), baseline)
+    assert len(regressions) == 1
+    assert regressions[0]["reason"] == "vanished"
+
+
+def test_unknown_unit_raises() -> None:
+    # A typo'd unit must fail loudly, not fall silently to the wrong gate branch.
+    baseline = _report(DimensionResult(name="weird", value=1.0, unit="furlongs"))
+    with pytest.raises(ValueError, match="unknown unit"):
+        _ = find_regressions(_report(), baseline)

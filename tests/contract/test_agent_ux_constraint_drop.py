@@ -53,3 +53,11 @@ def test_constraint_surfaced_requires_warning_and_downgrade() -> None:
 
     silent: dict[str, object] = {"constraint_warnings": [], "confidence": "high"}
     assert not constraint_surfaced(silent, "size:banana")
+
+    # Warning present but confidence NOT downgraded -> not surfaced. Exercises the
+    # downgrade guard specifically (the silent case above trips on empty warnings).
+    not_downgraded: dict[str, object] = {
+        "constraint_warnings": ["ignored 'size:banana'"],
+        "confidence": "high",
+    }
+    assert not constraint_surfaced(not_downgraded, "size:banana")

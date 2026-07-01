@@ -16,6 +16,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _EXPECTED_TOOL_COUNT = 48
+# Conforming tools on the current 48-tool surface (the R4 baseline). Phase-two
+# consolidation updates this alongside the committed baseline; pinning it means a
+# scorer collapse (e.g. R4 -> 0) fails loudly rather than passing `0 <= v <= 1`.
+_EXPECTED_CONFORMING = 32
 
 
 @pytest.mark.anyio
@@ -27,7 +31,7 @@ async def test_envelope_conformance_scored_over_full_surface(tmp_path: Path) -> 
     assert dimension.name == "envelope_conformance"
     assert dimension.unit == "share"
     assert dimension.total == _EXPECTED_TOOL_COUNT
-    assert 0.0 <= dimension.value <= 1.0
+    assert dimension.passed == _EXPECTED_CONFORMING
 
 
 def test_success_envelope_matches_only_success() -> None:
