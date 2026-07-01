@@ -25,16 +25,19 @@ if TYPE_CHECKING:
     from fastmcp import Client
     from fastmcp.client.transports import FastMCPTransport
 
+    from codescent.evals.agent_ux.models import ToolInfo
+
 
 def _arg_values(repo: Path, finding_id: str, result_id: str) -> dict[str, object]:
     """A value for every locator param a tool might require, keyed by name."""
+    symbol = "pkg.config.load_config"
     return {
         "repo": str(repo),
         "finding_id": finding_id,
         "result_id": result_id,
-        "qualified_name": "pkg.config.load_config",
-        "symbol": "pkg.config.load_config",
-        "target": "pkg.config.load_config",
+        "qualified_name": symbol,
+        "symbol": symbol,
+        "target": symbol,
         "path": "src/pkg/config.py",
         "query": "load",
         "queries": ["load"],
@@ -88,16 +91,22 @@ async def _sample_result_id(
 async def envelope_conformance(
     client: Client[FastMCPTransport],
     repo: Path,
+    *,
+    finding_id: str | None = None,
+    manifest: list[ToolInfo] | None = None,
 ) -> DimensionResult:
     """Score R4: share of tool responses matching exactly one envelope shape.
 
     Non-conforming tool names are listed in ``notes`` so the number is
-    explainable.
+    explainable. ``finding_id`` and ``manifest`` are derived from the surface
+    when not supplied by the aggregator.
     """
-    finding_id = await todo_finding_id(client, repo)
+    if finding_id is None:
+        finding_id = await todo_finding_id(client, repo)
     result_id = await _sample_result_id(client, repo)
     values = _arg_values(repo, finding_id, result_id)
-    manifest = await list_tools_manifest(client)
+    if manifest is None:
+        manifest = await list_tools_manifest(client)
 
     conforming = 0
     notes: list[str] = []

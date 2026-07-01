@@ -16,8 +16,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from codescent.core.errors import ErrorCode
+from codescent.core.models import EnvelopeConfidence
 from codescent.core.public_surface import registered_mcp_tool_names
-from codescent.evals.agent_ux._client import call_tool_json, todo_finding_id
+from codescent.evals.agent_ux._client import (
+    call_tool_json,
+    list_tools_manifest,
+    todo_finding_id,
+)
 from codescent.evals.agent_ux._graph import EXPECTED_EDGES, bfs, collect_next_tools
 from codescent.evals.agent_ux.envelope import envelope_conformance
 from codescent.evals.agent_ux.models import DimensionResult
@@ -36,7 +42,9 @@ async def run_deterministic_dimensions(
 ) -> tuple[DimensionResult, ...]:
     """Score every deterministic dimension (R2-R6) over ``repo``.
 
-    ``repo`` is scanned once here so every dimension reuses the same index.
+    The single ``todo_finding_id`` call scans ``repo`` once and builds the index
+    every dimension reuses; the finding id and manifest are then threaded into
+    the scorers so no dimension re-scans or re-fetches.
 
     Args:
         client: An open in-memory ``fastmcp.Client`` session.
@@ -45,13 +53,16 @@ async def run_deterministic_dimensions(
     Returns:
         The scored deterministic dimensions.
     """
-    _ = await call_tool_json(client, "scan_code_health", {"repo": str(repo)})
+    finding_id = await todo_finding_id(client, repo)
+    manifest = await list_tools_manifest(client)
     dimensions: list[DimensionResult] = [
-        await manifest_token_cost(client),
-        await error_recovery(client, repo),
+        await manifest_token_cost(client, manifest=manifest),
+        await error_recovery(client, repo, finding_id=finding_id),
         await constraint_drop(client, repo),
-        await loop_connectivity(client, repo),
-        await envelope_conformance(client, repo),
+        await loop_connectivity(client, repo, finding_id=finding_id),
+        await envelope_conformance(
+            client, repo, finding_id=finding_id, manifest=manifest
+        ),
     ]
     return tuple(dimensions)
 
@@ -62,15 +73,19 @@ async def run_deterministic_dimensions(
 async def loop_connectivity(
     client: Client[FastMCPTransport],
     repo: Path,
+    *,
+    finding_id: str | None = None,
 ) -> DimensionResult:
     """Score R3: the improvement spine forms a connected next_tools chain (AE3).
 
     Scores 1.0 only when BFS from ``scan_code_health`` reaches both
     ``mark_finding`` and ``record_verification``, no spine tool is a dead end,
     and every emitted target resolves against the registry. Otherwise the
-    dead-ends and dangling targets are reported as notes.
+    dead-ends and dangling targets are reported as notes. ``finding_id`` is
+    derived from the surface when not supplied by the aggregator.
     """
-    finding_id = await todo_finding_id(client, repo)
+    if finding_id is None:
+        finding_id = await todo_finding_id(client, repo)
     graph = await collect_next_tools(client, repo, finding_id)
     registered = registered_mcp_tool_names()
     reachable = bfs("scan_code_health", graph)
@@ -130,31 +145,31 @@ def recoverable_with_hint(
 def _recovery_cases(
     repo: Path,
     finding_id: str,
-) -> tuple[tuple[str, dict[str, object], str, str], ...]:
+) -> tuple[tuple[str, dict[str, object], ErrorCode, str], ...]:
     """The four malformed-input calls and the recovery each must carry (AE4)."""
     return (
         (
             "get_finding",
             {"repo": str(repo), "finding_id": "does-not-exist"},
-            "not_found",
+            ErrorCode.NOT_FOUND,
             "available_options",
         ),
         (
             "mark_finding",
             {"repo": str(repo), "finding_id": finding_id, "status": "banana"},
-            "invalid_value",
+            ErrorCode.INVALID_VALUE,
             "valid_values",
         ),
         (
             "get_symbol_context",
             {"repo": str(repo), "qualified_name": "pkg.config.load_confib"},
-            "not_found",
+            ErrorCode.NOT_FOUND,
             "suggestions",
         ),
         (
             "get_file_context",
             {"repo": str(repo), "path": "src/pkg/confgi.py"},
-            "not_found",
+            ErrorCode.NOT_FOUND,
             "suggestions",
         ),
     )
@@ -163,9 +178,16 @@ def _recovery_cases(
 async def error_recovery(
     client: Client[FastMCPTransport],
     repo: Path,
+    *,
+    finding_id: str | None = None,
 ) -> DimensionResult:
-    """Score R2: the four malformed-input sites return recoverable errors (AE4)."""
-    finding_id = await todo_finding_id(client, repo)
+    """Score R2: the four malformed-input sites return recoverable errors (AE4).
+
+    ``finding_id`` is derived from the surface when not supplied by the
+    aggregator.
+    """
+    if finding_id is None:
+        finding_id = await todo_finding_id(client, repo)
     cases = _recovery_cases(repo, finding_id)
     passed = 0
     notes: list[str] = []
@@ -216,7 +238,7 @@ def constraint_surfaced(payload: dict[str, object], token: str) -> bool:
         isinstance(entry, str) and token in entry
         for entry in cast("list[object]", warnings)
     )
-    return mentioned and payload.get("confidence") != "high"
+    return mentioned and payload.get("confidence") != EnvelopeConfidence.HIGH
 
 
 async def constraint_drop(

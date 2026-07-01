@@ -54,9 +54,15 @@ def manifest_cost(manifest: list[ToolInfo]) -> tuple[int, dict[str, int]]:
 
 async def manifest_token_cost(
     client: Client[FastMCPTransport],
+    *,
+    manifest: list[ToolInfo] | None = None,
 ) -> DimensionResult:
-    """Score R6: the token size of the ``tools/list`` manifest + descriptions."""
-    manifest = await list_tools_manifest(client)
+    """Score R6: the token size of the ``tools/list`` manifest + descriptions.
+
+    ``manifest`` is fetched from the surface when not supplied by the aggregator.
+    """
+    if manifest is None:
+        manifest = await list_tools_manifest(client)
     total, per_group = manifest_cost(manifest)
     breakdown = tuple(
         BreakdownEntry(label=group, value=float(cost))

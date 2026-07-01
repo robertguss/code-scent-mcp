@@ -21,8 +21,8 @@ import json
 from typing import TYPE_CHECKING, ClassVar, Protocol, cast, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict
-from rapidfuzz import fuzz
 
+from codescent.core.fuzzy import nearest_matches
 from codescent.evals.agent_ux.models import DimensionResult, ToolInfo
 
 if TYPE_CHECKING:
@@ -67,16 +67,13 @@ class HeuristicToolSelector:
     """
 
     def select(self, task: str, manifest: list[ToolInfo]) -> str:
-        best_name = ""
-        best_score = -1.0
-        needle = task.lower()
-        for tool in manifest:
-            haystack = f"{tool.name} {tool.description}".lower()
-            score = fuzz.partial_ratio(needle, haystack)
-            if score > best_score:
-                best_score = score
-                best_name = tool.name
-        return best_name
+        # Reuse the repo's canonical "did you mean" scorer (rapidfuzz
+        # partial_ratio) so the proxy ranks like the rest of the surface does.
+        by_haystack = {
+            f"{tool.name} {tool.description}".lower(): tool.name for tool in manifest
+        }
+        matches = nearest_matches(task.lower(), by_haystack, limit=1, threshold=0.0)
+        return by_haystack[matches[0]] if matches else ""
 
 
 class LiveModelToolSelector:
