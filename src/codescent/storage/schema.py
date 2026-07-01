@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Final
 
-SCHEMA_VERSION: Final = 8
+SCHEMA_VERSION: Final = 9
 
 BASE_TABLE_STATEMENTS: Final[tuple[str, ...]] = (
     "create table if not exists schema_version (version integer not null)",
@@ -253,6 +253,59 @@ MIGRATION_STATEMENTS: Final[dict[int, tuple[str, ...]]] = {
             accepted_at text not null
         )
         """,
+    ),
+    # Index every foreign-key child column in the graph tables. Without these,
+    # `delete from files` on a full reindex fires ON DELETE CASCADE / SET NULL
+    # that full-scans each child table once per deleted parent row -- O(files x
+    # children), ~277s on this repo. Indexed, the cascade lookups are O(log n)
+    # (~1s). These also serve the retrieval reads (find_callers / find_references
+    # query call_edges / symbol_references by symbol_id).
+    9: (
+        "create index if not exists idx_symbols_file_id on symbols(file_id)",
+        """
+        create index if not exists idx_imports_source_file_id
+            on imports(source_file_id)
+        """,
+        """
+        create index if not exists idx_imports_resolved_file_id
+            on imports(resolved_file_id)
+        """,
+        "create index if not exists idx_chunks_file_id on chunks(file_id)",
+        "create index if not exists idx_chunks_symbol_id on chunks(symbol_id)",
+        """
+        create index if not exists idx_symbol_references_source_file_id
+            on symbol_references(source_file_id)
+        """,
+        """
+        create index if not exists idx_symbol_references_target_file_id
+            on symbol_references(target_file_id)
+        """,
+        """
+        create index if not exists idx_symbol_references_source_symbol_id
+            on symbol_references(source_symbol_id)
+        """,
+        """
+        create index if not exists idx_symbol_references_target_symbol_id
+            on symbol_references(target_symbol_id)
+        """,
+        """
+        create index if not exists idx_call_edges_source_file_id
+            on call_edges(source_file_id)
+        """,
+        """
+        create index if not exists idx_call_edges_target_file_id
+            on call_edges(target_file_id)
+        """,
+        """
+        create index if not exists idx_call_edges_caller_symbol_id
+            on call_edges(caller_symbol_id)
+        """,
+        """
+        create index if not exists idx_call_edges_callee_symbol_id
+            on call_edges(callee_symbol_id)
+        """,
+        "create index if not exists idx_findings_file_id on findings(file_id)",
+        "create index if not exists idx_findings_symbol_id on findings(symbol_id)",
     ),
 }
 
