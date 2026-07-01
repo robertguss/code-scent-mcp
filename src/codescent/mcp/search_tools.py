@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Final, TypedDict
 
 from codescent.core.defensive import coerce_int, or_empty, resolve_query
 from codescent.core.public_surface import normalize_output_mode
+from codescent.engine.search.constraints import constraint_warnings
 from codescent.services.freshness import confidence_for_results, warnings_for_results
 from codescent.services.search import SearchService
 from codescent.services.search_support import SearchPagePayload, SearchResultPayload
@@ -40,6 +41,7 @@ class AdvisoryToolFields(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class FileResultPayload(TypedDict):
@@ -75,6 +77,7 @@ class SearchToolPayload(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class MultiSearchToolPayload(TypedDict):
@@ -87,6 +90,7 @@ class MultiSearchToolPayload(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class TodoSearchToolPayload(TypedDict):
@@ -97,6 +101,7 @@ class TodoSearchToolPayload(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class TestSearchToolPayload(TypedDict):
@@ -110,6 +115,7 @@ class TestSearchToolPayload(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 def register_search_tools(mcp: FastMCP) -> None:
@@ -199,6 +205,7 @@ def search_files(  # noqa: PLR0913 - additive defensive alias for sloppy inputs.
             has_results=bool(matches),
             result_kind="file paths",
             next_tools=("search_content", "get_repo_map"),
+            constraints=constraints,
         ),
     }
 
@@ -241,6 +248,7 @@ def search_content(  # noqa: PLR0913 - MCP tool exposes orthogonal shape toggles
             has_results=bool(matches),
             result_kind="content matches",
             next_tools=("search_files", "get_repo_map"),
+            constraints=constraints,
         ),
     }
 
@@ -277,6 +285,7 @@ def multi_search_content(  # noqa: PLR0913 - additive constraints prefilter knob
             has_results=bool(matches),
             result_kind="content matches",
             next_tools=("search_files", "search_content", "get_repo_map"),
+            constraints=constraints,
         ),
     }
 
@@ -420,12 +429,18 @@ def _advisory_fields(
     has_results: bool,
     result_kind: str,
     next_tools: tuple[str, ...],
+    constraints: str = "",
 ) -> AdvisoryToolFields:
+    dropped = constraint_warnings(constraints)
     return {
         "warnings": warnings_for_results(
             has_results=has_results,
             result_kind=result_kind,
         ),
-        "confidence": confidence_for_results(has_results=has_results),
+        "confidence": confidence_for_results(
+            has_results=has_results,
+            constraint_dropped=bool(dropped),
+        ),
         "next_tools": next_tools,
+        "constraint_warnings": dropped,
     }

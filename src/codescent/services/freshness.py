@@ -131,9 +131,15 @@ def confidence_for_results(
     *,
     has_results: bool,
     freshness: FreshnessMetadata | None = None,
+    constraint_dropped: bool = False,
 ) -> AdvisoryConfidence:
     if not has_results:
         return "low"
+    # A dropped constraint token means the scope the caller asked for was not
+    # fully applied, so the results may be broader than intended — cap the
+    # confidence so the model does not over-trust them (F2).
+    if constraint_dropped:
+        return "medium"
     if freshness is None:
         return "high"
     return freshness.confidence

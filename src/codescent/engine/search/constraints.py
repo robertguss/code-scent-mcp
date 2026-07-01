@@ -111,6 +111,10 @@ class ConstraintSet:
     git_kinds: frozenset[GitKind] = frozenset()
     sizes: tuple[SizeConstraint, ...] = ()
     times: tuple[TimeConstraint, ...] = ()
+    # Raw tokens that were dropped as unknown/malformed. Surfaced as
+    # ``constraint_warnings`` so a silently-ignored token is no longer trusted as
+    # a filter (F2). Not part of ``is_empty`` — it is diagnostics, not a filter.
+    ignored: tuple[str, ...] = ()
 
     @property
     def is_empty(self) -> bool:
@@ -136,6 +140,7 @@ class _Builder:
     git_kinds: set[GitKind] = field(default_factory=set)
     sizes: list[SizeConstraint] = field(default_factory=list)
     times: list[TimeConstraint] = field(default_factory=list)
+    ignored: list[str] = field(default_factory=list)
 
     def build(self) -> ConstraintSet:
         return ConstraintSet(
@@ -145,6 +150,7 @@ class _Builder:
             git_kinds=frozenset(self.git_kinds),
             sizes=tuple(self.sizes),
             times=tuple(self.times),
+            ignored=tuple(self.ignored),
         )
 
 
@@ -163,6 +169,35 @@ def parse_constraints(text: str) -> ConstraintSet:
     return builder.build()
 
 
+def constraint_warnings(text: str) -> tuple[str, ...]:
+    """Human-readable warning per dropped token in ``text``.
+
+    Runs the real :func:`parse_constraints` (no re-implementation, so it can
+    never drift from the actual filter) and formats every token it dropped.
+    Because ``parse_constraints`` never short-circuits, this warns even when
+    every token is malformed and the resulting filter is empty (the F2 repro).
+    """
+    return tuple(_ignored_message(token) for token in parse_constraints(text).ignored)
+
+
+def _ignored_message(token: str) -> str:
+    if token.startswith("size:"):
+        return (
+            f"ignored {token!r} — expected e.g. size:<10kb "
+            "(operators < <= > >=, units b/kb/mb)"
+        )
+    if token.startswith("mtime:"):
+        return (
+            f"ignored {token!r} — expected e.g. mtime:<7d "
+            "(operators < >, units s/m/h/d/w)"
+        )
+    if token.startswith("git:"):
+        return f"ignored {token!r} — expected git:modified or git:untracked"
+    if token.startswith("!"):
+        return f"ignored {token!r} — exclusion needs a pattern after '!'"
+    return f"ignored {token!r} — unknown constraint scheme"
+
+
 def is_glob(token: str) -> bool:
     """Return whether ``token`` contains a glob metacharacter (``* ? [``)."""
     return any(character in _GLOB_CHARS for character in token)
@@ -178,12 +213,18 @@ def _classify(builder: _Builder, token: str) -> None:
         # A bare token is a path prefix; a ``scheme:`` token with an unknown
         # scheme is ignored rather than mistaken for a prefix.
         builder.prefixes.append(token)
+    elif token:
+        # A ``scheme:`` token whose scheme we do not recognise — record it so the
+        # drop is surfaced instead of silently trusted.
+        builder.ignored.append(token)
 
 
 def _handle_exclude(builder: _Builder, token: str) -> None:
     inner = token.removeprefix("!")
     if inner:
         builder.excludes.append(ExcludePattern(pattern=inner, is_glob=is_glob(inner)))
+    else:
+        builder.ignored.append(token)
 
 
 def _handle_git(builder: _Builder, token: str) -> None:
@@ -192,18 +233,24 @@ def _handle_git(builder: _Builder, token: str) -> None:
         builder.git_kinds.add("modified")
     elif value == "untracked":
         builder.git_kinds.add("untracked")
+    else:
+        builder.ignored.append(token)
 
 
 def _handle_size(builder: _Builder, token: str) -> None:
     parsed = _parse_size(token.removeprefix("size:"))
     if parsed is not None:
         builder.sizes.append(parsed)
+    else:
+        builder.ignored.append(token)
 
 
 def _handle_time(builder: _Builder, token: str) -> None:
     parsed = _parse_time(token.removeprefix("mtime:"))
     if parsed is not None:
         builder.times.append(parsed)
+    else:
+        builder.ignored.append(token)
 
 
 _SCHEMES: Final[tuple[tuple[str, Callable[[_Builder, str], None]], ...]] = (
