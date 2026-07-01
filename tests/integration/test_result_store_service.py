@@ -179,6 +179,9 @@ def test_invalid_missing_and_expired_ids_return_parseable_errors(
         "message": "Result ID must be an opaque ctx_ identifier.",
         "result_id": "result-1",
         "retryable": False,
+        "ok": False,
+        "recoverable": False,
+        "data": {"result_id": "result-1", "retryable": False},
     }
     assert missing["code"] == "missing_result"
     assert missing["message"] == "Stored result ID was not found."

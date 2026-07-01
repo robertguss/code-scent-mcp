@@ -496,6 +496,9 @@ def test_retrieve_result_invalid_and_missing_ids_have_deterministic_json_errors(
         "message": "Stored result ID was not found.",
         "result_id": "ctx_0000000000000000",
         "retryable": False,
+        "ok": False,
+        "recoverable": False,
+        "data": {"result_id": "ctx_0000000000000000", "retryable": False},
     }
     assert invalid == {
         "kind": "result_store_error",
@@ -503,6 +506,9 @@ def test_retrieve_result_invalid_and_missing_ids_have_deterministic_json_errors(
         "message": "Result ID must be an opaque ctx_ identifier.",
         "result_id": "../secret.txt",
         "retryable": False,
+        "ok": False,
+        "recoverable": False,
+        "data": {"result_id": "../secret.txt", "retryable": False},
     }
     assert "Traceback" not in combined
     assert "LookupError" not in combined

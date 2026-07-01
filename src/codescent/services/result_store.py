@@ -45,6 +45,7 @@ class RetrievalFilters(TypedDict, total=False):
 
 
 class RetrievedResultPayload(TypedDict):
+    ok: bool
     kind: str
     result_id: str
     mode: str
@@ -62,6 +63,9 @@ class StoredResultErrorPayload(TypedDict):
     message: str
     result_id: str
     retryable: bool
+    ok: bool
+    recoverable: bool
+    data: dict[str, object]
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,12 +79,18 @@ class ResultStoreError(Exception):
         Exception.__init__(self, self.message)
 
     def to_payload(self) -> StoredResultErrorPayload:
+        # Uniform error-envelope keys (``ok``/``recoverable``/``data``) are added
+        # alongside the existing keys; ``recoverable`` mirrors ``retryable`` and
+        # ``result_id`` is mirrored into ``data`` (KTD2).
         return {
             "kind": "result_store_error",
             "code": self.code,
             "message": self.message,
             "result_id": self.result_id,
             "retryable": self.retryable,
+            "ok": False,
+            "recoverable": self.retryable,
+            "data": {"result_id": self.result_id, "retryable": self.retryable},
         }
 
 
@@ -276,6 +286,7 @@ def _summary_response(
     omitted_count = max(len(records) - len(visible), 0)
     warnings = _partial_warnings(omitted_count)
     return {
+        "ok": True,
         "kind": "retrieved_result",
         "result_id": row.id,
         "mode": StoredResultMode.SUMMARY.value,
@@ -304,6 +315,7 @@ def _items_response(
         response_mode = StoredResultMode.SUMMARY.value
         warnings = ("exact result exceeded limit; returning bounded partial payload",)
     return {
+        "ok": True,
         "kind": "retrieved_result",
         "result_id": row.id,
         "mode": response_mode,

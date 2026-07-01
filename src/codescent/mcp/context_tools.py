@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, TypedDict, cast
 
 from codescent.core.defensive import coerce_int, resolve_query
+from codescent.core.errors import CodeScentError, ErrorCode, ErrorSeverity
+from codescent.core.fuzzy import nearest_matches
 from codescent.core.paths import resolve_repo_root
 from codescent.core.preservation import estimate_token_usage
 from codescent.core.symbol_formatter import format_symbol_search_results
@@ -21,6 +23,7 @@ from codescent.services.freshness import (
     warnings_for_results,
 )
 from codescent.services.result_store import JsonValue, ResultStoreService
+from codescent.services.symbols import read_persisted_file_paths
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import SessionEventRepository, SessionEventWrite
 
@@ -176,7 +179,14 @@ def register_context_tools(mcp: FastMCP) -> None:
 
 
 def get_file_context(path: str, repo: str = ".") -> FileContextToolPayload:
-    payload = ContextService(repo).get_file_context(path)
+    try:
+        payload = ContextService(repo).get_file_context(path)
+    except LookupError as exc:
+        # ``ContextService.get_file_context`` keeps raising ``LookupError`` so
+        # best-effort enrichment callers (answer_pack, task_brief) still skip
+        # unindexed paths; only the tool surface converts it to a recoverable
+        # not-found with nearest-path suggestions (U2).
+        raise _unknown_path_error(repo, path) from exc
     return {
         "ok": True,
         "path": payload["path"],
@@ -196,6 +206,20 @@ def get_file_context(path: str, repo: str = ".") -> FileContextToolPayload:
         "changed_files": payload["changed_files"],
         "refresh_error": payload["refresh_error"],
     }
+
+
+def _unknown_path_error(repo: str, path: str) -> CodeScentError:
+    suggestions = nearest_matches(path, read_persisted_file_paths(repo), limit=5)
+    return CodeScentError(
+        code=ErrorCode.NOT_FOUND,
+        message=f"No indexed file at {path!r}.",
+        severity=ErrorSeverity.ERROR,
+        details={"path": path},
+        recovery={
+            "suggestions": list(suggestions),
+            "fix_hint": "Get valid file paths from get_repo_map or search_files.",
+        },
+    )
 
 
 def find_symbol(  # noqa: PLR0913 - additive defensive alias for sloppy inputs.

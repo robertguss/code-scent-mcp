@@ -5,10 +5,15 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from codescent.core.errors import CodeScentError, ErrorCode, ErrorSeverity
 from codescent.core.models import FindingStatus
 
 if TYPE_CHECKING:
     from codescent.storage import RepositoryStorage
+
+# Cap on the id sample surfaced in a not-found recovery payload — never dump all
+# ids (respects the North-Star bounding invariant).
+_ID_SAMPLE_LIMIT = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,10 +151,11 @@ class FindingRepository:
         return self.get_finding(finding_id)
 
     def get_finding(self, finding_id: str) -> FindingRow:
-        for finding in self.list_findings():
+        findings = self.list_findings()
+        for finding in findings:
             if finding.id == finding_id:
                 return finding
-        raise LookupError(finding_id)
+        raise _finding_not_found(finding_id, findings)
 
     def record_verification(
         self,
@@ -240,6 +246,26 @@ class FindingRepository:
                 ),
             )
         return {finding_id: tuple(events) for finding_id, events in grouped.items()}
+
+
+def _finding_not_found(
+    finding_id: str,
+    findings: tuple[FindingRow, ...],
+) -> CodeScentError:
+    sample = [finding.id for finding in findings[:_ID_SAMPLE_LIMIT]]
+    return CodeScentError(
+        code=ErrorCode.NOT_FOUND,
+        message=f"No finding {finding_id!r}.",
+        severity=ErrorSeverity.ERROR,
+        details={"finding_id": finding_id},
+        recovery={
+            "available_options": sample,
+            "total_findings": len(findings),
+            "fix_hint": (
+                "Get valid finding ids from get_next_improvement or get_backlog."
+            ),
+        },
+    )
 
 
 VerificationRunTuple = tuple[int, str, str, int, str, str]

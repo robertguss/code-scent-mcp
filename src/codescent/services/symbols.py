@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+from codescent.core.errors import CodeScentError, ErrorCode, ErrorSeverity
+from codescent.core.fuzzy import nearest_matches
 from codescent.core.paths import normalize_repo_path, resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
 from codescent.engine.packs import build_pack_registry
@@ -81,6 +83,7 @@ def read_persisted_symbol(
     qualified_name: str,
 ) -> SymbolMatchPayload:
     state = ensure_symbols_indexed(repo_root)
+    suggestions: tuple[str, ...] = ()
     with RepositoryStorage(state).read_connection() as connection:
         row = cast(
             "PersistedSymbolRow | None",
@@ -103,9 +106,39 @@ def read_persisted_symbol(
                 (qualified_name,),
             ).fetchone(),
         )
+        if row is None:
+            suggestions = _nearest_symbol_names(connection, qualified_name)
     if row is None:
-        raise LookupError(qualified_name)
+        raise CodeScentError(
+            code=ErrorCode.NOT_FOUND,
+            message=f"No symbol {qualified_name!r}.",
+            severity=ErrorSeverity.ERROR,
+            details={"qualified_name": qualified_name},
+            recovery={
+                "suggestions": list(suggestions),
+                "fix_hint": "Get valid qualified names from find_symbol.",
+            },
+        )
     return _symbol_row_payload(row)
+
+
+def _nearest_symbol_names(
+    connection: sqlite3.Connection,
+    qualified_name: str,
+    *,
+    limit: int = 5,
+) -> tuple[str, ...]:
+    rows = cast(
+        "list[tuple[str]]",
+        connection.execute(
+            "select distinct qualified_name from symbols",
+        ).fetchall(),
+    )
+    return nearest_matches(
+        qualified_name,
+        (row[0] for row in rows),
+        limit=limit,
+    )
 
 
 def read_persisted_file_symbols(
@@ -136,6 +169,16 @@ def read_persisted_file_symbols(
             (relative_path,),
         ).fetchall()
     return _symbol_rows_payload(rows)
+
+
+def read_persisted_file_paths(repo_root: Path | str) -> tuple[str, ...]:
+    state = ensure_symbols_indexed(repo_root)
+    with RepositoryStorage(state).read_connection() as connection:
+        rows = cast(
+            "list[tuple[str]]",
+            connection.execute("select path from files order by path").fetchall(),
+        )
+    return tuple(row[0] for row in rows)
 
 
 def ensure_symbols_indexed(repo_root: Path | str) -> StorageState:
