@@ -26,6 +26,7 @@ import dataclasses
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from codescent.core.errors import CodeScentError
 from codescent.core.paths import resolve_repo_root
 from codescent.services.git import CO_CHANGE_MAX_RESULTS, git_co_change_counts
 from codescent.services.refactor_planning import ImpactReport, RefactorPlanningService
@@ -124,7 +125,10 @@ class RefactorPreflightService:
                 target_type=target_type,
                 finding_id=finding_id,
             )
-        except (LookupError, IndexError):
+        except (LookupError, IndexError, CodeScentError):
+            # A bad finding id now raises a structured not-found CodeScentError
+            # (U2); keep degrading impact to a warning here rather than failing
+            # the whole preflight bundle for one unindexed/unknown target.
             warnings.append("impact unavailable: target not indexed")
             return None
 

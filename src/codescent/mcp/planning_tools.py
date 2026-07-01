@@ -57,6 +57,7 @@ class RefactorPlanToolPayload(TypedDict):
     fallback: str
     expected_behavior_preservation: tuple[str, ...]
     verification_recommendations: tuple[str, ...]
+    next_tools: tuple[str, ...]
 
 
 class ScaffoldToolPayload(TypedDict):
@@ -76,6 +77,7 @@ class SuggestedTestsToolPayload(TypedDict):
     likely_tests: tuple[str, ...]
     executes_in_v1: bool
     scaffold: NotRequired[ScaffoldToolPayload]
+    next_tools: tuple[str, ...]
 
 
 class SelectTestsToolPayload(TypedDict):
@@ -93,6 +95,7 @@ class VerifyChangeToolPayload(TypedDict):
     recommended_commands: tuple[str, ...]
     likely_tests: tuple[str, ...]
     missing_characterization_tests: tuple[str, ...]
+    next_tools: tuple[str, ...]
 
 
 class ImpactToolPayload(TypedDict):
@@ -167,59 +170,70 @@ class VerifyRefactorToolPayload(TypedDict):
 def register_planning_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent to retrieve bounded finding context before reading "
-            "whole files. This tool is read-only for source files."
+            "Bounded finding context before reading whole files; read-only for "
+            "source. Pass a finding_id from get_next_improvement or get_backlog. "
+            "e.g. get_finding_context(finding_id='python.large_file:cf58...')."
         ),
     )(get_finding_context)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to produce a safe refactor plan with non-goals, "
-            "risks, fallback, and verification recommendations."
+            "Safe refactor plan for a finding: goal, non-goals, risks, "
+            "fallback, and verification recommendations. Pass a finding_id from "
+            "get_next_improvement or get_backlog. e.g. "
+            "plan_refactor(finding_id='python.long_function:ab12...')."
         ),
     )(plan_refactor)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to recommend likely tests and commands. This tool "
-            "does not execute target project tests in V1. Pass scaffold=True "
-            "to also get an honest, RED characterization-test skeleton that "
-            "imports the finding's target and leaves TODO placeholders (never "
-            "a fake-green assertion) to pin current behavior before refactoring."
+            "Recommend likely tests and commands for a finding (does not "
+            "execute tests in V1). Pass scaffold=True for an honest RED "
+            "characterization-test skeleton that imports the target and leaves "
+            "TODO placeholders (never a fake-green assertion) to pin current "
+            "behavior. Pass a finding_id from get_next_improvement or "
+            "get_backlog. e.g. suggest_tests(finding_id='...', scaffold=True)."
         ),
     )(suggest_tests)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to compute the bounded minimal test set for the "
-            "current changes or given paths and a single focused command. "
-            "Recommend-only; does not execute target project tests."
+            "Bounded minimal test set for the current changes or given paths, "
+            "plus one focused command. Recommend-only; does not execute tests. "
+            "Pass a path (or paths) to scope it. e.g. "
+            "select_tests(paths=('src/app/auth.py',))."
         ),
     )(select_tests)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to estimate local blast radius for a file, symbol, "
-            "or finding with bounded confidence-labeled evidence."
+            "Estimate the local blast radius of a change with bounded, "
+            "confidence-labeled evidence. Set target_type to file, symbol, or "
+            "finding: a symbol target comes from find_symbol, a finding_id from "
+            "get_backlog or get_next_improvement. e.g. "
+            "get_impact(target_type='symbol', target='pkg.mod.fn')."
         ),
     )(get_impact)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to record recommend-only verification commands. "
-            "This does not execute target project commands."
+            "Record recommend-only verification commands for a finding; does "
+            "not execute target commands. Pass a finding_id from "
+            "get_next_improvement or get_backlog. e.g. "
+            "verify_change(finding_id='python.large_file:cf58...')."
         ),
     )(verify_change)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to deterministically check that an edit preserved a "
-            "Python file's public surface (exported symbols and signatures) "
-            "versus a git ref. Read-only; proves behavior preservation or "
-            "reports concrete violations."
+            "Deterministically check that an edit preserved a Python file's "
+            "public surface (exported symbols and signatures) versus a git ref; "
+            "read-only. Proves behavior preservation or reports concrete "
+            "violations. e.g. verify_refactor(path='src/app/auth.py', "
+            "base_ref='HEAD')."
         ),
     )(verify_refactor)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to run a one-call refactor preflight before an edit: "
-            "a bounded, deduped blast-radius bundle that composes impact "
-            "(callers/refs), git co-change coupling, the minimal verification "
-            "test set, and changed-file health for a file, symbol, or finding. "
-            "Pure composition of existing analyses; read-only for source files."
+            "One-call refactor preflight before an edit: a bounded, deduped "
+            "blast-radius bundle composing impact (callers/refs), git co-change "
+            "coupling, the minimal verification test set, and changed-file "
+            "health for a file, symbol, or finding. Read-only for source. e.g. "
+            "refactor_preflight(target_type='file', target='src/app/auth.py')."
         ),
     )(refactor_preflight)
 
@@ -347,6 +361,7 @@ def _plan_payload(plan: SafeRefactorPlan) -> RefactorPlanToolPayload:
         "fallback": plan.fallback,
         "expected_behavior_preservation": plan.expected_behavior_preservation,
         "verification_recommendations": plan.verification_recommendations,
+        "next_tools": ("suggest_tests", "get_impact"),
     }
 
 
@@ -356,6 +371,7 @@ def _tests_payload(suggested: SuggestedTests) -> SuggestedTestsToolPayload:
         "commands": suggested.commands,
         "likely_tests": suggested.likely_tests,
         "executes_in_v1": suggested.executes_in_v1,
+        "next_tools": ("verify_change",),
     }
 
 
@@ -456,6 +472,7 @@ def _verify_change_payload(
         "missing_characterization_tests": (
             recommendation.missing_characterization_tests
         ),
+        "next_tools": ("record_verification", "mark_finding"),
     }
 
 

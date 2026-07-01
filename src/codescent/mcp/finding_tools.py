@@ -79,81 +79,114 @@ def _status_counts(rows: Iterable[FindingRow]) -> dict[str, int]:
 def register_finding_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent to run deterministic Python code-health scanning. "
-            "Writes only local .codescent state and never edits source files."
+            "Deterministic first-run, full Python code-health scan; writes only "
+            "local .codescent state and never edits source. Use scan_code_health "
+            "for the initial scan, then rescan afterwards to compare lifecycle "
+            "state against the baseline. e.g. scan_code_health(repo='.')."
         ),
     )(scan_code_health)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to read a structured smell report from local state. "
-            "Read-only for source files."
+            "Structured smell report read from local .codescent state: findings "
+            "ranked by severity with bounded inline items and a ctx_ result id "
+            "when findings are omitted. e.g. get_smell_report(repo='.'). "
+            "Read-only for source."
         ),
     )(get_smell_report)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to read one finding with structured evidence, "
-            "lifecycle history, and deterministic score inputs."
+            "One finding in full: structured evidence, lifecycle history, and "
+            "deterministic score inputs. Pass a finding_id from "
+            "get_next_improvement or get_backlog. e.g. "
+            "get_finding(finding_id='python.large_file:cf58...'). Read-only for "
+            "source."
         ),
     )(get_finding)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to explain deterministic score inputs and ranking "
-            "reasons for a finding. Does not use subjective LLM judgment."
+            "Deterministic score inputs and ranking reasons for a finding, no "
+            "subjective LLM judgment. Pass a finding_id from get_next_improvement "
+            "or get_backlog. e.g. "
+            "explain_score(finding_id='python.long_function:ab12...')."
         ),
     )(explain_score)
     _ = mcp.tool(
         description=(
-            "Use CodeScent for one fix-ready explanation of a finding: why it "
-            "matters (message + evidence), the suggested fix, and a bounded "
-            "source snippet. Source-read-only; never an unbounded source dump."
+            "One fix-ready explanation of a finding: why it matters (message + "
+            "evidence), the suggested fix, and a bounded source snippet (never "
+            "an unbounded dump). Pass a finding_id from get_next_improvement or "
+            "get_backlog. e.g. "
+            "explain_finding(finding_id='python.dead_code_candidate:9f0a...')."
         ),
     )(explain_finding)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to choose the next deterministic improvement from "
-            "open or regressed findings."
+            "Pick the next deterministic improvement from open or regressed "
+            "findings; returns a finding_id that feeds get_finding, "
+            "explain_finding, plan_refactor, and mark_finding. e.g. "
+            "get_next_improvement(repo='.')."
         ),
     )(get_next_improvement)
     _ = mcp.tool(
-        description="Use CodeScent to read the deterministic finding backlog.",
+        description=(
+            "Deterministic finding backlog (open, in-progress, needs-review, "
+            "regressed) ranked by severity, with bounded inline items and a ctx_ "
+            "result id when items are omitted. Source of finding_ids for "
+            "get_finding, plan_refactor, and mark_finding. e.g. "
+            "get_backlog(repo='.')."
+        ),
     )(get_backlog)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to turn the finding backlog into a deterministic, "
-            "ROI-ordered improvement plan: findings clustered by theme with "
-            "effort and health-gain estimates. Bounded output."
+            "Turn the finding backlog into a deterministic, ROI-ordered plan: "
+            "findings clustered by theme with effort and health-gain estimates. "
+            "Bounded output. e.g. get_improvement_plan(repo='.')."
         ),
     )(get_improvement_plan)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to read adaptive per-rule confidence calibration "
-            "derived from this repo's own resolve/wontfix verdicts, plus learned "
-            "suppression candidates. Deterministic; read-only."
+            "Adaptive per-rule confidence calibration derived from this repo's "
+            "own resolve/wontfix verdicts, plus learned suppression candidates. "
+            "Deterministic, read-only. e.g. get_calibration(repo='.')."
         ),
     )(get_calibration)
     _ = mcp.tool(
-        description="Use CodeScent to read deterministic finding progress counts.",
+        description=(
+            "Deterministic finding progress counts by lifecycle status. e.g. "
+            "get_progress(repo='.')."
+        ),
     )(get_progress)
     _ = mcp.tool(
-        description="Use CodeScent to read regressed finding IDs after rescans.",
+        description=(
+            "Regressed finding ids surfaced after a rescan, ranked by severity, "
+            "bounded. e.g. get_regressions(repo='.')."
+        ),
     )(get_regressions)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to update finding lifecycle status in .codescent. "
-            "This never edits analyzed source files."
+            "Update a finding's lifecycle status in .codescent; never edits "
+            "source. Pass a finding_id from get_next_improvement or get_backlog "
+            "and a status of open, in_progress, resolved, deferred, wontfix, "
+            "ignored, regressed, needs_review, or suppressed. e.g. "
+            "mark_finding(finding_id='python.large_file:cf58...', "
+            "status='resolved')."
         ),
     )(mark_finding)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to record a caller-supplied verification result "
-            "for a finding. CodeScent stores the command, exit code, and a "
-            "bounded output summary; it never executes commands."
+            "Record a caller-supplied verification result for a finding: stores "
+            "the command, exit code, and a bounded output summary; never "
+            "executes commands. Pass a finding_id from get_next_improvement or "
+            "get_backlog. e.g. record_verification(finding_id='...', "
+            "command='pytest', exit_code=0, output_summary='42 passed')."
         ),
     )(record_verification)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to rescan and compare finding lifecycle state. "
-            "Writes only .codescent state."
+            "Rescan and compare finding lifecycle state against the prior "
+            "baseline; writes only .codescent state. Use rescan after an initial "
+            "scan_code_health to detect resolved and regressed findings. e.g. "
+            "rescan(repo='.')."
         ),
     )(rescan)
 
@@ -238,6 +271,7 @@ def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
             "rule_id": None,
             "file_path": None,
             "suggested_action": None,
+            "next_tools": (),
         }
     return {
         "ok": True,
@@ -245,6 +279,7 @@ def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
         "rule_id": finding.rule_id,
         "file_path": finding.file_path,
         "suggested_action": finding.suggested_action,
+        "next_tools": ("get_finding_context", "plan_refactor"),
     }
 
 
@@ -348,6 +383,7 @@ def mark_finding(
         "requested_status": result.requested_status.value,
         "gated": result.gated,
         "message": result.message,
+        "next_tools": ("rescan", "get_next_improvement"),
     }
 
 
@@ -372,6 +408,7 @@ def record_verification(
         "exit_code": verification.exit_code,
         "output_summary": verification.output_summary,
         "output_truncated": verification.output_truncated,
+        "next_tools": ("mark_finding",),
     }
 
 

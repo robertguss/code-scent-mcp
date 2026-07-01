@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Final, TypedDict
 
 from codescent.core.defensive import coerce_int, or_empty, resolve_query
 from codescent.core.public_surface import normalize_output_mode
+from codescent.engine.search.constraints import constraint_warnings
 from codescent.services.freshness import confidence_for_results, warnings_for_results
 from codescent.services.search import SearchService
 from codescent.services.search_support import SearchPagePayload, SearchResultPayload
@@ -40,6 +41,7 @@ class AdvisoryToolFields(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class FileResultPayload(TypedDict):
@@ -75,6 +77,7 @@ class SearchToolPayload(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class MultiSearchToolPayload(TypedDict):
@@ -87,6 +90,7 @@ class MultiSearchToolPayload(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class TodoSearchToolPayload(TypedDict):
@@ -97,6 +101,7 @@ class TodoSearchToolPayload(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class TestSearchToolPayload(TypedDict):
@@ -110,55 +115,62 @@ class TestSearchToolPayload(TypedDict):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 def register_search_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent before broad grep or large reads to search paths with "
-            "bounded results and ranking reasons. This read-only tool returns "
-            "paths, reasons, confidence, and warnings, never source content."
+            "Search paths before broad grep or large reads: bounded results "
+            "with ranking reasons, confidence, and warnings — returns paths, "
+            "never source content. Read-only. e.g. "
+            "search_files(query='auth middleware')."
         ),
     )(search_files)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent before broad grep or large reads to search content "
-            "with bounded results and ranking reasons. Collapses each match to "
-            "its enclosing function/class signature (exact for Python, heuristic "
-            "for TS/JS); pass expand=True for full lines. output_mode picks the "
-            "shape: content (default), files, count, or usage. constraints (see "
-            "get_schema) prefilters candidates, e.g. 'src/ *.py git:modified'."
+            "Search content before broad grep or large reads: bounded results "
+            "with ranking reasons, each match collapsed to its enclosing "
+            "function/class signature (exact for Python, heuristic for TS/JS); "
+            "pass expand=True for full lines. output_mode picks the shape: "
+            "content (default), files, count, or usage. constraints (see "
+            "get_schema) prefilters candidates, e.g. 'src/ *.py git:modified'. "
+            "e.g. search_content(query='def login', output_mode='usage')."
         ),
     )(search_content)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent to search multiple content queries with bounded, "
-            "deduped snippets and query-level ranking reasons. output_mode picks "
-            "the shape: content, files, count, or usage."
+            "Search several content queries at once: bounded, deduped snippets "
+            "with query-level ranking reasons. output_mode picks the shape: "
+            "content, files, count, or usage. e.g. "
+            "multi_search_content(queries=('login', 'logout'), "
+            "output_mode='files')."
         ),
     )(multi_search_content)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent to list changed files from git status and local "
-            "index drift with bounded ranking reasons. This read-only tool "
-            "excludes CodeScent runtime state and generated paths."
+            "List changed files from git status and local index drift with "
+            "bounded ranking reasons; excludes CodeScent runtime state and "
+            "generated paths. Read-only. e.g. search_changed_files(query='auth')."
         ),
     )(search_changed_files)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent to find TODO, FIXME, and HACK comments with bounded "
-            "one-line snippets, marker grouping, and ranking reasons."
+            "Find TODO, FIXME, and HACK comments with bounded one-line "
+            "snippets, marker grouping, and ranking reasons. e.g. "
+            "search_todos(query='auth')."
         ),
     )(search_todos)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent to find likely tests for a query, file path, symbol, "
-            "or finding id with bounded ranking reasons."
+            "Find likely tests for a query, file path, symbol, or finding id "
+            "with bounded ranking reasons. e.g. "
+            "search_tests(path='src/app/auth.py')."
         ),
     )(search_tests)
 
@@ -199,6 +211,8 @@ def search_files(  # noqa: PLR0913 - additive defensive alias for sloppy inputs.
             has_results=bool(matches),
             result_kind="file paths",
             next_tools=("search_content", "get_repo_map"),
+            current_tool="search_files",
+            constraints=constraints,
         ),
     }
 
@@ -241,6 +255,8 @@ def search_content(  # noqa: PLR0913 - MCP tool exposes orthogonal shape toggles
             has_results=bool(matches),
             result_kind="content matches",
             next_tools=("search_files", "get_repo_map"),
+            current_tool="search_content",
+            constraints=constraints,
         ),
     }
 
@@ -277,6 +293,8 @@ def multi_search_content(  # noqa: PLR0913 - additive constraints prefilter knob
             has_results=bool(matches),
             result_kind="content matches",
             next_tools=("search_files", "search_content", "get_repo_map"),
+            current_tool="multi_search_content",
+            constraints=constraints,
         ),
     }
 
@@ -299,6 +317,7 @@ def search_changed_files(
             has_results=bool(results),
             result_kind="changed files",
             next_tools=("get_repo_status", "get_repo_map"),
+            current_tool="search_changed_files",
         ),
     }
 
@@ -318,6 +337,7 @@ def search_todos(
             has_results=bool(results),
             result_kind="todo markers",
             next_tools=("search_content", "search_files"),
+            current_tool="search_todos",
         ),
     }
 
@@ -349,6 +369,7 @@ def search_tests(  # noqa: PLR0913 - MCP tool exposes distinct target inputs.
             has_results=bool(results),
             result_kind="likely tests",
             next_tools=("select_tests", "search_files", "search_content"),
+            current_tool="search_tests",
         ),
     }
 
@@ -420,12 +441,20 @@ def _advisory_fields(
     has_results: bool,
     result_kind: str,
     next_tools: tuple[str, ...],
+    current_tool: str,
+    constraints: str = "",
 ) -> AdvisoryToolFields:
+    dropped = constraint_warnings(constraints)
     return {
         "warnings": warnings_for_results(
             has_results=has_results,
             result_kind=result_kind,
+            current_tool=current_tool,
         ),
-        "confidence": confidence_for_results(has_results=has_results),
+        "confidence": confidence_for_results(
+            has_results=has_results,
+            constraint_dropped=bool(dropped),
+        ),
         "next_tools": next_tools,
+        "constraint_warnings": dropped,
     }

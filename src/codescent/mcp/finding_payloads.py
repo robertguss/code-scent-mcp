@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, TypedDict, cast
 
+from codescent.core.errors import CodeScentError, ErrorCode, ErrorSeverity
 from codescent.core.json_decode import ProvenanceItem, decode_provenance
 from codescent.core.models import FindingStatus
 from codescent.core.paths import resolve_repo_root
@@ -171,6 +172,7 @@ class NextImprovementToolPayload(TypedDict):
     rule_id: str | None
     file_path: str | None
     suggested_action: str | None
+    next_tools: tuple[str, ...]
 
 
 class ProgressToolPayload(TypedDict):
@@ -189,6 +191,7 @@ class MarkFindingToolPayload(TypedDict):
     requested_status: str
     gated: bool
     message: str
+    next_tools: tuple[str, ...]
 
 
 class RecordVerificationToolPayload(TypedDict):
@@ -199,6 +202,7 @@ class RecordVerificationToolPayload(TypedDict):
     exit_code: int
     output_summary: str
     output_truncated: bool
+    next_tools: tuple[str, ...]
 
 
 def severity_rank(severity: str) -> int:
@@ -507,4 +511,17 @@ def score_explanation_payload(
 
 
 def status_from_string(status: str) -> FindingStatus:
-    return FindingStatus(status)
+    try:
+        return FindingStatus(status)
+    except ValueError as exc:
+        valid_values = [member.value for member in FindingStatus]
+        raise CodeScentError(
+            code=ErrorCode.INVALID_VALUE,
+            message=f"Invalid finding status {status!r}.",
+            severity=ErrorSeverity.ERROR,
+            details={"status": status},
+            recovery={
+                "valid_values": valid_values,
+                "fix_hint": "Pass one of the valid FindingStatus values.",
+            },
+        ) from exc

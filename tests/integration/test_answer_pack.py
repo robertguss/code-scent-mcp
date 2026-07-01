@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from codescent.core.models import TokenBudgets
 from codescent.core.token_estimate import estimate_tokens
 from codescent.mcp.answer_pack_tools import answer_pack as answer_pack_tool
 from codescent.services.answer_pack import (
@@ -139,6 +140,79 @@ def test_answer_pack_tool_accepts_max_tokens_alias(tmp_path: Path) -> None:
     assert payload["result_id"] is not None
     assert payload["estimated_tokens"] <= budget
     assert any(tool.startswith("retrieve_result:") for tool in payload["next_tools"])
+
+
+def test_answer_pack_tool_self_bounds_without_caller_budget(tmp_path: Path) -> None:
+    repo = _large_repo(tmp_path)
+    # The full pack is larger than the default budget, and the caller passes
+    # neither budget nor max_tokens (U5): the tool must self-bound anyway.
+    full = AnswerPackService(repo).answer_pack("orchestrate")
+    default_budget = TokenBudgets().context
+    assert full.estimated_tokens > default_budget
+
+    payload = answer_pack_tool("orchestrate", repo=str(repo))
+
+    assert payload["truncated"] is True
+    assert payload["result_id"] is not None
+    assert payload["estimated_tokens"] <= default_budget
+
+
+def test_answer_pack_tool_small_query_not_truncated_by_self_bound(
+    tmp_path: Path,
+) -> None:
+    repo = _wide_repo(tmp_path)
+    # The full pack fits under the default budget, so the self-bound must not
+    # truncate a pack that was already small.
+    assert AnswerPackService(repo).answer_pack("mod").estimated_tokens < (
+        TokenBudgets().context
+    )
+
+    payload = answer_pack_tool("mod", repo=str(repo))
+
+    assert payload["truncated"] is False
+    assert payload["result_id"] is None
+
+
+def test_answer_pack_tool_explicit_budget_still_honored(tmp_path: Path) -> None:
+    repo = _wide_repo(tmp_path)
+    full = AnswerPackService(repo).answer_pack("mod")
+    budget = full.estimated_tokens // 2
+
+    payload = answer_pack_tool("mod", repo=str(repo), budget=budget)
+
+    assert payload["truncated"] is True
+    assert payload["estimated_tokens"] <= budget
+
+
+def _large_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo"
+    base = (
+        repo
+        / "src"
+        / "very"
+        / "deeply"
+        / "nested"
+        / "enterprise"
+        / "package"
+        / "structure"
+        / "components"
+        / "orchestration"
+    )
+    base.mkdir(parents=True)
+    for index in range(30):
+        module = (
+            base / f"widget_reconciliation_orchestration_service_module_{index:03d}.py"
+        )
+        _ = module.write_text(
+            "def orchestrate_widget_reconciliation_workflow_handler_variant"
+            f"_{index:03d}(configuration_payload_reference_argument) -> int:\n"
+            "    # TODO: split this orchestration responsibility into smaller units\n"
+            "    # FIXME: preserve backward compatibility with legacy queue names\n"
+            "    # HACK: keep the old behavior until the big migration finally lands\n"
+            f"    return {index}\n",
+        )
+    _ = CodeHealthService(repo).scan()
+    return repo
 
 
 def _item_count(pack: AnswerPack) -> int:

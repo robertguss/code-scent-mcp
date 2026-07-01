@@ -25,9 +25,12 @@ ResultToolPayload = dict[str, object]
 def register_result_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Retrieve exact, summarized, filtered, or sampled stored CodeScent "
-            "results by opaque ctx_ result id without rerunning searches or "
-            "reading filesystem paths from filters. Output is bounded by limit."
+            "Retrieve a stored CodeScent result by its opaque ctx_ result id "
+            "without rerunning searches: mode selects exact, summary, filtered, "
+            "or sample, and output is bounded by limit. The result_id is minted "
+            "by tools like answer_pack, get_backlog, and get_smell_report when "
+            "they omit items. e.g. retrieve_result(result_id='ctx_ab12...', "
+            "mode='summary')."
         ),
     )(retrieve_result)
 

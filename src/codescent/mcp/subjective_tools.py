@@ -59,12 +59,12 @@ class SubjectiveReviewToolPayload(TypedDict):
 def register_subjective_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent for an OPT-IN subjective second opinion: it asks YOUR "
-            "MCP client's own LLM (via MCP sampling) to judge deterministic "
-            "findings. Disabled unless privacy.allow_llm_review=true. The "
-            "CodeScent server makes NO network call; the client samples. Only "
-            "secret/PII-scrubbed finding metadata is sent, never source. Results "
-            "are labeled subjective and never replace deterministic findings."
+            "OPT-IN subjective second opinion: asks YOUR MCP client's own LLM "
+            "(via MCP sampling) to judge deterministic findings. Disabled unless "
+            "privacy.allow_llm_review=true. The CodeScent server makes NO network "
+            "call; the client samples. Only secret/PII-scrubbed finding metadata "
+            "is sent, never source. Results are labeled subjective and never "
+            "replace deterministic findings. e.g. subjective_review(repo='.')."
         ),
     )(subjective_review)
 

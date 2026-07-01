@@ -12,10 +12,10 @@ if TYPE_CHECKING:
 def register_session_stats_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent to inspect bounded MCP context and token savings "
-            "stats for a local agent session. This tool reads sanitized "
-            ".codescent event data and never returns raw source, raw results, "
-            "or full query payloads."
+            "Bounded MCP context and token-savings stats for a local agent "
+            "session; reads sanitized .codescent event data and never returns "
+            "raw source, raw results, or full query payloads. e.g. "
+            "context_stats(session_id='default')."
         ),
     )(context_stats)
 

@@ -14,6 +14,7 @@ from pathlib import Path
 from codescent.engine.search.constraints import (
     CONSTRAINT_KINDS,
     GitPaths,
+    constraint_warnings,
     parse_constraints,
 )
 from codescent.engine.search.constraints_filter import filter_paths
@@ -130,6 +131,30 @@ def test_malformed_token_is_ignored_not_raised() -> None:
     kept = _filter("src/ bogus:value size:notasize")
 
     assert set(kept) == {"src/acme/config.py", "src/acme/cli.py", "src/acme/cli.ts"}
+
+
+def test_parser_records_dropped_tokens_before_the_empty_short_circuit() -> None:
+    # The all-malformed case: the only token drops, so the constraint set is
+    # empty. The drop must still be recorded (F2 — no silent unfiltered result).
+    parsed = parse_constraints("size:banana")
+
+    assert parsed.is_empty
+    assert parsed.ignored == ("size:banana",)
+
+
+def test_constraint_warnings_name_each_dropped_token() -> None:
+    single = constraint_warnings("size:banana")
+    assert len(single) == 1
+    assert "size:banana" in single[0]
+
+    mixed = constraint_warnings("src/ bogus:value size:notasize")
+    assert len(mixed) == 2
+    joined = " ".join(mixed)
+    assert "bogus:value" in joined
+    assert "size:notasize" in joined
+
+    assert constraint_warnings("size:<10kb") == ()
+    assert constraint_warnings("") == ()
 
 
 def test_empty_constraints_is_a_noop() -> None:

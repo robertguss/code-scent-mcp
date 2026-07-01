@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import ClassVar
 
@@ -39,6 +40,7 @@ class SearchToolPayload(BaseModel):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class MultiSearchToolPayload(BaseModel):
@@ -53,6 +55,7 @@ class MultiSearchToolPayload(BaseModel):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class ChangedSearchToolPayload(BaseModel):
@@ -65,6 +68,7 @@ class ChangedSearchToolPayload(BaseModel):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class TodoSearchResult(BaseModel):
@@ -88,6 +92,7 @@ class TodoSearchToolPayload(BaseModel):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 class LikelyTestSearchResult(BaseModel):
@@ -112,6 +117,7 @@ class LikelyTestSearchToolPayload(BaseModel):
     warnings: tuple[str, ...]
     confidence: str
     next_tools: tuple[str, ...]
+    constraint_warnings: tuple[str, ...]
 
 
 @pytest.mark.anyio
@@ -349,6 +355,113 @@ async def test_search_tools_empty_results_include_guidance(tmp_path: Path) -> No
     assert todo_payload.confidence == "low"
     assert any("no todo markers found" in warning for warning in todo_payload.warnings)
     assert "search_content" in todo_payload.next_tools
+
+
+@pytest.mark.anyio
+async def test_search_files_warns_on_dropped_constraint_token(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "settings.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("SETTING = 1\n")
+
+    async with Client(mcp) as client:
+        # F2 repro / all-malformed case: the only token drops, so the constraint
+        # set is empty and the filter is a no-op — the warning must still fire.
+        dropped = await client.call_tool(
+            "search_files",
+            {"repo": str(repo), "query": "settings", "constraints": "size:banana"},
+        )
+        valid = await client.call_tool(
+            "search_files",
+            {"repo": str(repo), "query": "settings", "constraints": "size:<10kb"},
+        )
+
+    dropped_payload = SearchToolPayload.model_validate_json(
+        _text_content(dropped.content),
+    )
+    valid_payload = SearchToolPayload.model_validate_json(_text_content(valid.content))
+
+    assert any("size:banana" in w for w in dropped_payload.constraint_warnings)
+    assert dropped_payload.results != ()  # results still returned, not silently dropped
+    assert dropped_payload.confidence == "medium"  # lowered because scope not applied
+    assert valid_payload.constraint_warnings == ()
+
+
+@pytest.mark.anyio
+async def test_every_search_tool_reports_constraint_warnings_field(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("def run() -> None:\n    # TODO: x\n    pass\n")
+
+    async with Client(mcp) as client:
+        payloads = {
+            "search_files": await client.call_tool(
+                "search_files",
+                {"repo": str(repo), "query": "run"},
+            ),
+            "search_content": await client.call_tool(
+                "search_content",
+                {"repo": str(repo), "query": "run"},
+            ),
+            "multi_search_content": await client.call_tool(
+                "multi_search_content",
+                {"repo": str(repo), "queries": ["run"]},
+            ),
+            "search_changed_files": await client.call_tool(
+                "search_changed_files",
+                {"repo": str(repo)},
+            ),
+            "search_todos": await client.call_tool(
+                "search_todos",
+                {"repo": str(repo)},
+            ),
+            "search_tests": await client.call_tool(
+                "search_tests",
+                {"repo": str(repo)},
+            ),
+        }
+
+    for name, result in payloads.items():
+        payload = json.loads(_text_content(result.content))
+        assert "constraint_warnings" in payload, name
+        assert payload["constraint_warnings"] == [], name
+
+
+@pytest.mark.anyio
+async def test_empty_result_warning_is_not_self_referential(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("def run() -> None:\n    pass\n")
+
+    async with Client(mcp) as client:
+        files = await client.call_tool(
+            "search_files",
+            {"repo": str(repo), "query": "zzznomatch", "limit": 20},
+        )
+        content = await client.call_tool(
+            "search_content",
+            {"repo": str(repo), "query": "zzznomatch", "limit": 20},
+        )
+
+    files_warning = " ".join(
+        SearchToolPayload.model_validate_json(_text_content(files.content)).warnings,
+    )
+    content_warning = " ".join(
+        SearchToolPayload.model_validate_json(_text_content(content.content)).warnings,
+    )
+
+    # F11: the miss warning never recommends the tool the agent is already in ...
+    assert "search_files" not in files_warning
+    assert "search_content" not in content_warning
+    # ... but the other, non-self alternatives are still offered.
+    assert "search_content" in files_warning
+    assert "get_repo_map" in files_warning
+    assert "search_files" in content_warning
+    assert "get_repo_map" in content_warning
 
 
 def _text_content(content: list[ContentBlock]) -> str:

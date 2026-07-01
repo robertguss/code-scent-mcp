@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
+from codescent.core.models import TokenBudgets
 from codescent.services.answer_pack import AnswerPackService
 from codescent.services.context_support import (
     SymbolMatchPayload,  # noqa: TC001  (runtime: fastmcp builds the TypedDict schema)
@@ -31,13 +32,14 @@ class AnswerPackToolPayload(TypedDict):
 def register_answer_pack_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent to assemble ONE bounded, deduped answer pack for a "
-            "task: top files, key symbols, related tests, in-scope findings, and "
-            "related files composed into a single object (a file shared across "
-            "sources appears once). Pass max_tokens to fit a token budget; when "
-            "content is dropped a ctx_ result id is returned so you can expand the "
-            "full set with retrieve_result without rerunning retrieval. Read-only "
-            "for analyzed source; bounded output."
+            "Token-budgeted, deduped answer pack for ONE specific question: "
+            "top files, key symbols, related tests, in-scope findings, and "
+            "related files in a single object. Pass max_tokens to fit a budget; "
+            "when content is dropped a ctx_ result id is returned to expand the "
+            "full set via retrieve_result. Prefer start_task to open fresh work; "
+            "reach for answer_pack when a specific question must fit a token "
+            "budget. e.g. answer_pack(query='how does login work', "
+            "max_tokens=4000). Read-only for source; bounded output."
         ),
     )(answer_pack)
 
@@ -49,7 +51,13 @@ def answer_pack(
     max_tokens: int | None = None,
     budget: int | None = None,
 ) -> AnswerPackToolPayload:
+    # Self-bound: when the caller passes neither budget nor max_tokens, fall back
+    # to the shared context budget so the pack always truncates + offers a
+    # result_id instead of returning an unbounded object (KTD5 — reuse the
+    # existing TokenBudgets().context default rather than add a redundant knob).
     effective_budget = budget if budget is not None else max_tokens
+    if effective_budget is None:
+        effective_budget = TokenBudgets().context
     pack = AnswerPackService(repo).answer_pack(
         query,
         focus_path=focus_path,

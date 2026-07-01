@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 class RetrievedResultModel(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
+    ok: bool
     kind: str
     result_id: str
     mode: str
@@ -90,6 +91,7 @@ async def test_retrieve_result_exact_summary_filtered_and_sample_modes(
         _text_content(sample_result.content),
     )
 
+    assert exact.ok is True  # success now carries ok:true so branch-on-ok works
     assert exact.kind == "retrieved_result"
     assert exact.result_id == stored_id
     assert exact.mode == "exact"

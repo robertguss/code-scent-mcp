@@ -3,6 +3,7 @@ from fastmcp import FastMCP
 from codescent.mcp.answer_pack_tools import register_answer_pack_tools
 from codescent.mcp.architecture_tools import register_architecture_tools
 from codescent.mcp.context_tools import register_context_tools
+from codescent.mcp.error_boundary import ToolErrorBoundary
 from codescent.mcp.finding_tools import register_finding_tools
 from codescent.mcp.guide_tools import register_guide_tools
 from codescent.mcp.planning_tools import register_planning_tools
@@ -15,6 +16,7 @@ from codescent.mcp.session_stats_tools import register_session_stats_tools
 from codescent.mcp.subjective_tools import register_subjective_tools
 
 mcp = FastMCP(name="CodeScent")
+mcp.add_middleware(ToolErrorBoundary())
 register_repo_tools(mcp)
 register_search_tools(mcp)
 register_context_tools(mcp)

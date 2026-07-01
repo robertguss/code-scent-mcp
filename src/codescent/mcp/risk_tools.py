@@ -48,14 +48,15 @@ class DiffRiskToolPayload(TypedDict):
 def register_risk_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent to review local changed-file risk with findings, "
-            "impact, and recommended verification. No GitHub or network."
+            "Review local changed-file risk: findings, impact, and recommended "
+            "verification. No GitHub or network. e.g. review_diff_risk(repo='.')."
         ),
     )(review_diff_risk)
     _ = mcp.tool(
         description=(
-            "Use CodeScent to inspect one locally changed file with findings, "
-            "risk notes, likely tests, and recommended commands."
+            "Inspect one locally changed file: findings, risk notes, likely "
+            "tests, and recommended commands. Pass a repo-relative path. e.g. "
+            "get_changed_file_health(path='src/app/auth.py')."
         ),
     )(get_changed_file_health)
 

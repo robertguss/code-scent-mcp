@@ -82,9 +82,7 @@ def test_build_payload_health_tag_only_on_git_modified(
     changed_line = next(
         line for line in payload.splitlines() if "src/changed.py" in line
     )
-    stable_line = next(
-        line for line in payload.splitlines() if "src/stable.py" in line
-    )
+    stable_line = next(line for line in payload.splitlines() if "src/stable.py" in line)
     assert "hotspot" in changed_line  # health tag present on modified file
     assert "hotspot" not in stable_line
     assert "⚠" not in stable_line  # no risk marker on the unmodified file

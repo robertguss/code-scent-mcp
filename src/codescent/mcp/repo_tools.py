@@ -83,40 +83,41 @@ class ResumeTaskToolPayload(TypedDict):
 def register_repo_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent to RESUME work after losing context (e.g. a "
-            "compaction). Reconstructs a bounded session brief purely from "
-            "persisted state: the active/last findings, what's already verified, "
-            "the health-ratchet baseline status, recently touched files, the "
-            "recent tool trail, and the recommended next tool call. "
-            "Deterministic; reads no analyzed source; bounded output."
+            "RESUME work after losing context (e.g. a compaction): "
+            "reconstructs a bounded session brief purely from persisted state — "
+            "active/last findings, what's already verified, the health-ratchet "
+            "baseline status, recently touched files, the recent tool trail, and "
+            "the recommended next call. Deterministic; reads no analyzed source; "
+            "bounded output. e.g. resume_task(session_id='default')."
         ),
     )(resume_task)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent FIRST when beginning a task. Returns a bounded "
-            "brief: relevant files, key symbols, related tests, in-scope "
-            "findings, index freshness, auto-refresh metadata, first-use "
-            "auto-bootstrap status, warnings, "
-            "confidence, and the next tool calls to make so you avoid broad "
-            "greps and many round trips. Read-only for analyzed source; "
-            "bounded output."
+            "Call FIRST when beginning a task: a bounded brief of relevant "
+            "files, key symbols, related tests, in-scope findings, index "
+            "freshness, auto-refresh and auto-bootstrap status, warnings, "
+            "confidence, and the next calls to make so you avoid broad greps and "
+            "round trips. start_task opens fresh work on a task; use answer_pack "
+            "instead when you have a specific question to fit in a token budget. "
+            "e.g. start_task(query='add rate limiting to the API'). Read-only "
+            "for source; bounded output."
         ),
     )(start_task)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent before broad grep or large reads to get a bounded "
-            "repository map. This tool is read-only and returns paths/counts, "
-            "never source content."
+            "Bounded repository map before broad grep or large reads: returns "
+            "paths and counts, never source content. Read-only. e.g. "
+            "get_repo_map(repo='.')."
         ),
     )(get_repo_map)
 
     _ = mcp.tool(
         description=(
-            "Use CodeScent before broad grep or large reads to inspect bounded "
-            "repository status. This tool is read-only and does not create or "
-            "modify CodeScent state."
+            "Bounded repository status before broad grep or large reads: index "
+            "freshness, changed files, and finding counts. Read-only; creates or "
+            "modifies no CodeScent state. e.g. get_repo_status(repo='.')."
         ),
     )(get_repo_status)
 

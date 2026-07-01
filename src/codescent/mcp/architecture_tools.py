@@ -39,12 +39,12 @@ class GetArchitecturePayload(TypedDict):
 def register_architecture_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
-            "Use CodeScent to orient on an unfamiliar repository in ONE bounded "
-            "call instead of many repo-map + read cycles. Returns languages, "
-            "packages, entry points, layers, the largest files (hotspots), and "
-            "the de-facto modules: cbm's clusters when a local cbm process is "
-            "present, otherwise a native label-propagation pass over the import "
-            "graph (marked heuristic). Read-only for analyzed source; bounded "
+            "Orient on an unfamiliar repository in ONE bounded call instead of "
+            "many repo-map + read cycles: languages, packages, entry points, "
+            "layers, the largest files (hotspots), and the de-facto modules "
+            "(cbm's clusters when a local cbm process is present, else a native "
+            "label-propagation pass over the import graph, marked heuristic). "
+            "e.g. get_architecture(repo='.'). Read-only for source; bounded "
             "output."
         ),
     )(get_architecture)
