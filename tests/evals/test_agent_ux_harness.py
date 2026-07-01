@@ -61,4 +61,4 @@ async def test_build_smelly_repo_is_scannable(tmp_path: Path) -> None:
 async def test_build_agent_ux_report_reports_surface() -> None:
     report = await build_agent_ux_report()
     assert report.surface_tool_count == _EXPECTED_TOOL_COUNT
-    assert report.dimensions == ()  # U1 skeleton; U2-U6 add the dimensions
+    assert isinstance(report.dimensions, tuple)  # dimensions grow as U2-U6 land
