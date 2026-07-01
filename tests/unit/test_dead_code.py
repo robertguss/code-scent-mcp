@@ -208,3 +208,42 @@ def test_scan_dead_code_is_bounded_by_limit(tmp_path: Path) -> None:
 def _write(path: Path, source: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     _ = path.write_text(dedent(source))
+
+
+def test_annotation_only_symbols_are_not_dead_code(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _write(
+        repo / "src" / "pkg" / "mod.py",
+        """
+        class PayloadShape:
+            pass
+
+        class ParamOnly:
+            pass
+
+        class VarOnly:
+            pass
+
+        class TrulyDead:
+            pass
+
+        def build(raw: object) -> PayloadShape:
+            return raw
+
+        def consume(item: ParamOnly) -> None:
+            pass
+
+        def store(source: object) -> None:
+            holder: VarOnly = source
+            _ = holder
+        """,
+    )
+
+    names = {candidate.name for candidate in build_name_use_index(repo).candidates}
+
+    # Used only in return / parameter / variable annotations -> not dead (R9)...
+    assert "PayloadShape" not in names
+    assert "ParamOnly" not in names
+    assert "VarOnly" not in names
+    # ...while a class with no reference anywhere is still flagged.
+    assert "TrulyDead" in names

@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from codescent.engine.inventory import build_file_inventory
-from codescent.engine.search import apply_signals, rank_path
+from codescent.engine.search import apply_signals, rank_content, rank_path
 from codescent.engine.search.constraints import GitPaths, parse_constraints
 from codescent.engine.search.constraints_filter import build_predicate
 from codescent.services.fff_backend import probe_capabilities
@@ -38,6 +38,14 @@ if TYPE_CHECKING:
     from codescent.services.fff_backend import FffClient
 
 _FFF_BASE_SCORE: Final = 100.0
+# Reason tag stamped on empty-result fuzzy-fallback rows so agents see the
+# precision dropped from the literal pass to token/fuzzy matching (R2).
+_FUZZY_REASON: Final = "fuzzy"
+# A query with two or more whitespace tokens reads as natural language: only
+# then does the empty-result fallback fire, so a bare symbol/uuid that legitimately
+# has no match still returns empty instead of fabricating fuzzy hits.
+_MIN_NL_TOKENS: Final = 2
+_MIN_TOKEN_LENGTH: Final = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,11 +90,14 @@ def file_results(
     backend: FffClient | None,
 ) -> list[SearchResultPayload]:
     """Path search: fff ``fuzzy_paths`` when available, native rapidfuzz else."""
+    primary: list[SearchResultPayload] | None = None
     if backend is not None:
-        routed = _fff_path_results(backend, context, query)
-        if routed is not None:
-            return routed
-    return _native_file_results(context, query)
+        primary = _fff_path_results(backend, context, query)
+    if primary is None:
+        primary = _native_file_results(context, query)
+    if primary or not _looks_like_nl(query):
+        return primary
+    return _fuzzy_file_results(context, query)
 
 
 def content_results(
@@ -101,8 +112,9 @@ def content_results(
     items = build_file_inventory(context.repo_root, config=context.config)
     if context.allow is not None:
         items = tuple(item for item in items if context.allow(item.path))
+    primary: list[SearchResultPayload] | None = None
     if backend is not None:
-        routed = _fff_content_results(
+        primary = _fff_content_results(
             backend,
             context,
             query,
@@ -110,9 +122,17 @@ def content_results(
             line_budget=line_budget,
             expand=expand,
         )
-        if routed is not None:
-            return routed
-    return _native_content_results(
+    if primary is None:
+        primary = _native_content_results(
+            context,
+            items,
+            query,
+            line_budget=line_budget,
+            expand=expand,
+        )
+    if primary or not _looks_like_nl(query):
+        return primary
+    return _fuzzy_content_results(
         context,
         items,
         query,
@@ -217,6 +237,87 @@ def _native_content_results(
         if not match_indexes:
             continue
         signals = content_signals(item.path, context.signals)
+        results.extend(
+            _shape_content_matches(
+                context,
+                item,
+                lines,
+                match_indexes,
+                signals=signals,
+                line_budget=line_budget,
+                expand=expand,
+            ),
+        )
+    return results
+
+
+def _looks_like_nl(query: str) -> bool:
+    """A multi-token query reads as natural language, gating the fuzzy fallback."""
+    return len(query.split()) >= _MIN_NL_TOKENS
+
+
+def _query_tokens(query: str) -> tuple[str, ...]:
+    return tuple(token for token in query.split() if len(token) >= _MIN_TOKEN_LENGTH)
+
+
+def _fuzzy_path_score(path: str, tokens: tuple[str, ...]) -> float | None:
+    """Average token match score, rewarding paths that match more query tokens."""
+    ranks = [rank_path(path, token) for token in tokens]
+    hits = [rank for rank in ranks if rank is not None]
+    if not hits:
+        return None
+    return sum(rank.score for rank in hits) / len(tokens)
+
+
+def _fuzzy_file_results(
+    context: RetrievalContext,
+    query: str,
+) -> list[SearchResultPayload]:
+    """Token/fuzzy path fallback for an NL query the literal pass missed (R2)."""
+    tokens = _query_tokens(query)
+    if not tokens:
+        return []
+    results: list[SearchResultPayload] = []
+    for item in build_file_inventory(context.repo_root, config=context.config):
+        if context.allow is not None and not context.allow(item.path):
+            continue
+        score = _fuzzy_path_score(item.path, tokens)
+        if score is None:
+            continue
+        adjusted, reasons = apply_signals(
+            item.path,
+            score,
+            (_FUZZY_REASON,),
+            context.signals,
+        )
+        results.append(_path_result(item.path, adjusted, reasons))
+    return results
+
+
+def _fuzzy_content_results(
+    context: RetrievalContext,
+    items: tuple[IndexedFile, ...],
+    query: str,
+    *,
+    line_budget: int,
+    expand: bool,
+) -> list[SearchResultPayload]:
+    """Token/fuzzy content fallback for an NL query the literal pass missed (R2)."""
+    tokens = _query_tokens(query)
+    if not tokens:
+        return []
+    results: list[SearchResultPayload] = []
+    for item in items:
+        lines = searchable_lines(context.repo_root, item.path)
+        match_indexes = tuple(
+            index
+            for index, line in enumerate(lines)
+            if any(rank_content(line, token) is not None for token in tokens)
+        )
+        if not match_indexes:
+            continue
+        base_score, base_reasons = content_signals(item.path, context.signals)
+        signals = (base_score, (*base_reasons, _FUZZY_REASON))
         results.extend(
             _shape_content_matches(
                 context,

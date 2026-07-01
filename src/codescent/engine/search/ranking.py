@@ -125,6 +125,26 @@ def rank_path(path: str, query: str) -> PathRank | None:
     return PathRank(score=fuzzy_score, reasons=("fuzzy_path",))
 
 
+def rank_content(line: str, query: str) -> float | None:
+    """Fuzzy-rank a single content line against a query token.
+
+    Content analogue of :func:`rank_path`, scoped to one line: returns 100.0 for
+    an exact case-aware substring, otherwise ``rapidfuzz.partial_ratio`` when it
+    clears :data:`FUZZY_MATCH_THRESHOLD`, else ``None``. Used only by the
+    empty-result fuzzy fallback, never on the literal hit path.
+    """
+    haystack = _match_text(line, query)
+    needle = _match_text(query, query)
+
+    if needle in haystack:
+        return 100.0
+
+    fuzzy_score = float(fuzz.partial_ratio(needle, haystack))
+    if fuzzy_score < FUZZY_MATCH_THRESHOLD:
+        return None
+    return fuzzy_score
+
+
 def _match_text(value: str, query: str) -> str:
     if any(character.isupper() for character in query):
         return value

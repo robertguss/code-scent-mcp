@@ -56,6 +56,12 @@
       "file": "src/codescent/engine/packs.py",
       "symbol": "engine.packs._rule_packs"
     },
+    "python.large_file:0380bbd8d7a2": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/engine/parsers/python.py",
+      "symbol": null
+    },
     "python.deep_nesting:6783b16fd9cc": {
       "rule_id": "python.deep_nesting",
       "severity": "warning",
@@ -230,6 +236,18 @@
       "file": "src/codescent/services/context.py",
       "symbol": null
     },
+    "python.large_function:f0d519bab083": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/context.py",
+      "symbol": "services.context.ContextService.find_callees"
+    },
+    "python.large_function:b6a7d9fbf0e8": {
+      "rule_id": "python.large_function",
+      "severity": "warning",
+      "file": "src/codescent/services/context.py",
+      "symbol": "services.context.ContextService.get_file_context"
+    },
     "python.large_function:ddaf06b3ccf3": {
       "rule_id": "python.large_function",
       "severity": "warning",
@@ -252,6 +270,12 @@
       "rule_id": "python.large_file",
       "severity": "warning",
       "file": "src/codescent/services/fff_backend.py",
+      "symbol": null
+    },
+    "python.large_file:f8e67a92f4fc": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/findings.py",
       "symbol": null
     },
     "python.large_file:bf74b988e976": {

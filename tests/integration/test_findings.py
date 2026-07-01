@@ -20,6 +20,7 @@ from codescent.services.findings import (
     MAX_VERIFICATION_OUTPUT_SUMMARY_CHARS,
     FindingsService,
 )
+from codescent.services.improvement_plan import ImprovementPlanService
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import FindingRepository
 
@@ -381,6 +382,87 @@ def test_next_improvement_preserves_severity_and_rule_priority(
 
     assert rule_next is not None
     assert rule_next.id == "cold-higher-rule"
+
+
+def test_next_improvement_prefers_source_over_test_structural(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="src-large",
+            rule_id="python.large_file",
+            file_path="src/big.py",
+            severity="warning",
+            line_count=200,
+        ),
+    )
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="test-large",
+            rule_id="python.large_file",
+            file_path="tests/test_big.py",
+            severity="warning",
+            line_count=400,
+        ),
+    )
+
+    next_improvement = FindingsService(repo).get_next_improvement()
+
+    assert next_improvement is not None
+    assert next_improvement.id == "src-large"
+
+
+def test_next_improvement_empty_when_only_test_structural(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="test-large",
+            rule_id="python.large_file",
+            file_path="tests/test_big.py",
+            severity="warning",
+            line_count=400,
+        ),
+    )
+
+    assert FindingsService(repo).get_next_improvement() is None
+
+
+def test_next_improvement_agrees_with_improvement_plan_top_item(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="src-dup",
+            rule_id="python.duplicate_literal",
+            file_path="src/pkg/config.py",
+            severity="warning",
+            line_count=50,
+        ),
+    )
+    _seed_open_finding(
+        repo,
+        SeedFinding(
+            finding_id="test-large",
+            rule_id="python.large_file",
+            file_path="tests/test_big.py",
+            severity="warning",
+            line_count=400,
+        ),
+    )
+
+    next_improvement = FindingsService(repo).get_next_improvement()
+    plan = ImprovementPlanService(repo).get_improvement_plan()
+
+    assert next_improvement is not None
+    # get_next_improvement and the plan's top ROI cluster agree on the item...
+    assert next_improvement.id in plan.clusters[0].finding_ids
+    # ...and the structural test cluster is deprioritized to the bottom.
+    assert plan.clusters[-1].rule_id == "python.large_file"
+    assert plan.clusters[-1].scope.startswith("tests")
 
 
 @dataclass(frozen=True, slots=True)

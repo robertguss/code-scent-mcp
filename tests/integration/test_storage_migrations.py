@@ -111,6 +111,50 @@ def test_migrates_mvp_schema_to_latest_without_data_loss(tmp_path: Path) -> None
     }
 
 
+def test_migration_indexes_foreign_key_child_columns(tmp_path: Path) -> None:
+    # Regression: the graph tables carried no index on any foreign-key child
+    # column, so a full reindex's `delete from files` fired ON DELETE
+    # CASCADE / SET NULL that full-scanned every child table once per deleted
+    # parent row -- O(files x children). On this repo that was ~277s. Migration
+    # 9 indexes each FK child column so the cascade lookups are O(log n).
+    repo = tmp_path / "repo"
+    state_dir = repo / ".codescent"
+    database_path = state_dir / "index.sqlite"
+    repo.mkdir()
+    state_dir.mkdir()
+    _ = (repo / "app.py").write_text("value = 1\n")
+    _ = (state_dir / "config.toml").write_text(
+        f"[project]\nschema_version = {SCHEMA_VERSION}\n",
+    )
+    _create_mvp_v4_database(database_path)
+
+    state = initialize_storage(repo)
+
+    expected = {
+        "idx_symbols_file_id",
+        "idx_imports_source_file_id",
+        "idx_imports_resolved_file_id",
+        "idx_chunks_file_id",
+        "idx_chunks_symbol_id",
+        "idx_symbol_references_source_file_id",
+        "idx_symbol_references_target_file_id",
+        "idx_symbol_references_source_symbol_id",
+        "idx_symbol_references_target_symbol_id",
+        "idx_call_edges_source_file_id",
+        "idx_call_edges_target_file_id",
+        "idx_call_edges_caller_symbol_id",
+        "idx_call_edges_callee_symbol_id",
+        "idx_findings_file_id",
+        "idx_findings_symbol_id",
+    }
+    with RepositoryStorage(state).read_connection() as connection:
+        rows: list[tuple[str]] = connection.execute(
+            "select name from sqlite_master where type = 'index'",
+        ).fetchall()
+        indexes = {row[0] for row in rows}
+    assert expected <= indexes
+
+
 def test_reconciles_stored_results_missing_project_id_column(tmp_path: Path) -> None:
     # Regression: a database whose `stored_results` table predates the
     # `project_id` column (the column was added to migration 5's create

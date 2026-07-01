@@ -12,6 +12,39 @@ COMMIT_HASH_LENGTH: Final = 40
 COMMIT_HASH_CHARACTERS: Final = frozenset("0123456789abcdef")
 PORCELAIN_STATUS_PREFIX_WIDTH: Final = 3
 MIN_PORCELAIN_STATUS_LINE_LENGTH: Final = PORCELAIN_STATUS_PREFIX_WIDTH + 1
+# Directory prefixes whose contents churn on nearly every commit and bury real
+# coupling in co-change / blast-radius signals (R3). Generalizes the historical
+# ``.codescent`` skip.
+CO_CHANGE_EXCLUDED_PREFIXES: Final = (".codescent", ".beads/")
+# Dependency lockfiles rewritten on nearly every dependency bump; noise for
+# source-to-source co-change.
+CO_CHANGE_EXCLUDED_LOCKFILES: Final = frozenset(
+    {
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        "poetry.lock",
+        "uv.lock",
+        "Pipfile.lock",
+        "Cargo.lock",
+        "go.sum",
+    },
+)
+
+
+def _is_excluded_cochange_path(path: str) -> bool:
+    """High-churn state/artifact paths that must not dominate co-change signals.
+
+    Excludes the ``.codescent`` runtime dir, ``.beads`` issue state, ``*.jsonl``
+    append-only state logs, and common dependency lockfiles — all rewritten on
+    nearly every commit, so they co-change with everything and bury the real
+    source-to-source coupling the caller is after.
+    """
+    if path.startswith(CO_CHANGE_EXCLUDED_PREFIXES):
+        return True
+    if path.endswith(".jsonl"):
+        return True
+    return path.rsplit("/", maxsplit=1)[-1] in CO_CHANGE_EXCLUDED_LOCKFILES
 
 
 @dataclass(frozen=True, slots=True)
@@ -259,8 +292,11 @@ def git_related_paths(repo_root: Path, path: str) -> tuple[str, ...]:
         if show_result.returncode != 0:
             continue
         for changed_path in show_result.stdout.splitlines():
-            if changed_path and changed_path != path:
-                related.add(changed_path)
+            if not changed_path or changed_path == path:
+                continue
+            if _is_excluded_cochange_path(changed_path):
+                continue
+            related.add(changed_path)
     return tuple(sorted(related))
 
 
@@ -449,7 +485,7 @@ def _add_author_churn(
     if author is None:
         return
     for changed_path in commit_paths:
-        if changed_path.startswith(".codescent"):
+        if _is_excluded_cochange_path(changed_path):
             continue
         totals[changed_path] = totals.get(changed_path, 0) + 1
         per_author = authors.setdefault(changed_path, {})
@@ -458,7 +494,7 @@ def _add_author_churn(
 
 def _add_change_counts(counts: dict[str, int], commit_paths: set[str]) -> None:
     for changed_path in commit_paths:
-        if changed_path.startswith(".codescent"):
+        if _is_excluded_cochange_path(changed_path):
             continue
         counts[changed_path] = counts.get(changed_path, 0) + 1
 
@@ -469,7 +505,7 @@ def _add_co_change_counts(
     target_path: str,
 ) -> None:
     for changed_path in commit_paths:
-        if changed_path == target_path or changed_path.startswith(".codescent"):
+        if changed_path == target_path or _is_excluded_cochange_path(changed_path):
             continue
         counts[changed_path] = counts.get(changed_path, 0) + 1
 

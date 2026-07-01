@@ -5,7 +5,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from codescent.storage import RepositoryStorage, initialize_storage
-from codescent.storage.repositories import SessionEventRepository, SessionEventRow
+from codescent.storage.repositories import (
+    SessionEventRepository,
+    SessionEventRow,
+    SessionEventWrite,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -33,6 +37,8 @@ class ContextStats:
     most_used_tools: tuple[str, ...]
     repeated_broad_queries: tuple[JsonObject, ...]
     warnings: tuple[JsonObject, ...]
+    backend_resolutions: int
+    cbm_resolutions: int
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -47,6 +53,17 @@ class ContextStats:
             "most_used_tools": list(self.most_used_tools),
             "repeated_broad_queries": list(self.repeated_broad_queries),
             "warnings": list(self.warnings),
+            # W3 signal (R11/R12): the rate at which real sessions resolve the
+            # optional cbm backend vs falling back to native. A sustained high
+            # rate is the recorded trigger to revisit the deferred hard-dep
+            # decision (docs/decisions/0001-cbm-optional-by-default.md).
+            "backend_resolutions": self.backend_resolutions,
+            "cbm_resolutions": self.cbm_resolutions,
+            "cbm_present_rate": (
+                self.cbm_resolutions / self.backend_resolutions
+                if self.backend_resolutions > 0
+                else 0.0
+            ),
         }
 
 
@@ -126,6 +143,16 @@ def _aggregate_stats(
                 1,
             )
 
+    # W3 signal (R11/R12): counted in a separate pass so the main dispatch stays
+    # simple. Denominator = every structural resolution; numerator = the cbm ones.
+    backend_events = [
+        event for event in events if event.event_type == "structural_backend_resolved"
+    ]
+    backend_resolutions = len(backend_events)
+    cbm_resolutions = sum(
+        1 for event in backend_events if event.payload.get("backend_name") == "cbm"
+    )
+
     largest_summarized_results = tuple(
         sorted(
             largest_results,
@@ -148,6 +175,34 @@ def _aggregate_stats(
         most_used_tools=_most_used_tools(tool_counter),
         repeated_broad_queries=_repeated_broad_queries(broad_query_counter),
         warnings=_warnings(warning_counter),
+        backend_resolutions=backend_resolutions,
+        cbm_resolutions=cbm_resolutions,
+    )
+
+
+def record_backend_resolution(
+    *,
+    repo_root: Path | str,
+    project_id: str,
+    session_id: str,
+    backend_name: str,
+) -> None:
+    """Record which structural backend (cbm/native) a session resolved.
+
+    The per-session cbm-present-vs-native split is the W3 revisit signal
+    (R11/R12); it feeds ``context_stats``' ``cbm_present_rate``. Payload is a
+    single low-cardinality slug -- no source, no paths -- so it rides the
+    existing session-event sanitization unchanged.
+    """
+    state = initialize_storage(repo_root)
+    repository = SessionEventRepository(RepositoryStorage(state))
+    _ = repository.record_event(
+        SessionEventWrite(
+            project_id=project_id,
+            session_id=session_id,
+            event_type="structural_backend_resolved",
+            payload={"backend_name": backend_name},
+        ),
     )
 
 

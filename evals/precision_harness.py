@@ -160,13 +160,16 @@ def scan_corpus_pairs(corpus_root: Path) -> set[tuple[str, str]]:
 
     ``.codescent`` runtime state is removed before and after so the scan is a
     deterministic cold run and the corpus stays source-only on disk.
+
+    The default scan-time suppression is turned OFF here so this harness keeps
+    measuring rule precision against the intentional-smell corpus (R4 override).
     """
     shutil.rmtree(corpus_root / ".codescent", ignore_errors=True)
     ConfigService(corpus_root).save(
         ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
     )
     try:
-        scan = CodeHealthService(corpus_root).scan()
+        scan = CodeHealthService(corpus_root).scan(apply_default_suppression=False)
         return {
             (finding.rule_id, finding.file_path)
             for finding in scan.findings

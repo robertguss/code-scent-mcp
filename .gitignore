@@ -34,3 +34,6 @@ htmlcov/
 
 # bv (beads viewer) local config and caches
 .bv/
+
+# Claude Code agent worktrees (ephemeral; .claude/settings.json stays tracked)
+.claude/worktrees/

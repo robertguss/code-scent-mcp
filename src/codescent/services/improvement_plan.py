@@ -16,7 +16,7 @@ from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Final
 
 from codescent.core.models import FindingStatus
-from codescent.services.findings import FindingsService
+from codescent.services.findings import FindingsService, is_test_structural
 
 if TYPE_CHECKING:
     from codescent.storage.repositories import FindingRow
@@ -135,13 +135,30 @@ class ImprovementPlanService:
         clusters = _build_clusters(findings)
         ordered = sorted(
             clusters,
-            key=lambda cluster: (-cluster.roi, cluster.scope, cluster.rule_id),
+            key=lambda cluster: (
+                _cluster_deprioritized(cluster),
+                -cluster.roi,
+                cluster.scope,
+                cluster.rule_id,
+            ),
         )
         return ImprovementPlan(
             clusters=tuple(ordered),
             total_clusters=len(ordered),
             total_findings=len(findings),
         )
+
+
+def _cluster_deprioritized(cluster: ImprovementCluster) -> int:
+    """Push structural test-file clusters below real work.
+
+    Keeps this plan's top item aligned with ``get_next_improvement`` instead of
+    proposing a test split (R5).
+    """
+    all_test_structural = bool(cluster.files) and all(
+        is_test_structural(cluster.rule_id, file_path) for file_path in cluster.files
+    )
+    return 1 if all_test_structural else 0
 
 
 def _build_clusters(findings: tuple[FindingRow, ...]) -> list[ImprovementCluster]:
