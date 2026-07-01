@@ -430,6 +430,40 @@ async def test_every_search_tool_reports_constraint_warnings_field(
         assert payload["constraint_warnings"] == [], name
 
 
+@pytest.mark.anyio
+async def test_empty_result_warning_is_not_self_referential(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "src" / "app.py"
+    source.parent.mkdir(parents=True)
+    _ = source.write_text("def run() -> None:\n    pass\n")
+
+    async with Client(mcp) as client:
+        files = await client.call_tool(
+            "search_files",
+            {"repo": str(repo), "query": "zzznomatch", "limit": 20},
+        )
+        content = await client.call_tool(
+            "search_content",
+            {"repo": str(repo), "query": "zzznomatch", "limit": 20},
+        )
+
+    files_warning = " ".join(
+        SearchToolPayload.model_validate_json(_text_content(files.content)).warnings,
+    )
+    content_warning = " ".join(
+        SearchToolPayload.model_validate_json(_text_content(content.content)).warnings,
+    )
+
+    # F11: the miss warning never recommends the tool the agent is already in ...
+    assert "search_files" not in files_warning
+    assert "search_content" not in content_warning
+    # ... but the other, non-self alternatives are still offered.
+    assert "search_content" in files_warning
+    assert "get_repo_map" in files_warning
+    assert "search_files" in content_warning
+    assert "get_repo_map" in content_warning
+
+
 def _text_content(content: list[ContentBlock]) -> str:
     assert len(content) == 1
     first = content[0]

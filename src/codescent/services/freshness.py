@@ -120,11 +120,28 @@ def next_tools_with_refresh_recovery(
     return _dedupe((SCAN_RECOVERY_TOOL, *tools))
 
 
-def no_result_warning(*, result_kind: str) -> str:
+# Alternative tools an empty-result warning can steer toward. The calling tool
+# is dropped from this list so the warning never recommends the tool the agent
+# is already using (F11).
+_MISS_ALTERNATIVES: tuple[str, ...] = (
+    "search_files",
+    "search_content",
+    "get_repo_map",
+)
+
+
+def no_result_warning(*, result_kind: str, current_tool: str | None = None) -> str:
+    alternatives = tuple(tool for tool in _MISS_ALTERNATIVES if tool != current_tool)
     return (
         f"no {result_kind} found; if this miss matters, try a narrower query, "
-        "search_files, search_content, or get_repo_map"
+        f"{_join_alternatives(alternatives)}"
     )
+
+
+def _join_alternatives(tools: tuple[str, ...]) -> str:
+    if len(tools) <= 1:
+        return tools[0] if tools else "a different search tool"
+    return f"{', '.join(tools[:-1])}, or {tools[-1]}"
 
 
 def confidence_for_results(
@@ -150,12 +167,15 @@ def warnings_for_results(
     has_results: bool,
     result_kind: str,
     freshness: FreshnessMetadata | None = None,
+    current_tool: str | None = None,
 ) -> tuple[str, ...]:
     warnings: list[str] = []
     if freshness is not None:
         warnings.extend(freshness.warnings)
     if not has_results:
-        warnings.append(no_result_warning(result_kind=result_kind))
+        warnings.append(
+            no_result_warning(result_kind=result_kind, current_tool=current_tool),
+        )
     return tuple(warnings)
 
 

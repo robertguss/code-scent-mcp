@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
+from codescent.core.models import TokenBudgets
 from codescent.services.answer_pack import AnswerPackService
 from codescent.services.context_support import (
     SymbolMatchPayload,  # noqa: TC001  (runtime: fastmcp builds the TypedDict schema)
@@ -49,7 +50,13 @@ def answer_pack(
     max_tokens: int | None = None,
     budget: int | None = None,
 ) -> AnswerPackToolPayload:
+    # Self-bound: when the caller passes neither budget nor max_tokens, fall back
+    # to the shared context budget so the pack always truncates + offers a
+    # result_id instead of returning an unbounded object (KTD5 — reuse the
+    # existing TokenBudgets().context default rather than add a redundant knob).
     effective_budget = budget if budget is not None else max_tokens
+    if effective_budget is None:
+        effective_budget = TokenBudgets().context
     pack = AnswerPackService(repo).answer_pack(
         query,
         focus_path=focus_path,

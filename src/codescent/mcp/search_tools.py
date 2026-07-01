@@ -205,6 +205,7 @@ def search_files(  # noqa: PLR0913 - additive defensive alias for sloppy inputs.
             has_results=bool(matches),
             result_kind="file paths",
             next_tools=("search_content", "get_repo_map"),
+            current_tool="search_files",
             constraints=constraints,
         ),
     }
@@ -248,6 +249,7 @@ def search_content(  # noqa: PLR0913 - MCP tool exposes orthogonal shape toggles
             has_results=bool(matches),
             result_kind="content matches",
             next_tools=("search_files", "get_repo_map"),
+            current_tool="search_content",
             constraints=constraints,
         ),
     }
@@ -285,6 +287,7 @@ def multi_search_content(  # noqa: PLR0913 - additive constraints prefilter knob
             has_results=bool(matches),
             result_kind="content matches",
             next_tools=("search_files", "search_content", "get_repo_map"),
+            current_tool="multi_search_content",
             constraints=constraints,
         ),
     }
@@ -308,6 +311,7 @@ def search_changed_files(
             has_results=bool(results),
             result_kind="changed files",
             next_tools=("get_repo_status", "get_repo_map"),
+            current_tool="search_changed_files",
         ),
     }
 
@@ -327,6 +331,7 @@ def search_todos(
             has_results=bool(results),
             result_kind="todo markers",
             next_tools=("search_content", "search_files"),
+            current_tool="search_todos",
         ),
     }
 
@@ -358,6 +363,7 @@ def search_tests(  # noqa: PLR0913 - MCP tool exposes distinct target inputs.
             has_results=bool(results),
             result_kind="likely tests",
             next_tools=("select_tests", "search_files", "search_content"),
+            current_tool="search_tests",
         ),
     }
 
@@ -429,6 +435,7 @@ def _advisory_fields(
     has_results: bool,
     result_kind: str,
     next_tools: tuple[str, ...],
+    current_tool: str,
     constraints: str = "",
 ) -> AdvisoryToolFields:
     dropped = constraint_warnings(constraints)
@@ -436,6 +443,7 @@ def _advisory_fields(
         "warnings": warnings_for_results(
             has_results=has_results,
             result_kind=result_kind,
+            current_tool=current_tool,
         ),
         "confidence": confidence_for_results(
             has_results=has_results,
