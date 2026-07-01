@@ -8,6 +8,12 @@ from codescent.engine.source_read import read_source_bytes
 
 DEFAULT_EXCLUDED_NAMES: Final = frozenset(
     {
+        # Tool-local, gitignored, non-source dirs: beads issue/history data and
+        # Claude agent worktrees/settings. Scanning them buries real findings
+        # under tens of thousands of duplicate-literal hits (same class as the
+        # already-excluded ``.codescent``; mirrors U3's co-change exclusion).
+        ".beads",
+        ".claude",
         ".codescent",
         ".git",
         ".hg",

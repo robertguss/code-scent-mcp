@@ -55,6 +55,7 @@ class FileContextPayload(TypedDict):
     imports: tuple[str, ...]
     likely_tests: tuple[str, ...]
     related_files: tuple[str, ...]
+    related_files_next_cursor: int | None
     source_ranges: tuple[dict[str, str | int], ...]
     risk_notes: tuple[str, ...]
     next_tools: tuple[str, ...]
@@ -263,13 +264,22 @@ def graph_payload(
     for row in visible_rows:
         text, path, start_line, confidence = row[:4]
         caller = row[4] if len(row) == CALLER_ROW_LENGTH else None
+        # Call edges are stored at a flat 0.4 at parse time, so even the true
+        # definition-site caller (one resolved to an enclosing symbol) would read
+        # as "low". Lift a resolved edge out of the low band so the label reflects
+        # that we know which symbol makes the call (R6).
+        resolved_confidence = (
+            max(confidence, LOW_CONFIDENCE_THRESHOLD)
+            if caller is not None
+            else confidence
+        )
         results.append(
             {
                 "text": text,
                 "path": path,
                 "start_line": start_line,
-                "confidence": confidence,
-                "certainty": certainty(confidence),
+                "confidence": resolved_confidence,
+                "certainty": certainty(resolved_confidence),
                 "caller": caller,
             },
         )

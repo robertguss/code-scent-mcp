@@ -107,6 +107,8 @@ smoke, and safety eval details.
 - [Evals](docs/evals.md): deterministic eval, agent transcript, real smoke, and
   source-read-only proof.
 - [Agent routing](docs/agent-routing.md): optional downstream agent templates.
+- [Decisions](docs/decisions/0001-cbm-optional-by-default.md): why
+  codebase-memory-mcp stays optional, and the signal that would flip it.
 - [Changelog](CHANGELOG.md): release history.
 
 ## Implemented Local Surface

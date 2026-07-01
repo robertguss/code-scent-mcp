@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import builtins
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypedDict
 
 from codescent.core.models import PageOptions
 from codescent.core.paths import normalize_repo_path, resolve_repo_root
 from codescent.engine.context import source_range
+from codescent.services.cbm_backend import select_graph_backend
 from codescent.services.context_support import (
     LOW_CONFIDENCE_THRESHOLD,
     MIN_RELATED_TERM_LENGTH,
@@ -53,10 +55,70 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
+    from codescent.services.graph_backend import (
+        CallEdge,
+        GraphBackend,
+        SymbolNode,
+    )
+
 type PersistedFileRow = tuple[str, int]
+type CallerRow = tuple[str, str, int, float, str | None]
 type PersistedImportRow = tuple[str, str | None]
 type PersistedTextRow = tuple[str, str]
 type GraphRow = tuple[str, str, int, float] | tuple[str, str, int, float, str | None]
+
+# Cap `get_file_context.related_files` at the same page size `get_related_files`
+# uses, so the tool stays "cheaper than reading the file" instead of dumping the
+# whole repo. The tail is reachable via `related_files_next_cursor`.
+RELATED_FILE_LIMIT = 20
+
+# Common built-in-type methods that read as callee noise (`x.append(...)` stores
+# call_text "append"). Unioned with `dir(builtins)` to filter language builtins
+# out of `find_callees` (R8). This is a native-path floor, case-folded against
+# `call_edges.call_text`; cbm's real call graph avoids builtins structurally.
+_BUILTIN_CALLEE_METHODS = frozenset(
+    {
+        "append",
+        "extend",
+        "insert",
+        "remove",
+        "pop",
+        "add",
+        "update",
+        "discard",
+        "get",
+        "setdefault",
+        "items",
+        "keys",
+        "values",
+        "join",
+        "split",
+        "rsplit",
+        "splitlines",
+        "strip",
+        "lstrip",
+        "rstrip",
+        "format",
+        "replace",
+        "startswith",
+        "endswith",
+        "lower",
+        "upper",
+        "title",
+        "encode",
+        "decode",
+        "count",
+        "index",
+        "sort",
+        "copy",
+        "clear",
+    },
+)
+PYTHON_BUILTIN_CALLEES = (
+    frozenset(name.lower() for name in dir(builtins)) | _BUILTIN_CALLEE_METHODS
+)
+_BUILTIN_CALLEE_PLACEHOLDERS = ", ".join("?" * len(PYTHON_BUILTIN_CALLEES))
+_BUILTIN_CALLEE_PARAMS = tuple(sorted(PYTHON_BUILTIN_CALLEES))
 
 __all__ = [
     "ContextService",
@@ -91,7 +153,12 @@ class ContextService:
         _ = _freshness_for_service(repo_root, auto_refresh=self.auto_refresh)
         return read_persisted_symbols(repo_root, query, limit=limit)
 
-    def get_file_context(self, path: str) -> FileContextPayload:
+    def get_file_context(
+        self,
+        path: str,
+        *,
+        related_cursor: int = 0,
+    ) -> FileContextPayload:
         repo_root = resolve_repo_root(self.repo_root)
         freshness = _freshness_for_service(
             repo_root,
@@ -109,13 +176,22 @@ class ContextService:
             _persisted_related_reason_map(repo_root, relative_path, tests),
             relative_path,
         )
+        related_page = related_rows[
+            related_cursor : related_cursor + RELATED_FILE_LIMIT
+        ]
+        related_next_cursor = (
+            related_cursor + RELATED_FILE_LIMIT
+            if related_cursor + RELATED_FILE_LIMIT < len(related_rows)
+            else None
+        )
         return {
             "path": relative_path,
             "summary": _persisted_file_summary(relative_path, symbols),
             "symbols": tuple(symbol["name"] for symbol in symbols),
             "imports": tuple(import_text(module, name) for module, name in imports),
             "likely_tests": tests,
-            "related_files": tuple(item["path"] for item in related_rows),
+            "related_files": tuple(item["path"] for item in related_page),
+            "related_files_next_cursor": related_next_cursor,
             "source_ranges": tuple(
                 source_range(
                     repo_root,
@@ -201,25 +277,30 @@ class ContextService:
             repo_root,
             auto_refresh=self.auto_refresh,
         )
-        state = ensure_graph_indexed(repo_root)
-        with RepositoryStorage(state).read_connection() as connection:
-            rows: list[tuple[str, str, int, float, str | None]] = connection.execute(
-                """
-                select
-                    call_edges.call_text,
-                    files.path,
-                    call_edges.start_line,
-                    call_edges.confidence,
-                    symbols.qualified_name
-                from call_edges
-                join files on files.id = call_edges.source_file_id
-                left join symbols on symbols.id = call_edges.caller_symbol_id
-                where lower(call_edges.call_text) like ?
-                order by files.path, call_edges.start_line
-                limit ? offset ?
-                """,
-                (like(query), page.limit + 1, page.offset),
-            ).fetchall()
+        backend = select_graph_backend(repo_root)
+        if backend.name() == "cbm":
+            ranked = _cbm_caller_rows(backend, query)
+            rows: list[CallerRow] = ranked[page.offset : page.offset + page.limit + 1]
+        else:
+            state = ensure_graph_indexed(repo_root)
+            with RepositoryStorage(state).read_connection() as connection:
+                rows = connection.execute(
+                    """
+                    select
+                        call_edges.call_text,
+                        files.path,
+                        call_edges.start_line,
+                        call_edges.confidence,
+                        symbols.qualified_name
+                    from call_edges
+                    join files on files.id = call_edges.source_file_id
+                    left join symbols on symbols.id = call_edges.caller_symbol_id
+                    where lower(call_edges.call_text) like ?
+                    order by files.path, call_edges.start_line
+                    limit ? offset ?
+                    """,
+                    (like(query), page.limit + 1, page.offset),
+                ).fetchall()
         return _graph_payload(query, rows, page, freshness=freshness)
 
     def find_callees(
@@ -235,27 +316,42 @@ class ContextService:
             repo_root,
             auto_refresh=self.auto_refresh,
         )
-        state = ensure_graph_indexed(repo_root)
-        with RepositoryStorage(state).read_connection() as connection:
-            rows: list[tuple[str, str, int, float, str | None]] = connection.execute(
-                """
-                select
-                    call_edges.call_text,
-                    files.path,
-                    call_edges.start_line,
-                    call_edges.confidence,
-                    symbols.qualified_name
-                from call_edges
-                join files on files.id = call_edges.source_file_id
-                left join symbols on symbols.id = call_edges.caller_symbol_id
-                where
-                    lower(symbols.name) like ?
-                    or lower(symbols.qualified_name) like ?
-                order by files.path, call_edges.start_line
-                limit ? offset ?
-                """,
-                (like(query), like(query), page.limit + 1, page.offset),
-            ).fetchall()
+        backend = select_graph_backend(repo_root)
+        if backend.name() == "cbm":
+            ranked = _cbm_callee_rows(backend, query)
+            rows: list[CallerRow] = ranked[page.offset : page.offset + page.limit + 1]
+        else:
+            state = ensure_graph_indexed(repo_root)
+            with RepositoryStorage(state).read_connection() as connection:
+                rows = connection.execute(
+                    f"""
+                    select
+                        call_edges.call_text,
+                        files.path,
+                        call_edges.start_line,
+                        call_edges.confidence,
+                        symbols.qualified_name
+                    from call_edges
+                    join files on files.id = call_edges.source_file_id
+                    left join symbols on symbols.id = call_edges.caller_symbol_id
+                    where (
+                        lower(symbols.name) like ?
+                        or lower(symbols.qualified_name) like ?
+                    )
+                    and lower(call_edges.call_text) not in (
+                        {_BUILTIN_CALLEE_PLACEHOLDERS}
+                    )
+                    order by files.path, call_edges.start_line
+                    limit ? offset ?
+                    """,  # noqa: S608 - placeholders are a fixed builtins constant.
+                    (
+                        like(query),
+                        like(query),
+                        *_BUILTIN_CALLEE_PARAMS,
+                        page.limit + 1,
+                        page.offset,
+                    ),
+                ).fetchall()
         return _graph_payload(query, rows, page, freshness=freshness)
 
     def get_related_files(
@@ -311,6 +407,92 @@ class ContextService:
             "changed_files": freshness.changed_files,
             "refresh_error": freshness.refresh_error,
         }
+
+
+def _symbols_by_path(
+    symbols: tuple[SymbolNode, ...],
+) -> dict[str, list[SymbolNode]]:
+    grouped: dict[str, list[SymbolNode]] = {}
+    for symbol in symbols:
+        grouped.setdefault(symbol.path, []).append(symbol)
+    return grouped
+
+
+def _enclosing_symbol(
+    edge: CallEdge,
+    symbols_by_path: dict[str, list[SymbolNode]],
+) -> SymbolNode | None:
+    """The innermost symbol whose line range contains ``edge``'s call site.
+
+    cbm ``CallEdge`` records the calling *file* and line but not the calling
+    symbol; the enclosing symbol is recovered from the symbol table's line
+    ranges (innermost wins for nested defs).
+    """
+    candidates = [
+        symbol
+        for symbol in symbols_by_path.get(edge.caller_path, ())
+        if symbol.start_line <= edge.start_line <= symbol.end_line
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda symbol: symbol.start_line)
+
+
+def _cbm_caller_rows(backend: GraphBackend, query: str) -> list[CallerRow]:
+    """cbm-sourced "who calls ``query``" rows, shaped like the native payload."""
+    needle = query.lower()
+    symbols_by_path = _symbols_by_path(backend.symbols())
+    rows: list[CallerRow] = []
+    for edge in backend.call_edges():
+        if needle not in edge.callee_name.lower():
+            continue
+        caller = _enclosing_symbol(edge, symbols_by_path)
+        rows.append(
+            (
+                edge.callee_name,
+                edge.caller_path,
+                edge.start_line,
+                edge.confidence,
+                caller.qualified_name if caller is not None else None,
+            ),
+        )
+    rows.sort(key=lambda row: (row[1], row[2]))
+    return rows
+
+
+def _cbm_callee_rows(backend: GraphBackend, query: str) -> list[CallerRow]:
+    """cbm-sourced "what ``query`` calls" rows, builtins filtered (U6 floor).
+
+    Each edge is attributed to its single innermost enclosing symbol (mirroring
+    the native path's join on one ``caller_symbol_id``); matching the query
+    against every *containing* symbol instead would emit a nested method's call
+    once per enclosing class too, over-reporting and diverging from native.
+    """
+    needle = query.lower()
+    symbols_by_path = _symbols_by_path(backend.symbols())
+    rows: list[CallerRow] = []
+    for edge in backend.call_edges():
+        if edge.callee_name.lower() in PYTHON_BUILTIN_CALLEES:
+            continue
+        caller = _enclosing_symbol(edge, symbols_by_path)
+        if caller is None:
+            continue
+        if (
+            needle not in caller.name.lower()
+            and needle not in caller.qualified_name.lower()
+        ):
+            continue
+        rows.append(
+            (
+                edge.callee_name,
+                edge.caller_path,
+                edge.start_line,
+                edge.confidence,
+                caller.qualified_name,
+            ),
+        )
+    rows.sort(key=lambda row: (row[1], row[2]))
+    return rows
 
 
 def _freshness_for_service(repo_root: Path, *, auto_refresh: bool) -> FreshnessMetadata:

@@ -8,6 +8,7 @@ from typing import Final, cast
 from codescent.core.models import FindingStatus
 from codescent.services.code_health import CodeHealthScanResult, CodeHealthService
 from codescent.services.git import git_change_counts
+from codescent.services.search_queries import is_test_path
 from codescent.storage import RepositoryStorage, initialize_storage
 from codescent.storage.repositories import (
     FindingEventRow,
@@ -17,6 +18,30 @@ from codescent.storage.repositories import (
 )
 
 MAX_VERIFICATION_OUTPUT_SUMMARY_CHARS: Final = 1000
+
+# Structural / size rules whose "split / break up / flatten" action is nonsensical
+# on a test file (R5): prioritization must not surface "split a test file" over
+# real source work. Matched against the rule id's language-suffixed tail.
+STRUCTURAL_RULE_SUFFIXES: Final = frozenset(
+    {
+        "large_file",
+        "large_class",
+        "large_function",
+        "relative_large_file",
+        "relative_large_class",
+        "relative_large_function",
+        "deep_nesting",
+        "mixed_responsibilities",
+        "structural_near_duplicate",
+    },
+)
+
+
+def is_test_structural(rule_id: str, file_path: str) -> bool:
+    """A structural/size finding on a test file — low-value to action (R5)."""
+    if not is_test_path(file_path):
+        return False
+    return rule_id.rsplit(".", maxsplit=1)[-1] in STRUCTURAL_RULE_SUFFIXES
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,7 +153,13 @@ class FindingsService:
         )
         for status in actionable:
             for finding in ranked_findings:
-                if finding.status is status:
+                # Never recommend "split a test file": structural findings on
+                # test paths are excluded outright, so when they are the only
+                # candidates the next improvement is empty rather than nonsense.
+                if finding.status is status and not is_test_structural(
+                    finding.rule_id,
+                    finding.file_path,
+                ):
                     return finding
         return None
 
@@ -259,13 +290,19 @@ def _gated_resolution_note(note: str) -> str:
 def _finding_priority(
     finding: FindingRow,
     change_counts: dict[str, int],
-) -> tuple[int, int, int, str]:
+) -> tuple[int, int, int, int, str]:
+    # Structural findings on test paths sort below every real finding (R5) while
+    # leaving source-finding order untouched (all source findings score 0 here).
+    test_structural_rank = (
+        1 if is_test_structural(finding.rule_id, finding.file_path) else 0
+    )
     severity_rank = {"warning": 0, "error": 0, "info": 1}.get(finding.severity, 2)
     rule_rank = {
         "python.changed_source_without_related_test": 9,
         "python.missing_nearby_test": 8,
     }.get(finding.rule_id, 0)
     return (
+        test_structural_rank,
         severity_rank,
         rule_rank,
         -_hotspot_score(finding, change_counts),

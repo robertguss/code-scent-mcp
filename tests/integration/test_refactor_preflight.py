@@ -52,6 +52,19 @@ def test_each_section_matches_its_component_called_directly(tmp_path: Path) -> N
     assert bundle.changed_file_health == health_direct
 
 
+def test_changed_file_health_ok_for_unchanged_file(tmp_path: Path) -> None:
+    repo = _build_coupled_repo(tmp_path)
+    _ = CodeHealthService(repo).scan()
+
+    # CORE is committed and the tree is clean, so it is not currently changed.
+    health = RiskService(repo).get_changed_file_health(CORE)
+
+    # A successful health check is ok=True regardless of change status (R6); the
+    # not-changed status is a note, not a failure signal.
+    assert health.ok is True
+    assert any("not currently changed" in note for note in health.risk_notes)
+
+
 def test_bundle_is_bounded_and_deduped(tmp_path: Path) -> None:
     repo = _build_coupled_repo(tmp_path)
     _ = CodeHealthService(repo).scan()

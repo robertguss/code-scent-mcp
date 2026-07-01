@@ -200,6 +200,13 @@ class _PythonParser(ast.NodeVisitor):
             self.references.append(reference)
         self.generic_visit(node)
 
+    @override
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        # A variable annotation (``x: MyType``) uses ``MyType`` even if the name
+        # appears nowhere else, so emit it as a reference (R9).
+        self.references.extend(_annotation_references(node.annotation))
+        self.generic_visit(node)
+
     def _record_function(
         self,
         node: ast.FunctionDef | ast.AsyncFunctionDef,
@@ -209,6 +216,11 @@ class _PythonParser(ast.NodeVisitor):
         kind = _function_kind(self._class_stack, is_async=is_async)
         qualified_name = _qualified_name(self._module, (*self._class_stack, node.name))
         self.symbols.append(_symbol(node, node.name, qualified_name, kind))
+        # Return and parameter type annotations use their type names; count them
+        # so a class used only in a signature is not a dead-code false positive (R9).
+        self.references.extend(_annotation_references(node.returns))
+        for annotation in _parameter_annotations(node.args):
+            self.references.extend(_annotation_references(annotation))
 
 
 def _symbol(
@@ -243,6 +255,67 @@ def _call_reference(node: ast.Call) -> ParsedReference | None:
             )
         case _:
             return None
+
+
+def _parameter_annotations(args: ast.arguments) -> list[ast.expr | None]:
+    """Every parameter's annotation across all arg kinds (pos-only..kwarg)."""
+    annotations = [
+        arg.annotation for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs)
+    ]
+    annotations.extend(
+        extra.annotation for extra in (args.vararg, args.kwarg) if extra is not None
+    )
+    return annotations
+
+
+def _annotation_references(annotation: ast.expr | None) -> list[ParsedReference]:
+    """References for every type name used in ``annotation`` (nested generics too).
+
+    Walks the annotation collecting the referenced type names, so
+    ``tuple[Foo, ...]`` yields ``Foo`` and ``mod.MyType`` yields ``MyType`` (the
+    leading ``mod`` is a namespace, not a referenced type, so it is skipped --
+    otherwise tokens like ``typing``/``collections`` pollute related-file
+    matching). Names inside an embedded call such as ``Annotated[int, Field()]``
+    are left to ``visit_Call`` so they are not double-counted. These are
+    ``LOW_CONFIDENCE`` like call references (ponytail: annotations are static but
+    the name-use index only needs presence, not certainty).
+
+    ponytail: explicit string forward-refs (``x: "Foo"``) parse to ``Constant``
+    and are skipped; ``from __future__ import annotations`` keeps real AST nodes,
+    so it is unaffected.
+    """
+    if annotation is None:
+        return []
+    skip: set[int] = set()
+    for node in ast.walk(annotation):
+        if isinstance(node, ast.Call):
+            skip.update(id(child) for child in ast.walk(node))
+        elif isinstance(node, ast.Attribute) and isinstance(
+            node.value,
+            ast.Name | ast.Attribute,
+        ):
+            # The value side of a dotted name is a namespace qualifier; only the
+            # final attribute (`.attr`) names the referenced type.
+            skip.add(id(node.value))
+    references: list[ParsedReference] = []
+    for node in ast.walk(annotation):
+        if id(node) in skip:
+            continue
+        if isinstance(node, ast.Name):
+            references.append(
+                ParsedReference(
+                    name=node.id, line=node.lineno, confidence=LOW_CONFIDENCE
+                ),
+            )
+        elif isinstance(node, ast.Attribute):
+            references.append(
+                ParsedReference(
+                    name=node.attr,
+                    line=node.lineno,
+                    confidence=LOW_CONFIDENCE,
+                ),
+            )
+    return references
 
 
 def _function_kind(class_stack: list[str], *, is_async: bool) -> str:

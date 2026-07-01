@@ -140,7 +140,10 @@ class RiskService:
         )
         risk_score = _file_risk_score(findings, impact.confidence)
         return ChangedFileHealth(
-            ok=is_changed,
+            # A successful health check is ``ok`` whether or not the file is
+            # currently changed; the not-changed status is carried in risk_notes
+            # ("not currently changed: <path>") rather than an error signal (R6).
+            ok=True,
             path=path,
             risk_score=risk_score,
             risk_level=_risk_level(risk_score),

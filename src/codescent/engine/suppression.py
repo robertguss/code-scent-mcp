@@ -32,6 +32,29 @@ if TYPE_CHECKING:
 # case-sensitive so it never fires on prose.
 _IGNORE_RE = re.compile(r"(?:#|//)\s*codescent\s*:\s*ignore\b\s*(?:\[([^\]]*)\])?")
 
+# --- Default scan-time (per rule x scope) suppression (R4) -------------------
+# Distinct from inline directives above: this drops known-noise findings before
+# they are stored so default-scan counts reflect signal. Two scopes:
+#   * the ``precision_corpus`` intentional-smell fixtures -> ALL rules;
+#   * test files -> only these structural / test-hygiene rules (test-QUALITY
+#     rules such as ``assertion_free_test`` deliberately keep scanning tests).
+# The precision eval harness opts back in via ``apply_default_suppression=False``.
+CORPUS_PATH_MARKER = "precision_corpus/"
+# Matched against the rule id's language-suffixed tail (the ``duplicate_literal``
+# of ``python.duplicate_literal`` / ``generic.duplicate_literal``).
+TEST_SUPPRESSED_RULE_SUFFIXES = frozenset(
+    {"duplicate_literal", "missing_nearby_test", "large_file"},
+)
+
+
+def is_scan_time_suppressed(rule_id: str, file_path: str, *, is_test: bool) -> bool:
+    """Default-scan noise gate: intentional-corpus smells and test-scope noise."""
+    if CORPUS_PATH_MARKER in file_path:
+        return True
+    rule_suffix = rule_id.rsplit(".", maxsplit=1)[-1]
+    return is_test and rule_suffix in TEST_SUPPRESSED_RULE_SUFFIXES
+
+
 # Evidence keys that carry a finding's 1-based source line, in priority order.
 _LINE_EVIDENCE_KEYS = ("start_line", "line")
 

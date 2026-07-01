@@ -19,6 +19,7 @@ from codescent.engine.rules.model import (
 )
 from codescent.engine.source_read import read_source_lines
 from codescent.engine.suppression import (
+    is_scan_time_suppressed,
     match_suppressions,
     parse_ignore_directives,
 )
@@ -101,6 +102,7 @@ class CodeHealthService:
         *,
         workers: int | None = None,
         use_cache: bool = True,
+        apply_default_suppression: bool = True,
     ) -> CodeHealthScanResult:
         index_result = RepoIndexService(self.repo_root).index_repo()
         state = initialize_storage(self.repo_root)
@@ -141,7 +143,14 @@ class CodeHealthService:
                 if config.inline_suppression
                 else {}
             )
-            suppressed_keys = frozenset(suppressed_matches)
+            scan_time_suppressed_keys: frozenset[str] = (
+                _scan_time_suppressed_keys(findings)
+                if apply_default_suppression
+                else frozenset()
+            )
+            suppressed_keys: frozenset[str] = (
+                frozenset(suppressed_matches) | scan_time_suppressed_keys
+            )
             resolved_ids = _resolved_absent_ids(previous, current_stable_keys)
             regressed_ids = _regressed_ids(
                 previous,
@@ -552,6 +561,26 @@ def _regressed_ids(
         if stable_key in current_stable_keys
         and stable_key not in suppressed_keys
         and status is FindingStatus.RESOLVED
+    )
+
+
+def _scan_time_suppressed_keys(
+    findings: tuple[CodeHealthFinding, ...],
+) -> frozenset[str]:
+    """Stable keys of findings the default scan-time config drops (R4).
+
+    Corpus fixtures (all rules) and the structural/test-hygiene noise rules in
+    test scope; test-quality rules keep firing on tests. Overridable per scan
+    via ``apply_default_suppression=False`` for the precision eval harness.
+    """
+    return frozenset(
+        finding.stable_key
+        for finding in findings
+        if is_scan_time_suppressed(
+            finding.rule_id,
+            finding.file_path,
+            is_test=is_test_path(finding.file_path),
+        )
     )
 
 

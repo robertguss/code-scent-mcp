@@ -1,7 +1,12 @@
 import subprocess
 from pathlib import Path
 
-from codescent.services.git import git_change_counts, git_co_change_counts
+from codescent.services.git import (
+    _is_excluded_cochange_path,  # pyright: ignore[reportPrivateUsage]
+    git_change_counts,
+    git_co_change_counts,
+    git_related_paths,
+)
 
 
 def test_git_co_change_counts_repeated_peer_changes(tmp_path: Path) -> None:
@@ -51,6 +56,63 @@ def test_git_co_change_counts_empty_for_repo_without_history(tmp_path: Path) -> 
 
     assert git_co_change_counts(repo, "a.py") == ()
     assert git_change_counts(repo) == {}
+
+
+def test_git_co_change_excludes_high_churn_artifacts(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "qa@example.invalid")
+    _git(repo, "config", "user.name", "QA")
+
+    for value in (1, 2):
+        _write(repo / "a.py", f"value = {value}\n")
+        _write(repo / "b.py", f"value = {value}\n")
+        _write(repo / ".beads" / "issues.jsonl", f'{{"n": {value}}}\n')
+        _write(repo / "uv.lock", f"# lock {value}\n")
+        _commit(
+            repo,
+            f"coupling {value}",
+            "a.py",
+            "b.py",
+            ".beads/issues.jsonl",
+            "uv.lock",
+        )
+
+    co_changes = git_co_change_counts(repo, "a.py")
+    paths = {path for path, _count in co_changes}
+
+    assert co_changes[0] == ("b.py", 2)
+    assert ".beads/issues.jsonl" not in paths
+    assert "uv.lock" not in paths
+
+
+def test_git_related_paths_excludes_high_churn_artifacts(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "qa@example.invalid")
+    _git(repo, "config", "user.name", "QA")
+
+    _write(repo / "a.py", "value = 1\n")
+    _write(repo / "b.py", "value = 1\n")
+    _write(repo / ".beads" / "issues.jsonl", '{"n": 1}\n')
+    _commit(repo, "coupling", "a.py", "b.py", ".beads/issues.jsonl")
+
+    related = git_related_paths(repo, "a.py")
+
+    assert "b.py" in related
+    assert ".beads/issues.jsonl" not in related
+
+
+def test_is_excluded_cochange_path_covers_state_and_lockfiles() -> None:
+    assert _is_excluded_cochange_path(".beads/issues.jsonl")
+    assert _is_excluded_cochange_path(".codescent/state.json")
+    assert _is_excluded_cochange_path("data/events.jsonl")
+    assert _is_excluded_cochange_path("uv.lock")
+    assert _is_excluded_cochange_path("frontend/package-lock.json")
+    assert not _is_excluded_cochange_path("src/app.py")
+    assert not _is_excluded_cochange_path("tests/test_app.py")
 
 
 def _write(path: Path, content: str) -> None:

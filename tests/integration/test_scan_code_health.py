@@ -9,6 +9,8 @@ from typer.testing import CliRunner
 
 from codescent.cli.main import app
 from codescent.core.models import MaintainabilityThresholds, ProjectConfig
+from codescent.engine.rules.model import CodeHealthFinding
+from codescent.services.code_health import CodeHealthService
 from codescent.services.config import ConfigService
 
 
@@ -197,6 +199,79 @@ def test_scan_uses_configured_coverage_path(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "python.uncovered_symbol" in payload.rule_ids
+
+
+def _noise_and_quality_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo"
+    (repo / "src" / "pkg").mkdir(parents=True)
+    (repo / "tests").mkdir()
+    (repo / "evals" / "precision_corpus" / "pkg").mkdir(parents=True)
+    _ = (repo / "src" / "pkg" / "app.py").write_text(
+        """\
+STATUS = "pending-review"
+OTHER = "pending-review"
+THIRD = "pending-review"
+
+
+def load() -> str:
+    return STATUS
+""",
+    )
+    _ = (repo / "tests" / "test_dupes.py").write_text(
+        """\
+STATUS = "pending-review"
+OTHER = "pending-review"
+THIRD = "pending-review"
+
+
+def test_no_assertions() -> None:
+    value = STATUS
+    print(value)
+""",
+    )
+    _ = (repo / "evals" / "precision_corpus" / "pkg" / "dupes.py").write_text(
+        'A = "corpus-smell"\nB = "corpus-smell"\nC = "corpus-smell"\n',
+    )
+    ConfigService(repo).save(
+        ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
+    )
+    return repo
+
+
+def _has_finding(
+    findings: tuple[CodeHealthFinding, ...],
+    rule_suffix: str,
+    path_prefix: str,
+) -> bool:
+    return any(
+        finding.rule_id.endswith(rule_suffix)
+        and finding.file_path.startswith(path_prefix)
+        for finding in findings
+    )
+
+
+def test_default_scan_suppresses_test_and_corpus_noise(tmp_path: Path) -> None:
+    repo = _noise_and_quality_repo(tmp_path)
+
+    active = CodeHealthService(repo).scan().active_findings
+
+    # Structural noise dropped in test scope and across the corpus...
+    assert not _has_finding(active, "duplicate_literal", "tests/")
+    assert not any("precision_corpus/" in finding.file_path for finding in active)
+    # ...but retained on real source, and test-quality rules still fire on tests.
+    assert _has_finding(active, "duplicate_literal", "src/")
+    assert _has_finding(active, "assertion_free_test", "tests/")
+
+
+def test_scan_override_reincludes_suppressed_noise(tmp_path: Path) -> None:
+    repo = _noise_and_quality_repo(tmp_path)
+
+    active = (
+        CodeHealthService(repo).scan(apply_default_suppression=False).active_findings
+    )
+
+    assert _has_finding(active, "duplicate_literal", "tests/")
+    assert any("precision_corpus/" in finding.file_path for finding in active)
 
 
 def _git(repo: Path, *args: str) -> None:
