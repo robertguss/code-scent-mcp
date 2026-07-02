@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import sqlite3
-from contextlib import closing
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, TypedDict, cast
 
@@ -16,6 +14,8 @@ from codescent.services.config import ConfigService
 from codescent.services.git import detect_git_state
 from codescent.services.session_resume import RatchetStatus, SessionResumeService
 from codescent.services.task_brief import TaskBriefService
+from codescent.storage import RepositoryStorage, state_for
+from codescent.storage.repositories import IndexStatusRepository
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -219,13 +219,26 @@ def get_repo_status(repo: str = ".") -> RepoStatusToolPayload:
         item.path: item.hash for item in build_file_inventory(repo_root, config=config)
     }
     database_path = repo_root / ".codescent" / "index.sqlite"
-    stored_hashes = _stored_hashes(database_path)
+    # Read through the coordinated reader (never a raw sqlite3 connect) so a
+    # status read waits for any in-flight writer and never sees a mid-write
+    # database. Guard on existence first -- read_connection would otherwise
+    # create the file, and get_repo_status creates no state.
+    if database_path.exists():
+        status = IndexStatusRepository(RepositoryStorage(state_for(repo_root)))
+        stored_hashes = status.stored_hashes()
+        finding_count = status.finding_count()
+        unresolved = status.unresolved_finding_count()
+    else:
+        stored_hashes, finding_count, unresolved = {}, 0, 0
     changed_files = _changed_files(inventory_hashes, stored_hashes)
     git_state = detect_git_state(repo_root)
-    unresolved = _unresolved_finding_count(database_path)
+    # Independent of index_fresh: these findings predate the file_path
+    # persistence fix, so their path was never persisted. A rescan re-persists
+    # it. (Do not conflate with staleness -- a fresh index can still hold them.)
     rescan_hint = (
-        f"{unresolved} open finding(s) have no resolvable file path "
-        "(stale index); run rescan to re-locate them."
+        f"{unresolved} open finding(s) have no persisted file path; they "
+        "predate the file_path persistence fix. Run rescan to re-persist "
+        "their paths."
     )
     warnings: tuple[str, ...] = (rescan_hint,) if unresolved else ()
 
@@ -239,7 +252,7 @@ def get_repo_status(repo: str = ".") -> RepoStatusToolPayload:
         ),
         indexed_files=len(stored_hashes),
         changed_files=changed_files[:CHANGED_FILE_LIMIT],
-        finding_count=_finding_count(database_path),
+        finding_count=finding_count,
         unresolved_finding_count=unresolved,
         database_ok=database_path.exists(),
         git_available=git_state.available,
@@ -263,56 +276,6 @@ def _top_level(paths: tuple[str, ...]) -> tuple[str, ...]:
 
 def _entrypoints(paths: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(path for path in paths if Path(path).name in ENTRYPOINT_NAMES)
-
-
-def _stored_hashes(database_path: Path) -> dict[str, str]:
-    if not database_path.exists():
-        return {}
-    try:
-        with closing(sqlite3.connect(database_path)) as connection:
-            rows: list[tuple[str, str]] = connection.execute(
-                "select path, hash from files",
-            ).fetchall()
-    except sqlite3.DatabaseError:
-        return {}
-    return dict(rows)
-
-
-def _finding_count(database_path: Path) -> int:
-    if not database_path.exists():
-        return 0
-    try:
-        with closing(sqlite3.connect(database_path)) as connection:
-            rows: list[tuple[int]] = connection.execute(
-                "select id from findings",
-            ).fetchall()
-    except sqlite3.DatabaseError:
-        return 0
-    return len(rows)
-
-
-def _unresolved_finding_count(database_path: Path) -> int:
-    """Open/regressed findings whose file location did not resolve.
-
-    A non-empty count means findings were persisted by older logic (or on files
-    not re-scanned since the file_path fix) and can't be located or explained
-    until a rescan re-persists their path. Surfaced as a rescan hint so an agent
-    is not left with silently empty file paths under a fresh-looking index.
-    """
-    if not database_path.exists():
-        return 0
-    try:
-        with closing(sqlite3.connect(database_path)) as connection:
-            rows: list[tuple[int]] = connection.execute(
-                """
-                select 1 from findings
-                where status in ('open', 'regressed')
-                    and (file_path is null or file_path = '')
-                """,
-            ).fetchall()
-    except sqlite3.DatabaseError:
-        return 0
-    return len(rows)
 
 
 def _changed_files(

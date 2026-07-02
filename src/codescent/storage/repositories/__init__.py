@@ -4,6 +4,7 @@ from codescent.storage.repositories.findings import (
     FindingRow,
     VerificationRunRow,
 )
+from codescent.storage.repositories.index_status import IndexStatusRepository
 from codescent.storage.repositories.session_events import (
     SanitizedPayload,
     SessionEventRepository,
@@ -23,6 +24,7 @@ __all__ = [
     "FindingEventRow",
     "FindingRepository",
     "FindingRow",
+    "IndexStatusRepository",
     "SanitizedPayload",
     "SessionEventRepository",
     "SessionEventRow",

@@ -30,7 +30,7 @@ class StorageState:
 
 def initialize_storage(root: Path | str) -> StorageState:
     repo_root = resolve_repo_root(root)
-    state = _state_for(repo_root)
+    state = state_for(repo_root)
     state.state_dir.mkdir(exist_ok=True)
 
     storage = RepositoryStorage(state)
@@ -120,7 +120,14 @@ class RepositoryStorage:
             ACTIVE_READERS[self.state.database_path] = reader_count - 1
 
 
-def _state_for(repo_root: Path) -> StorageState:
+def state_for(repo_root: Path) -> StorageState:
+    """Compute the storage paths for a repo without any filesystem side effects.
+
+    Unlike :func:`initialize_storage` this creates nothing and runs no
+    migration, so read-only callers (e.g. get_repo_status) can build a
+    coordinated :class:`RepositoryStorage` reader for an already-existing
+    database without mutating state.
+    """
     state_dir = repo_root / ".codescent"
     return StorageState(
         repo_root=repo_root,
