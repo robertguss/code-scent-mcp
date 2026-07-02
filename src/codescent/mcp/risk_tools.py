@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, cast
 
+from codescent.mcp.finding_payloads import ok_envelope
 from codescent.services.risk import (
     ChangedFileHealth,
     DiffRiskReport,
@@ -32,6 +33,7 @@ class ChangedFileHealthToolPayload(TypedDict):
     suggested_tests: tuple[str, ...]
     recommended_commands: tuple[str, ...]
     risk_notes: tuple[str, ...]
+    next_tools: tuple[str, ...]
 
 
 class DiffRiskToolPayload(TypedDict):
@@ -43,6 +45,7 @@ class DiffRiskToolPayload(TypedDict):
     suggested_tests: tuple[str, ...]
     recommended_commands: tuple[str, ...]
     file_health: tuple[ChangedFileHealthToolPayload, ...]
+    next_tools: tuple[str, ...]
 
 
 def register_risk_tools(mcp: FastMCP) -> None:
@@ -75,23 +78,27 @@ def get_changed_file_health(
 
 
 def _diff_risk_payload(report: DiffRiskReport) -> DiffRiskToolPayload:
-    return {
-        "ok": True,
-        "changed_files": report.changed_files,
-        "risk_score": report.risk_score,
-        "risk_level": report.risk_level,
-        "findings": tuple(_finding_payload(finding) for finding in report.findings),
-        "suggested_tests": report.suggested_tests,
-        "recommended_commands": report.recommended_commands,
-        "file_health": tuple(
+    envelope = ok_envelope(
+        next_tools=("get_changed_file_health", "select_tests", "scan_code_health"),
+        changed_files=report.changed_files,
+        risk_score=report.risk_score,
+        risk_level=report.risk_level,
+        findings=tuple(_finding_payload(finding) for finding in report.findings),
+        suggested_tests=report.suggested_tests,
+        recommended_commands=report.recommended_commands,
+        file_health=tuple(
             _changed_file_health_payload(health) for health in report.file_health
         ),
-    }
+    )
+    return cast("DiffRiskToolPayload", cast("object", envelope))
 
 
 def _changed_file_health_payload(
     health: ChangedFileHealth,
 ) -> ChangedFileHealthToolPayload:
+    # ok reflects health.ok (a missing/unchanged file is a soft no), so this one
+    # keeps its own ok rather than routing through ok_envelope; next_tools is
+    # still emitted so the success case conforms.
     return {
         "ok": health.ok,
         "path": health.path,
@@ -102,6 +109,7 @@ def _changed_file_health_payload(
         "suggested_tests": health.suggested_tests,
         "recommended_commands": health.recommended_commands,
         "risk_notes": health.risk_notes,
+        "next_tools": ("review_diff_risk", "scan_code_health"),
     }
 
 

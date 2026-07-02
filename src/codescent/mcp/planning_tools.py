@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NotRequired, TypedDict
+from typing import TYPE_CHECKING, NotRequired, TypedDict, cast
 
+from codescent.mcp.finding_payloads import ok_envelope
 from codescent.services.refactor_planning import (
     FindingContext,
     ImpactReport,
@@ -86,6 +87,7 @@ class SelectTestsToolPayload(TypedDict):
     test_files: tuple[str, ...]
     command: str
     executes_in_v1: bool
+    next_tools: tuple[str, ...]
 
 
 class VerifyChangeToolPayload(TypedDict):
@@ -106,6 +108,7 @@ class ImpactToolPayload(TypedDict):
     likely_tests: tuple[str, ...]
     risk_notes: tuple[str, ...]
     confidence: float
+    next_tools: tuple[str, ...]
 
 
 class CoChangeEntryPayload(TypedDict):
@@ -385,25 +388,27 @@ def _scaffold_payload(scaffold: CharacterizationScaffold) -> ScaffoldToolPayload
 
 
 def _select_tests_payload(selected: SelectedTests) -> SelectTestsToolPayload:
-    return {
-        "ok": True,
-        "changed_files": selected.changed_files,
-        "test_files": selected.test_files,
-        "command": selected.command,
-        "executes_in_v1": selected.executes_in_v1,
-    }
+    envelope = ok_envelope(
+        next_tools=("verify_change", "record_verification"),
+        changed_files=selected.changed_files,
+        test_files=selected.test_files,
+        command=selected.command,
+        executes_in_v1=selected.executes_in_v1,
+    )
+    return cast("SelectTestsToolPayload", cast("object", envelope))
 
 
 def _impact_payload(impact: ImpactReport) -> ImpactToolPayload:
-    return {
-        "ok": True,
-        "target_type": impact.target_type,
-        "target": impact.target,
-        "affected_files": impact.affected_files,
-        "likely_tests": impact.likely_tests,
-        "risk_notes": impact.risk_notes,
-        "confidence": impact.confidence,
-    }
+    envelope = ok_envelope(
+        next_tools=("select_tests", "plan_refactor"),
+        target_type=impact.target_type,
+        target=impact.target,
+        affected_files=impact.affected_files,
+        likely_tests=impact.likely_tests,
+        risk_notes=impact.risk_notes,
+        confidence=impact.confidence,
+    )
+    return cast("ImpactToolPayload", cast("object", envelope))
 
 
 def _preflight_payload(

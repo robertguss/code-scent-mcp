@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, cast
 
+from codescent.mcp.finding_payloads import ok_envelope
 from codescent.services.architecture import build_architecture
 
 if TYPE_CHECKING:
@@ -34,6 +35,7 @@ class GetArchitecturePayload(TypedDict):
     hotspots: tuple[HotspotPayload, ...]
     modules: tuple[ModuleViewPayload, ...]
     cluster_source: str
+    next_tools: tuple[str, ...]
 
 
 def register_architecture_tools(mcp: FastMCP) -> None:
@@ -55,19 +57,19 @@ def get_architecture(repo: str = ".") -> GetArchitecturePayload:
 
 
 def _architecture_payload(architecture: Architecture) -> GetArchitecturePayload:
-    return {
-        "ok": True,
-        "read_only": True,
-        "file_count": architecture.file_count,
-        "languages": architecture.languages,
-        "packages": architecture.packages,
-        "entry_points": architecture.entry_points,
-        "layers": architecture.layers,
-        "hotspots": tuple(
+    envelope = ok_envelope(
+        next_tools=("get_repo_map", "scan_code_health"),
+        read_only=True,
+        file_count=architecture.file_count,
+        languages=architecture.languages,
+        packages=architecture.packages,
+        entry_points=architecture.entry_points,
+        layers=architecture.layers,
+        hotspots=tuple(
             {"path": hotspot.path, "line_count": hotspot.line_count}
             for hotspot in architecture.hotspots
         ),
-        "modules": tuple(
+        modules=tuple(
             {
                 "name": module.name,
                 "members": module.members,
@@ -77,5 +79,6 @@ def _architecture_payload(architecture: Architecture) -> GetArchitecturePayload:
             }
             for module in architecture.modules
         ),
-        "cluster_source": architecture.cluster_source,
-    }
+        cluster_source=architecture.cluster_source,
+    )
+    return cast("GetArchitecturePayload", cast("object", envelope))

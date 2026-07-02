@@ -23,6 +23,7 @@ _TOP_LEVEL_KEYS = {
     "types",
     "param_aliases",
     "constraints",
+    "next_tools",
 }
 
 

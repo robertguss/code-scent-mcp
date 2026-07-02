@@ -50,6 +50,7 @@ class GuidePayload(TypedDict):
     tool_groups: tuple[GuideToolGroup, ...]
     safety_boundaries: tuple[str, ...]
     tool_count: int
+    next_tools: tuple[str, ...]
 
 
 WORKFLOW: Final[tuple[GuideWorkflowStep, ...]] = (
@@ -193,4 +194,7 @@ def build_guide() -> GuidePayload:
         "tool_groups": tuple(tool_groups),
         "safety_boundaries": SAFETY_BOUNDARIES,
         "tool_count": len(registered),
+        # Terminal discovery tool: an empty next_tools still conforms to the
+        # success envelope (ok:True AND next_tools present).
+        "next_tools": (),
     }

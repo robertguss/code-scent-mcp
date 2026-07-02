@@ -19,7 +19,7 @@ _EXPECTED_TOOL_COUNT = 42  # P2.1+P2.2: finding tools merged away.
 # Conforming tools on the current 42-tool surface (the R4 baseline). Phase-two
 # consolidation updates this alongside the committed baseline; pinning it means a
 # scorer collapse (e.g. R4 -> 0) fails loudly rather than passing `0 <= v <= 1`.
-_EXPECTED_CONFORMING = 29
+_EXPECTED_CONFORMING = 40  # P3.3: wired 11 tools through ok_envelope.
 
 
 @pytest.mark.anyio

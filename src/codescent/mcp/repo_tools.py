@@ -3,10 +3,11 @@ from __future__ import annotations
 import sqlite3
 from contextlib import closing
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, TypedDict
+from typing import TYPE_CHECKING, Final, TypedDict, cast
 
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import build_file_inventory
+from codescent.mcp.finding_payloads import ok_envelope
 from codescent.mcp.session_context import resolve_session_id
 from codescent.services.bootstrap import (
     BootstrapNote,  # noqa: TC001  (runtime: fastmcp builds the TypedDict schema)
@@ -36,6 +37,7 @@ class RepoMapToolPayload(TypedDict):
     top_level: tuple[str, ...]
     entrypoints: tuple[str, ...]
     sample_files: tuple[str, ...]
+    next_tools: tuple[str, ...]
 
 
 class RepoStatusToolPayload(TypedDict):
@@ -50,6 +52,7 @@ class RepoStatusToolPayload(TypedDict):
     git_available: bool
     git_status: str
     warnings: tuple[str, ...]
+    next_tools: tuple[str, ...]
 
 
 class StartTaskToolPayload(TypedDict):
@@ -176,16 +179,17 @@ def get_repo_map(repo: str = ".") -> RepoMapToolPayload:
     config = ConfigService(repo_root).load()
     inventory = build_file_inventory(repo_root, config=config)
 
-    return {
-        "ok": True,
-        "read_only": True,
-        "file_count": len(inventory),
-        "test_file_count": sum(1 for item in inventory if item.is_test),
-        "languages": _language_counts(tuple(item.language for item in inventory)),
-        "top_level": _top_level(tuple(item.path for item in inventory)),
-        "entrypoints": _entrypoints(tuple(item.path for item in inventory)),
-        "sample_files": tuple(item.path for item in inventory[:SAMPLE_FILE_LIMIT]),
-    }
+    envelope = ok_envelope(
+        next_tools=("scan_code_health", "get_repo_status", "search_content"),
+        read_only=True,
+        file_count=len(inventory),
+        test_file_count=sum(1 for item in inventory if item.is_test),
+        languages=_language_counts(tuple(item.language for item in inventory)),
+        top_level=_top_level(tuple(item.path for item in inventory)),
+        entrypoints=_entrypoints(tuple(item.path for item in inventory)),
+        sample_files=tuple(item.path for item in inventory[:SAMPLE_FILE_LIMIT]),
+    )
+    return cast("RepoMapToolPayload", cast("object", envelope))
 
 
 def _task_brief_payload(brief: TaskBrief) -> StartTaskToolPayload:
@@ -225,23 +229,24 @@ def get_repo_status(repo: str = ".") -> RepoStatusToolPayload:
     )
     warnings: tuple[str, ...] = (rescan_hint,) if unresolved else ()
 
-    return {
-        "ok": True,
-        "read_only": True,
-        "index_fresh": (
+    envelope = ok_envelope(
+        next_tools=("scan_code_health", "list_findings", "rescan"),
+        read_only=True,
+        index_fresh=(
             database_path.exists()
             and len(changed_files) == 0
             and len(stored_hashes) == len(inventory_hashes)
         ),
-        "indexed_files": len(stored_hashes),
-        "changed_files": changed_files[:CHANGED_FILE_LIMIT],
-        "finding_count": _finding_count(database_path),
-        "unresolved_finding_count": unresolved,
-        "database_ok": database_path.exists(),
-        "git_available": git_state.available,
-        "git_status": git_state.status,
-        "warnings": warnings,
-    }
+        indexed_files=len(stored_hashes),
+        changed_files=changed_files[:CHANGED_FILE_LIMIT],
+        finding_count=_finding_count(database_path),
+        unresolved_finding_count=unresolved,
+        database_ok=database_path.exists(),
+        git_available=git_state.available,
+        git_status=git_state.status,
+        warnings=warnings,
+    )
+    return cast("RepoStatusToolPayload", cast("object", envelope))
 
 
 def _language_counts(languages: tuple[str, ...]) -> dict[str, int]:

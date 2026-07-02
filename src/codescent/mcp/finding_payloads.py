@@ -144,6 +144,7 @@ class CalibrationToolPayload(TypedDict):
     min_sample_size: int
     rules: tuple[RuleCalibrationItem, ...]
     suppression_candidates: tuple[SuppressionCandidateItem, ...]
+    next_tools: tuple[str, ...]
 
 
 class FindingDetailToolPayload(TypedDict):
@@ -257,6 +258,20 @@ def scan_finding_item(finding: CodeHealthFinding) -> FindingItem:
     }
 
 
+def ok_envelope(
+    *,
+    next_tools: tuple[str, ...],
+    **fields: object,
+) -> dict[str, object]:
+    """Minimal success envelope: ok:True + a next_tools array + the tool's fields.
+
+    The tiny sibling of bounded_finding_list for tools whose payload is a plain,
+    already-bounded dict. Terminal tools pass ``next_tools=()`` -- an empty array
+    still satisfies the success-envelope schema (ok:True AND next_tools present).
+    """
+    return {"ok": True, **fields, "next_tools": next_tools}
+
+
 def bounded_finding_list(  # noqa: PLR0913
     *,
     kind: str,
@@ -327,12 +342,12 @@ def bounded_finding_list(  # noqa: PLR0913
 
 
 def calibration_payload(report: CalibrationReport) -> CalibrationToolPayload:
-    return {
-        "ok": True,
-        "confidence_recalibration": report.confidence_recalibration,
-        "learned_suppression": report.learned_suppression,
-        "min_sample_size": report.min_sample_size,
-        "rules": tuple(
+    envelope = ok_envelope(
+        next_tools=("list_findings", "scan_code_health"),
+        confidence_recalibration=report.confidence_recalibration,
+        learned_suppression=report.learned_suppression,
+        min_sample_size=report.min_sample_size,
+        rules=tuple(
             {
                 "rule_id": rule.rule_id,
                 "base_confidence": rule.base_confidence,
@@ -345,7 +360,7 @@ def calibration_payload(report: CalibrationReport) -> CalibrationToolPayload:
             }
             for rule in report.rules
         ),
-        "suppression_candidates": tuple(
+        suppression_candidates=tuple(
             {
                 "rule_id": candidate.rule_id,
                 "scope": candidate.scope,
@@ -353,7 +368,8 @@ def calibration_payload(report: CalibrationReport) -> CalibrationToolPayload:
             }
             for candidate in report.suppression_candidates
         ),
-    }
+    )
+    return cast("CalibrationToolPayload", cast("object", envelope))
 
 
 def cluster_item(cluster: ImprovementCluster) -> ImprovementClusterItem:

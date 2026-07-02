@@ -10,6 +10,7 @@ from codescent.core.fuzzy import nearest_matches
 from codescent.core.paths import resolve_repo_root
 from codescent.core.preservation import estimate_token_usage
 from codescent.core.symbol_formatter import format_symbol_search_results
+from codescent.mcp.finding_payloads import ok_envelope
 from codescent.mcp.session_context import resolve_session_id
 from codescent.services.cbm_backend import select_graph_backend
 from codescent.services.context import (
@@ -97,6 +98,7 @@ class SymbolContextToolPayload(TypedDict):
     auto_refreshed: bool
     changed_files: tuple[str, ...]
     refresh_error: str | None
+    next_tools: tuple[str, ...]
 
 
 class GraphToolPayload(TypedDict):
@@ -464,20 +466,21 @@ def get_symbol_context(
     repo: str = ".",
 ) -> SymbolContextToolPayload:
     payload = ContextService(repo).get_symbol_context(qualified_name)
-    return {
-        "ok": True,
-        "symbol": payload["symbol"],
-        "likely_tests": payload["likely_tests"],
-        "source_ranges": payload["source_ranges"],
-        "risk_notes": payload["risk_notes"],
-        "warnings": payload["warnings"],
-        "confidence": payload["confidence"],
-        "index_fresh": payload["index_fresh"],
-        "index_was_stale": payload["index_was_stale"],
-        "auto_refreshed": payload["auto_refreshed"],
-        "changed_files": payload["changed_files"],
-        "refresh_error": payload["refresh_error"],
-    }
+    envelope = ok_envelope(
+        next_tools=("explain_finding", "find_references", "plan_refactor"),
+        symbol=payload["symbol"],
+        likely_tests=payload["likely_tests"],
+        source_ranges=payload["source_ranges"],
+        risk_notes=payload["risk_notes"],
+        warnings=payload["warnings"],
+        confidence=payload["confidence"],
+        index_fresh=payload["index_fresh"],
+        index_was_stale=payload["index_was_stale"],
+        auto_refreshed=payload["auto_refreshed"],
+        changed_files=payload["changed_files"],
+        refresh_error=payload["refresh_error"],
+    )
+    return cast("SymbolContextToolPayload", cast("object", envelope))
 
 
 def find_references(

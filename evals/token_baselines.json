@@ -2,31 +2,31 @@
   "repo": "tests/fixtures/python-basic",
   "scenarios": [
     {
+      "scenario": "find_symbol",
       "codescent_tokens": 150,
-      "delta": 215,
       "naive_tokens": 365,
-      "ratio": 0.410959,
-      "scenario": "find_symbol"
+      "delta": 215,
+      "ratio": 0.410959
     },
     {
+      "scenario": "search_content",
       "codescent_tokens": 1119,
-      "delta": 781,
       "naive_tokens": 1900,
-      "ratio": 0.588947,
-      "scenario": "search_content"
+      "delta": 781,
+      "ratio": 0.588947
     },
     {
-      "codescent_tokens": 959,
-      "delta": 941,
+      "scenario": "start_task",
+      "codescent_tokens": 958,
       "naive_tokens": 1900,
-      "ratio": 0.504737,
-      "scenario": "start_task"
+      "delta": 942,
+      "ratio": 0.504211
     }
   ],
   "summary": {
-    "codescent_tokens": 2228,
-    "delta": 1937,
+    "codescent_tokens": 2227,
     "naive_tokens": 4165,
-    "ratio": 0.534934
+    "delta": 1938,
+    "ratio": 0.534694
   }
 }

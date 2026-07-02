@@ -85,6 +85,7 @@ class SchemaPayload(TypedDict):
     param_aliases: tuple[SchemaAlias, ...]
     # The search/grep ``constraints`` DSL prefilter kinds.
     constraints: tuple[SchemaConstraintKind, ...]
+    next_tools: tuple[str, ...]
 
 
 def build_schema() -> SchemaPayload:
@@ -119,6 +120,9 @@ def build_schema() -> SchemaPayload:
             {"token": kind.token, "description": kind.description}
             for kind in CONSTRAINT_KINDS
         ),
+        # Terminal discovery tool: an empty next_tools still conforms to the
+        # success envelope (ok:True AND next_tools present).
+        "next_tools": (),
     }
 
 
