@@ -16,7 +16,11 @@ from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Final
 
 from codescent.core.models import FindingStatus
-from codescent.services.findings import FindingsService, is_test_structural
+from codescent.services.findings import (
+    DEFAULT_MIN_SEVERITY,
+    FindingsService,
+    is_test_structural,
+)
 
 if TYPE_CHECKING:
     from codescent.storage.repositories import FindingRow
@@ -126,10 +130,21 @@ class ImprovementPlan:
 class ImprovementPlanService:
     repo_root: Path | str
 
-    def get_improvement_plan(self) -> ImprovementPlan:
+    def get_improvement_plan(
+        self,
+        *,
+        min_severity: str = DEFAULT_MIN_SEVERITY,
+        include_all: bool = False,
+    ) -> ImprovementPlan:
+        # Inherit the default severity/tier gate at the shared choke (U1): plan
+        # over the actionable headline, not the info/heuristic firehose.
+        report = FindingsService(self.repo_root).get_smell_report(
+            min_severity=min_severity,
+            include_all=include_all,
+        )
         findings = tuple(
             finding
-            for finding in FindingsService(self.repo_root).get_smell_report().findings
+            for finding in report.headline
             if finding.status in _ACTIONABLE_STATUSES
         )
         clusters = _build_clusters(findings)

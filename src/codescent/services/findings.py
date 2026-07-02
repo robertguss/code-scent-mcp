@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, cast
 
+from codescent.core.errors import CodeScentError, ErrorCode, ErrorSeverity
 from codescent.core.models import FindingStatus
 from codescent.services.code_health import CodeHealthScanResult, CodeHealthService
 from codescent.services.git import git_change_counts
@@ -44,11 +45,99 @@ def is_test_structural(rule_id: str, file_path: str) -> bool:
     return rule_id.rsplit(".", maxsplit=1)[-1] in STRUCTURAL_RULE_SUFFIXES
 
 
+# Default finding-view gate (U1). Findings already carry two unused priority
+# axes -- severity (info/warning/error) and confidence_tier (verified/heuristic).
+# The default view surfaces the ACTIONABLE set (severity >= min OR verified tier)
+# as the headline and relegates the info+heuristic mass to a bounded, opt-in
+# tail. This is presentation only: finding_count and stored data are untouched,
+# and include_all / a lower min_severity restores the full set.
+SEVERITY_ORDER: Final[dict[str, int]] = {"info": 0, "warning": 1, "error": 2}
+DEFAULT_MIN_SEVERITY: Final = "warning"
+VALID_MIN_SEVERITIES: Final = ("info", "warning", "error")
+_VERIFIED_TIER: Final = "verified"
+
+
+@dataclass(frozen=True, slots=True)
+class GatedFindings:
+    """A severity/tier partition of one finding set (presentation only)."""
+
+    headline: tuple[FindingRow, ...]
+    deferred: tuple[FindingRow, ...]
+    # True when nothing met the gate, so the full set is surfaced as the headline
+    # rather than hiding everything (an info/heuristic-only repo still shows work).
+    degraded: bool
+
+
+def validate_min_severity(value: str) -> str:
+    """Return ``value`` if it is a valid gate severity, else a recoverable error.
+
+    Keeps the F1 contract green: an invalid ``min_severity`` yields an
+    ``invalid_value`` error carrying ``valid_values`` rather than silently
+    degrading, so an agent can self-correct.
+    """
+    if value not in VALID_MIN_SEVERITIES:
+        raise CodeScentError(
+            code=ErrorCode.INVALID_VALUE,
+            message=f"Invalid min_severity {value!r}.",
+            severity=ErrorSeverity.ERROR,
+            details={"min_severity": value},
+            recovery={
+                "valid_values": list(VALID_MIN_SEVERITIES),
+                "fix_hint": (
+                    "Pass one of info, warning, or error, or set include_all=True."
+                ),
+            },
+        )
+    return value
+
+
+def gate_findings(
+    findings: tuple[FindingRow, ...],
+    *,
+    min_severity: str = DEFAULT_MIN_SEVERITY,
+    include_all: bool = False,
+) -> GatedFindings:
+    """Split findings into the actionable headline and the info/heuristic tail.
+
+    Actionable == severity at or above ``min_severity`` OR a verified-tier
+    finding. ``include_all`` (or ``min_severity='info'``) puts everything in the
+    headline. When no finding meets the gate the whole set becomes the headline
+    with ``degraded=True`` so an info-only repo is never blanked out.
+    """
+    if include_all:
+        return GatedFindings(headline=findings, deferred=(), degraded=False)
+    threshold = SEVERITY_ORDER.get(min_severity, SEVERITY_ORDER[DEFAULT_MIN_SEVERITY])
+    headline: list[FindingRow] = []
+    deferred: list[FindingRow] = []
+    for finding in findings:
+        actionable = (
+            SEVERITY_ORDER.get(finding.severity, 0) >= threshold
+            or finding.confidence_tier == _VERIFIED_TIER
+        )
+        (headline if actionable else deferred).append(finding)
+    if not headline:
+        return GatedFindings(headline=findings, deferred=(), degraded=True)
+    return GatedFindings(
+        headline=tuple(headline),
+        deferred=tuple(deferred),
+        degraded=False,
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class SmellReport:
     findings: tuple[FindingRow, ...]
     open_count: int
     status_counts: dict[str, int]
+    # The default severity/tier gate applied to ``findings`` (U1). ``headline``
+    # is the actionable set every default view leads with; ``deferred`` is the
+    # bounded info/heuristic tail; ``degraded`` marks an info-only fallback.
+    # ``findings`` stays the FULL set so counts are unchanged.
+    headline: tuple[FindingRow, ...] = ()
+    deferred: tuple[FindingRow, ...] = ()
+    degraded: bool = False
+    min_severity: str = DEFAULT_MIN_SEVERITY
+    include_all: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,19 +216,42 @@ class RescanResult:
 class FindingsService:
     repo_root: Path | str
 
-    def get_smell_report(self) -> SmellReport:
+    def get_smell_report(
+        self,
+        *,
+        min_severity: str = DEFAULT_MIN_SEVERITY,
+        include_all: bool = False,
+    ) -> SmellReport:
         findings = _repository(self.repo_root).list_findings()
         counts: dict[str, int] = {}
         for finding in findings:
             counts[finding.status.value] = counts.get(finding.status.value, 0) + 1
+        gated = gate_findings(
+            findings,
+            min_severity=min_severity,
+            include_all=include_all,
+        )
         return SmellReport(
             findings=findings,
             open_count=counts.get(FindingStatus.OPEN.value, 0),
             status_counts=counts,
+            headline=gated.headline,
+            deferred=gated.deferred,
+            degraded=gated.degraded,
+            min_severity=min_severity,
+            include_all=include_all,
         )
 
-    def get_next_improvement(self) -> FindingRow | None:
-        report = self.get_smell_report()
+    def get_next_improvement(
+        self,
+        *,
+        min_severity: str = DEFAULT_MIN_SEVERITY,
+        include_all: bool = False,
+    ) -> FindingRow | None:
+        report = self.get_smell_report(
+            min_severity=min_severity,
+            include_all=include_all,
+        )
         change_counts = git_change_counts(Path(self.repo_root))
         actionable = (
             FindingStatus.REGRESSED,
@@ -147,8 +259,12 @@ class FindingsService:
             FindingStatus.OPEN,
             FindingStatus.IN_PROGRESS,
         )
+        # Select from the gated headline: the severity/tier gate is now the
+        # default recommendation filter, not just a tiebreak. The headline
+        # degrades to the full set when nothing is actionable, so an info-only
+        # repo still yields a next improvement.
         ranked_findings = sorted(
-            report.findings,
+            report.headline,
             key=lambda finding: _finding_priority(finding, change_counts),
         )
         for status in actionable:
@@ -163,19 +279,34 @@ class FindingsService:
                     return finding
         return None
 
-    def get_backlog(self) -> BacklogReport:
-        report = self.get_smell_report()
+    def get_backlog(
+        self,
+        *,
+        min_severity: str = DEFAULT_MIN_SEVERITY,
+        include_all: bool = False,
+    ) -> BacklogReport:
+        report = self.get_smell_report(
+            min_severity=min_severity,
+            include_all=include_all,
+        )
         actionable_statuses = {
             FindingStatus.OPEN,
             FindingStatus.IN_PROGRESS,
             FindingStatus.NEEDS_REVIEW,
             FindingStatus.REGRESSED,
         }
-        finding_ids = tuple(
-            finding.id
-            for finding in report.findings
-            if finding.status in actionable_statuses
-        )
+
+        def _ids(rows: tuple[FindingRow, ...]) -> tuple[str, ...]:
+            return tuple(
+                finding.id
+                for finding in rows
+                if finding.status in actionable_statuses
+            )
+
+        # Inherit the default gate at the same choke: the backlog leads with the
+        # actionable headline, then the info/heuristic tail. Every backlog id is
+        # still present (count unchanged) -- the gate reorders, it does not drop.
+        finding_ids = _ids(report.headline) + _ids(report.deferred)
         return BacklogReport(
             open_count=len(finding_ids),
             status_counts=report.status_counts,

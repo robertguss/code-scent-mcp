@@ -55,7 +55,10 @@ def test_improvement_plan_clusters_by_theme_with_roi_and_effort(tmp_path: Path) 
     repo = _repo(tmp_path)
     _ = CodeHealthService(repo).scan()
 
-    plan = ImprovementPlanService(repo).get_improvement_plan()
+    # include_all: duplicate_literal is info/heuristic and the default gate (U1)
+    # would defer it; this test exercises the clustering/ROI logic over the full
+    # finding set.
+    plan = ImprovementPlanService(repo).get_improvement_plan(include_all=True)
 
     assert plan.total_clusters == len(plan.clusters)
     assert plan.total_findings > 0

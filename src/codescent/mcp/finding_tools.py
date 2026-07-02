@@ -31,7 +31,11 @@ from codescent.mcp.finding_payloads import (
 from codescent.services.calibration import CalibrationService
 from codescent.services.code_health import CodeHealthService
 from codescent.services.explain import ExplainService, FindingExplanation
-from codescent.services.findings import FindingsService
+from codescent.services.findings import (
+    DEFAULT_MIN_SEVERITY,
+    FindingsService,
+    validate_min_severity,
+)
 from codescent.services.improvement_plan import ImprovementPlanService
 from codescent.services.reports import ReportService
 
@@ -66,6 +70,8 @@ if TYPE_CHECKING:
 
     from fastmcp import FastMCP
 
+    from codescent.mcp.finding_payloads import FindingItem
+    from codescent.services.findings import SmellReport
     from codescent.storage.repositories import FindingRow
 
 
@@ -74,6 +80,42 @@ def _status_counts(rows: Iterable[FindingRow]) -> dict[str, int]:
     for finding in rows:
         counts[finding.status.value] = counts.get(finding.status.value, 0) + 1
     return counts
+
+
+def _headline_then_tail(rows: Iterable[FindingRow]) -> tuple[FindingItem, ...]:
+    ordered = sorted(
+        rows,
+        key=lambda finding: (severity_rank(finding.severity), finding.id),
+    )
+    return tuple(finding_payload(finding) for finding in ordered)
+
+
+def _gate_extra(report: SmellReport) -> dict[str, object]:
+    """Surface the default-gate state so an agent can opt into the full set."""
+    deferred = len(report.deferred)
+    notes: list[str] = []
+    if deferred > 0:
+        notes.append(
+            (
+                f"{deferred} lower-severity info/heuristic finding(s) hidden by "
+                "the default gate; call with include_all=True or "
+                "min_severity='info' to include them."
+            ),
+        )
+    if report.degraded:
+        notes.append(
+            (
+                "No actionable (warning+ or verified-tier) findings; showing the "
+                "full set by lowest severity."
+            ),
+        )
+    return {
+        "min_severity": report.min_severity,
+        "include_all": report.include_all,
+        "deferred_count": deferred,
+        "gate_degraded": report.degraded,
+        "gate_notes": tuple(notes),
+    }
 
 
 def register_finding_tools(mcp: FastMCP) -> None:
@@ -87,10 +129,12 @@ def register_finding_tools(mcp: FastMCP) -> None:
     )(scan_code_health)
     _ = mcp.tool(
         description=(
-            "Structured smell report read from local .codescent state: findings "
-            "ranked by severity with bounded inline items and a ctx_ result id "
-            "when findings are omitted. e.g. get_smell_report(repo='.'). "
-            "Read-only for source."
+            "Structured smell report read from local .codescent state. Leads with "
+            "the actionable set (warning+ severity or verified-tier findings); the "
+            "info/heuristic mass is a counted, opt-in tail -- pass include_all=True "
+            "or min_severity='info' for the full set. Bounded inline items with a "
+            "ctx_ result id when omitted; total finding_count is unchanged. e.g. "
+            "get_smell_report(repo='.'). Read-only for source."
         ),
     )(get_smell_report)
     _ = mcp.tool(
@@ -130,10 +174,11 @@ def register_finding_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
             "Deterministic finding backlog (open, in-progress, needs-review, "
-            "regressed) ranked by severity, with bounded inline items and a ctx_ "
-            "result id when items are omitted. Source of finding_ids for "
-            "get_finding, plan_refactor, and mark_finding. e.g. "
-            "get_backlog(repo='.')."
+            "regressed) ranked by severity. Leads with the actionable set by "
+            "default; pass include_all=True or min_severity='info' for the full "
+            "backlog. Bounded inline items with a ctx_ result id when items are "
+            "omitted. Source of finding_ids for get_finding, plan_refactor, and "
+            "mark_finding. e.g. get_backlog(repo='.')."
         ),
     )(get_backlog)
     _ = mcp.tool(
@@ -201,13 +246,22 @@ def scan_code_health(repo: str = ".") -> ScanHealthToolPayload:
     return cast("ScanHealthToolPayload", cast("object", envelope))
 
 
-def get_smell_report(repo: str = ".") -> SmellReportToolPayload:
-    report = FindingsService(repo).get_smell_report()
-    ordered = sorted(
-        report.findings,
-        key=lambda finding: (severity_rank(finding.severity), finding.id),
+def get_smell_report(
+    repo: str = ".",
+    min_severity: str = DEFAULT_MIN_SEVERITY,
+    include_all: bool = False,
+) -> SmellReportToolPayload:
+    min_severity = validate_min_severity(min_severity)
+    report = FindingsService(repo).get_smell_report(
+        min_severity=min_severity,
+        include_all=include_all,
     )
-    records = tuple(finding_payload(finding) for finding in ordered)
+    # Lead with the gated actionable headline, then the info/heuristic tail;
+    # counts stay over the FULL set so finding totals are unchanged, and the
+    # tail is still inline-or-offloaded via bounded_finding_list (never dropped).
+    records = _headline_then_tail(report.headline) + _headline_then_tail(
+        report.deferred,
+    )
     severity_counts, rule_counts = aggregate_counts(
         (finding.severity, finding.rule_id) for finding in report.findings
     )
@@ -225,6 +279,7 @@ def get_smell_report(repo: str = ".") -> SmellReportToolPayload:
         records=records,
         aggregates=aggregates,
         next_tools=("get_next_improvement", "plan_refactor", "retrieve_result"),
+        extra=_gate_extra(report),
     )
     return cast("SmellReportToolPayload", cast("object", envelope))
 
@@ -262,8 +317,16 @@ def _explain_payload(explanation: FindingExplanation) -> ExplainFindingToolPaylo
     }
 
 
-def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
-    finding = FindingsService(repo).get_next_improvement()
+def get_next_improvement(
+    repo: str = ".",
+    min_severity: str = DEFAULT_MIN_SEVERITY,
+    include_all: bool = False,
+) -> NextImprovementToolPayload:
+    min_severity = validate_min_severity(min_severity)
+    finding = FindingsService(repo).get_next_improvement(
+        min_severity=min_severity,
+        include_all=include_all,
+    )
     if finding is None:
         return {
             "ok": True,
@@ -283,13 +346,27 @@ def get_next_improvement(repo: str = ".") -> NextImprovementToolPayload:
     }
 
 
-def get_backlog(repo: str = ".") -> BacklogToolPayload:
-    report = FindingsService(repo).get_smell_report()
-    rows = sorted(
-        (finding for finding in report.findings if finding.status in _BACKLOG_STATUSES),
-        key=lambda finding: (severity_rank(finding.severity), finding.id),
+def get_backlog(
+    repo: str = ".",
+    min_severity: str = DEFAULT_MIN_SEVERITY,
+    include_all: bool = False,
+) -> BacklogToolPayload:
+    min_severity = validate_min_severity(min_severity)
+    report = FindingsService(repo).get_smell_report(
+        min_severity=min_severity,
+        include_all=include_all,
     )
-    records = tuple(finding_payload(finding) for finding in rows)
+    # Inherit the default gate at the shared choke: lead with the actionable
+    # headline, then the info/heuristic tail; every backlog item is still
+    # inline-or-offloaded (the gate reorders, it does not drop).
+    headline_rows = [
+        finding for finding in report.headline if finding.status in _BACKLOG_STATUSES
+    ]
+    deferred_rows = [
+        finding for finding in report.deferred if finding.status in _BACKLOG_STATUSES
+    ]
+    rows = headline_rows + deferred_rows
+    records = _headline_then_tail(headline_rows) + _headline_then_tail(deferred_rows)
     severity_counts, rule_counts = aggregate_counts(
         (finding.severity, finding.rule_id) for finding in rows
     )
@@ -307,12 +384,21 @@ def get_backlog(repo: str = ".") -> BacklogToolPayload:
         records=records,
         aggregates=aggregates,
         next_tools=("get_next_improvement", "retrieve_result"),
+        extra=_gate_extra(report),
     )
     return cast("BacklogToolPayload", cast("object", envelope))
 
 
-def get_improvement_plan(repo: str = ".") -> ImprovementPlanToolPayload:
-    plan = ImprovementPlanService(repo).get_improvement_plan()
+def get_improvement_plan(
+    repo: str = ".",
+    min_severity: str = DEFAULT_MIN_SEVERITY,
+    include_all: bool = False,
+) -> ImprovementPlanToolPayload:
+    min_severity = validate_min_severity(min_severity)
+    plan = ImprovementPlanService(repo).get_improvement_plan(
+        min_severity=min_severity,
+        include_all=include_all,
+    )
     envelope = improvement_plan_payload(plan, repo=repo)
     return cast("ImprovementPlanToolPayload", cast("object", envelope))
 
