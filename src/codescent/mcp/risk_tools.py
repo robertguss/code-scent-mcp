@@ -25,6 +25,7 @@ class RiskFindingToolPayload(TypedDict):
 
 class ChangedFileHealthToolPayload(TypedDict):
     ok: bool
+    file_ok: bool
     path: str
     risk_score: float
     risk_level: str
@@ -96,21 +97,21 @@ def _diff_risk_payload(report: DiffRiskReport) -> DiffRiskToolPayload:
 def _changed_file_health_payload(
     health: ChangedFileHealth,
 ) -> ChangedFileHealthToolPayload:
-    # ok reflects health.ok (a missing/unchanged file is a soft no), so this one
-    # keeps its own ok rather than routing through ok_envelope; next_tools is
-    # still emitted so the success case conforms.
-    return {
-        "ok": health.ok,
-        "path": health.path,
-        "risk_score": health.risk_score,
-        "risk_level": health.risk_level,
-        "finding_ids": tuple(finding.finding_id for finding in health.findings),
-        "findings": tuple(_finding_payload(finding) for finding in health.findings),
-        "suggested_tests": health.suggested_tests,
-        "recommended_commands": health.recommended_commands,
-        "risk_notes": health.risk_notes,
-        "next_tools": ("review_diff_risk", "scan_code_health"),
-    }
+    # ok is transport success (the call ran); the domain verdict (whether the
+    # file had resolvable health data) is its own file_ok field (U4).
+    envelope = ok_envelope(
+        next_tools=("review_diff_risk", "select_tests"),
+        file_ok=health.ok,
+        path=health.path,
+        risk_score=health.risk_score,
+        risk_level=health.risk_level,
+        finding_ids=tuple(finding.finding_id for finding in health.findings),
+        findings=tuple(_finding_payload(finding) for finding in health.findings),
+        suggested_tests=health.suggested_tests,
+        recommended_commands=health.recommended_commands,
+        risk_notes=health.risk_notes,
+    )
+    return cast("ChangedFileHealthToolPayload", cast("object", envelope))
 
 
 def _finding_payload(finding: RiskFinding) -> RiskFindingToolPayload:

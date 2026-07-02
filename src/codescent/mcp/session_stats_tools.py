@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from codescent.core.paths import resolve_repo_root
+from codescent.mcp.finding_payloads import ok_envelope
 from codescent.mcp.session_context import resolve_session_id
 from codescent.services.session_stats import ContextStatsService
 
@@ -36,4 +37,7 @@ def context_stats(
         project_id=resolved_project_id,
         session_id=resolve_session_id(session_id),
     )
-    return stats.to_payload()
+    # Wrap the (previously bare) stats dict in the success envelope so ok means
+    # transport success and next_tools is present (U4). cbm_present_rate and the
+    # rest of to_payload ride through unchanged (ADR-0001 telemetry preserved).
+    return ok_envelope(next_tools=("list_findings",), **stats.to_payload())

@@ -67,6 +67,7 @@ class PreflightModel(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
 
     ok: bool
+    preflight_ok: bool
     target_type: str
     target: str
     file_path: str
@@ -123,7 +124,10 @@ async def test_refactor_preflight_returns_bounded_bundle(tmp_path: Path) -> None
     payload_json = _text_content(result.content)
     payload = PreflightModel.model_validate_json(payload_json)
 
+    # U4: ok is transport success; the preflight pass/fail verdict is its own
+    # field so ok no longer overloads two meanings.
     assert payload.ok is True
+    assert payload.preflight_ok is True
     assert payload.file_path == CORE
     # All four sections are present and carry the real component fields.
     assert CORE in payload.impact.affected_files

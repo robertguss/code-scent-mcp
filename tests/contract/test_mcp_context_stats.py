@@ -42,6 +42,8 @@ class WarningItem(BaseModel):
 class ContextStatsPayload(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
+    ok: bool
+    next_tools: tuple[str, ...]
     session_id: str
     tool_calls: int = Field(ge=0)
     summarized_results: int = Field(ge=0)
@@ -72,6 +74,9 @@ async def test_context_stats_empty_session_returns_zero_payload(tmp_path: Path) 
 
     payload = ContextStatsPayload.model_validate_json(_text_content(result.content))
 
+    # U4: ok means transport success and next_tools is present (was a bare dict).
+    assert payload.ok is True
+    assert payload.next_tools == ("list_findings",)
     assert payload.session_id == "empty-session"
     assert payload.tool_calls == 0
     assert payload.summarized_results == 0

@@ -142,6 +142,7 @@ class PreflightChangedFileHealthPayload(TypedDict):
 
 class RefactorPreflightToolPayload(TypedDict):
     ok: bool
+    preflight_ok: bool
     target_type: str
     target: str
     file_path: str
@@ -414,22 +415,23 @@ def _impact_payload(impact: ImpactReport) -> ImpactToolPayload:
 def _preflight_payload(
     bundle: RefactorPreflightBundle,
 ) -> RefactorPreflightToolPayload:
-    return {
-        "ok": bundle.ok,
-        "target_type": bundle.target_type,
-        "target": bundle.target,
-        "file_path": bundle.file_path,
-        "impact": _impact_payload(bundle.impact),
-        "co_change": tuple(
+    # ok is transport success (the call ran); the preflight pass/fail verdict is
+    # its own preflight_ok field (U4 -- ok no longer overloads two meanings).
+    envelope = ok_envelope(
+        next_tools=bundle.next_tools,
+        preflight_ok=bundle.ok,
+        target_type=bundle.target_type,
+        target=bundle.target,
+        file_path=bundle.file_path,
+        impact=_impact_payload(bundle.impact),
+        co_change=tuple(
             {"path": entry.path, "commits": entry.commits} for entry in bundle.co_change
         ),
-        "test_selection": _select_tests_payload(bundle.test_selection),
-        "changed_file_health": _changed_file_health_payload(
-            bundle.changed_file_health,
-        ),
-        "warnings": bundle.warnings,
-        "next_tools": bundle.next_tools,
-    }
+        test_selection=_select_tests_payload(bundle.test_selection),
+        changed_file_health=_changed_file_health_payload(bundle.changed_file_health),
+        warnings=bundle.warnings,
+    )
+    return cast("RefactorPreflightToolPayload", cast("object", envelope))
 
 
 def _changed_file_health_payload(
