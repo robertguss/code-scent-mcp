@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, cast
 
 from codescent.core.models import ProjectConfig
 from codescent.core.paths import resolve_repo_root
+from codescent.storage import state_path
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -24,21 +25,21 @@ class ConfigService:
 
     def load(self) -> ProjectConfig:
         repo_root = resolve_repo_root(self.repo_root)
-        config_path = repo_root / ".codescent" / "config.toml"
+        config_path = state_path(repo_root, "config.toml")
         if not config_path.exists():
             return ProjectConfig()
         return ProjectConfig.model_validate(_parse_config(config_path))
 
     def save(self, config: ProjectConfig) -> None:
         repo_root = resolve_repo_root(self.repo_root)
-        config_path = repo_root / ".codescent" / "config.toml"
+        config_path = state_path(repo_root, "config.toml")
         config_path.parent.mkdir(parents=True, exist_ok=True)
         _ = config_path.write_text(_render_config(config))
 
     def save_rule_packs(self, rule_packs: tuple[str, ...]) -> ProjectConfig:
         repo_root = resolve_repo_root(self.repo_root)
         config = self.load().model_copy(update={"rule_packs": rule_packs})
-        config_path = repo_root / ".codescent" / "config.toml"
+        config_path = state_path(repo_root, "config.toml")
         config_path.parent.mkdir(parents=True, exist_ok=True)
         if config_path.exists():
             raw = _parse_raw_config(config_path)

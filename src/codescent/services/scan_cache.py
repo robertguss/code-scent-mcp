@@ -33,6 +33,7 @@ from codescent.engine.packs_generic import generic_pack_files
 from codescent.engine.packs_go import go_pack_files
 from codescent.engine.rules.model import CodeHealthFinding
 from codescent.engine.source_read import read_source_bytes
+from codescent.storage import state_path
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -161,7 +162,9 @@ class ScanCache:
 
     @property
     def path(self) -> Path:
-        return self.state_dir / CACHE_FILENAME
+        # Route through the state-write choke point: state_dir is <repo>/.codescent,
+        # so its parent is the repo root (F9 containment invariant).
+        return state_path(self.state_dir.parent, CACHE_FILENAME)
 
     def load(self) -> CachedScan | None:
         try:

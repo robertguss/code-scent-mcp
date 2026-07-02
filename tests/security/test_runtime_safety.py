@@ -13,6 +13,7 @@ import scripts.smoke_lx_data_lake as lx_smoke
 from pydantic import TypeAdapter
 from scripts.prove_source_read_only import prove_source_read_only
 
+from codescent.core.errors import CodeScentError, ErrorCode
 from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.engine.inventory import build_file_inventory
 from codescent.mcp.context_tools import find_symbol
@@ -42,7 +43,7 @@ from codescent.services.subjective_review import (
     SubjectiveReviewService,
 )
 from codescent.smoke.lx_data_lake_contract import JsonValue
-from codescent.storage import RepositoryStorage, initialize_storage
+from codescent.storage import RepositoryStorage, initialize_storage, state_path
 from codescent.storage.repositories import SessionEventRepository
 
 JSON_PAYLOAD = TypeAdapter(dict[str, JsonValue])
@@ -633,3 +634,17 @@ def test_cbm_graph_backend_makes_no_network_requests(
     # cbm absent on this host -> detection stays local and selects native.
     assert select_graph_backend(repo).name() == "native"
     assert attempts == []
+
+
+def test_state_writes_are_contained_under_dot_codescent(tmp_path: Path) -> None:
+    # F9 (U7): the plain-file state-write choke point. A traversal target is
+    # refused at runtime rather than escaping the .codescent sandbox -- the
+    # defense-in-depth twin of the read-only-source eval.
+    # The real writers resolve inside .codescent.
+    ConfigService(tmp_path).save(ProjectConfig())
+    assert (tmp_path / ".codescent" / "config.toml").exists()
+    assert state_path(tmp_path, "config.toml").is_relative_to(tmp_path / ".codescent")
+
+    with pytest.raises(CodeScentError) as excinfo:
+        _ = state_path(tmp_path, "..", "..", "etc", "passwd")
+    assert excinfo.value.code == ErrorCode.PATH_OUTSIDE_ROOT

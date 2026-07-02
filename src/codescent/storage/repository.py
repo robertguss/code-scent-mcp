@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Final
 
 from codescent.core.errors import CodeScentError, ErrorCode, ErrorSeverity
 from codescent.core.paths import resolve_repo_root
+from codescent.storage.paths import state_path
 from codescent.storage.schema import SCHEMA_VERSION, migrate
 
 if TYPE_CHECKING:
@@ -132,8 +133,8 @@ def state_for(repo_root: Path) -> StorageState:
     return StorageState(
         repo_root=repo_root,
         state_dir=state_dir,
-        database_path=state_dir / "index.sqlite",
-        config_path=state_dir / "config.toml",
+        database_path=state_path(repo_root, "index.sqlite"),
+        config_path=state_path(repo_root, "config.toml"),
     )
 
 

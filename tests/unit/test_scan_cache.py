@@ -82,7 +82,8 @@ def test_cache_roundtrip_preserves_tier_and_provenance(tmp_path: Path) -> None:
     )
     assert finding.confidence_tier == "verified"
 
-    cache = ScanCache(tmp_path)
+    # state_dir is the .codescent dir (prod passes StorageState.state_dir).
+    cache = ScanCache(tmp_path / ".codescent")
     cache.store(
         fingerprint="fp",
         file_hashes={"src/pkg/a.py": "h"},
