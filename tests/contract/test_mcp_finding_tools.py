@@ -233,10 +233,11 @@ async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
             },
         )
         detail_result = await client.call_tool(
-            "get_finding",
+            "explain_finding",
             {
                 "repo": str(repo),
                 "finding_id": scan_payload.finding_ids[0],
+                "view": "summary",
             },
         )
         rescan_result = await client.call_tool("rescan", {"repo": str(repo)})
@@ -321,8 +322,8 @@ async def test_explain_score_returns_deterministic_ranking_reasons(
 
     async with Client(mcp) as client:
         result = await client.call_tool(
-            "explain_score",
-            {"repo": str(repo), "finding_id": finding_id},
+            "explain_finding",
+            {"repo": str(repo), "finding_id": finding_id, "view": "score"},
         )
 
     explanation = ScoreExplanationPayload.model_validate_json(
@@ -483,8 +484,8 @@ async def test_explain_score_carries_a_calibration_block(tmp_path: Path) -> None
         )
         finding_id = scan_payload.finding_ids[0]
         result = await client.call_tool(
-            "explain_score",
-            {"repo": str(repo), "finding_id": finding_id},
+            "explain_finding",
+            {"repo": str(repo), "finding_id": finding_id, "view": "score"},
         )
 
     payload = ScoreExplanationModel.model_validate_json(_text_content(result.content))
@@ -570,8 +571,8 @@ async def test_finding_payloads_expose_confidence_tier_and_provenance(
         report_raw = await client.call_tool("list_findings", {"repo": str(repo)})
         scan = ScanToolPayload.model_validate_json(_text_content(scan_raw.content))
         detail_raw = await client.call_tool(
-            "get_finding",
-            {"repo": str(repo), "finding_id": scan.finding_ids[0]},
+            "explain_finding",
+            {"repo": str(repo), "finding_id": scan.finding_ids[0], "view": "summary"},
         )
 
     scan_items = TieredListPayload.model_validate_json(_text_content(scan_raw.content))

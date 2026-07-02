@@ -139,7 +139,7 @@ def test_brief_reconstructs_in_flight_work_and_ledger(tmp_path: Path) -> None:
     _touch(repo, "fix-me", FindingStatus.IN_PROGRESS)  # in-flight, not verified
     _verify(repo, "done-pending", exit_code=0)  # verified via the ledger
     _tool_event(repo, "plan_refactor", "2026-06-13T00:00:00+00:00")
-    _tool_event(repo, "get_finding_context", "2026-06-13T00:00:01+00:00")
+    _tool_event(repo, "explain_finding", "2026-06-13T00:00:01+00:00")
 
     brief = SessionResumeService(repo).resume_task(
         project_id=PROJECT_ID,
@@ -150,7 +150,7 @@ def test_brief_reconstructs_in_flight_work_and_ledger(tmp_path: Path) -> None:
     assert brief.active_findings[0]["id"] == "fix-me"
     assert brief.active_findings[0]["status"] == FindingStatus.IN_PROGRESS.value
     assert brief.status == "in_progress"
-    assert brief.next_tools[0] == "get_finding_context:fix-me"
+    assert brief.next_tools[0] == "explain_finding:fix-me"
     assert "fix-me" in brief.summary
     # The verification ledger surfaces what's already proven.
     assert brief.verified_findings[0]["finding_id"] == "done-pending"
@@ -158,7 +158,7 @@ def test_brief_reconstructs_in_flight_work_and_ledger(tmp_path: Path) -> None:
     # Recently touched files come from findings/ledger activity (both touched).
     assert set(brief.recently_touched_files) == {"src/a.py", "src/b.py"}
     # Recent tool trail is most-recent-first from sanitized session events.
-    assert brief.recent_tools == ("get_finding_context", "plan_refactor")
+    assert brief.recent_tools == ("explain_finding", "plan_refactor")
     # No baseline accepted yet.
     assert brief.ratchet == {"baseline_accepted": False, "baseline_finding_count": 0}
 

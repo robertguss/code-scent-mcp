@@ -162,7 +162,7 @@ async def test_tool_descriptions_name_no_unregistered_sibling() -> None:
 # --------------------------------------------------------------------------- #
 def test_synthetic_dangling_next_tools_target_fails() -> None:
     registered = registered_mcp_tool_names()
-    refs = {"get_finding", "merged_away_tool:status", "removed_tool"}
+    refs = {"explain_finding", "merged_away_tool:status", "removed_tool"}
     assert unresolved_explicit(refs, registered) == {"merged_away_tool", "removed_tool"}
 
 
@@ -170,7 +170,7 @@ def test_synthetic_prompt_naming_removed_tool_fails() -> None:
     vocabulary = known_mcp_tool_names()
     # Pretend a merge moved plan_refactor out of the registered split.
     reduced = registered_mcp_tool_names() - {"plan_refactor"}
-    text = "First call get_finding_context, then plan_refactor for the change."
+    text = "First call explain_finding, then plan_refactor for the change."
     assert unresolved_prose(text, vocabulary, reduced) == {"plan_refactor"}
 
 
@@ -184,5 +184,5 @@ def test_synthetic_description_naming_removed_sibling_fails() -> None:
 
 def test_synthetic_eval_naming_removed_tool_fails() -> None:
     registered = registered_mcp_tool_names()
-    refs = {"search_files", "get_finding_context", "removed_eval_tool"}
+    refs = {"search_files", "explain_finding", "removed_eval_tool"}
     assert unresolved_explicit(refs, registered) == {"removed_eval_tool"}

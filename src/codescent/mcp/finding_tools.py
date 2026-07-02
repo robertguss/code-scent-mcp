@@ -26,6 +26,13 @@ from codescent.mcp.finding_payloads import (
     severity_rank,
     status_from_string,
 )
+
+# U11: explain_finding(view="context") reuses the planning-group context view.
+# planning_tools imports only services, so this stays acyclic.
+from codescent.mcp.planning_tools import (
+    FindingContextToolPayload,
+    get_finding_context,
+)
 from codescent.services.calibration import CalibrationService
 from codescent.services.code_health import CodeHealthService
 from codescent.services.explain import ExplainService, FindingExplanation
@@ -76,6 +83,27 @@ def _validate_list_status(value: str) -> str:
     return value
 
 
+# explain_finding view routing (U11): default "fix" == the current fix-ready
+# explanation; the other views subsume get_finding / explain_score /
+# get_finding_context.
+VALID_EXPLAIN_VIEWS: tuple[str, ...] = ("fix", "summary", "score", "context")
+
+
+def _validate_explain_view(value: str) -> str:
+    if value not in VALID_EXPLAIN_VIEWS:
+        raise CodeScentError(
+            code=ErrorCode.INVALID_VALUE,
+            message=f"Invalid explain view {value!r}.",
+            severity=ErrorSeverity.ERROR,
+            details={"view": value},
+            recovery={
+                "valid_values": list(VALID_EXPLAIN_VIEWS),
+                "fix_hint": "Pass one of fix, summary, score, or context.",
+            },
+        )
+    return value
+
+
 class ExplainFindingToolPayload(TypedDict):
     ok: bool
     finding_id: str
@@ -90,6 +118,15 @@ class ExplainFindingToolPayload(TypedDict):
     snippet: dict[str, str | int]
     snippet_truncated: bool
     next_tools: tuple[str, ...]
+
+
+# U11: explain_finding returns one of four shapes, selected by ``view``.
+ExplainFindingResult = (
+    ExplainFindingToolPayload
+    | FindingDetailToolPayload
+    | ScoreExplanationToolPayload
+    | FindingContextToolPayload
+)
 
 
 if TYPE_CHECKING:
@@ -169,35 +206,22 @@ def register_finding_tools(mcp: FastMCP) -> None:
     )(list_findings)
     _ = mcp.tool(
         description=(
-            "One finding in full: structured evidence, lifecycle history, and "
-            "deterministic score inputs. Pass a finding_id from "
-            "get_next_improvement or list_findings. e.g. "
-            "get_finding(finding_id='python.large_file:cf58...'). Read-only for "
-            "source."
-        ),
-    )(get_finding)
-    _ = mcp.tool(
-        description=(
-            "Deterministic score inputs and ranking reasons for a finding, no "
-            "subjective LLM judgment. Pass a finding_id from get_next_improvement "
-            "or list_findings. e.g. "
-            "explain_score(finding_id='python.long_function:ab12...')."
-        ),
-    )(explain_score)
-    _ = mcp.tool(
-        description=(
-            "One fix-ready explanation of a finding: why it matters (message + "
-            "evidence), the suggested fix, and a bounded source snippet (never "
-            "an unbounded dump). Pass a finding_id from get_next_improvement or "
-            "list_findings. e.g. "
-            "explain_finding(finding_id='python.dead_code_candidate:9f0a...')."
+            "Explain a finding, selected by view (all read-only, all bounded): "
+            "'fix' (default) is the fix-ready explanation -- why it matters, the "
+            "suggested fix, and a bounded source snippet; 'summary' is the finding "
+            "in full (structured evidence + lifecycle history); 'score' is the "
+            "deterministic ranking inputs, no LLM judgment; 'context' is the "
+            "bounded refactor context before reading whole files. Pass a "
+            "finding_id from get_next_improvement or list_findings. e.g. "
+            "explain_finding(finding_id='python.dead_code_candidate:9f0a...', "
+            "view='context')."
         ),
     )(explain_finding)
     _ = mcp.tool(
         description=(
             "Pick the next deterministic improvement from open or regressed "
-            "findings; returns a finding_id that feeds get_finding, "
-            "explain_finding, plan_refactor, and mark_finding. e.g. "
+            "findings; returns a finding_id that feeds explain_finding, "
+            "plan_refactor, and mark_finding. e.g. "
             "get_next_improvement(repo='.')."
         ),
     )(get_next_improvement)
@@ -329,18 +353,26 @@ def _finding_list_envelope(  # noqa: PLR0913 - keyword-only presentation inputs.
     )
 
 
-def get_finding(finding_id: str, repo: str = ".") -> FindingDetailToolPayload:
-    return detail_payload(ReportService(repo).get_finding(finding_id))
-
-
-def explain_score(
+def explain_finding(
     finding_id: str,
     repo: str = ".",
-) -> ScoreExplanationToolPayload:
-    return score_explanation_payload(ReportService(repo).explain_score(finding_id))
+    view: str = "fix",
+) -> ExplainFindingResult:
+    """Merged finding explanation (U11): one view selector over four code paths.
 
-
-def explain_finding(finding_id: str, repo: str = ".") -> ExplainFindingToolPayload:
+    Subsumes the former get_finding/explain_score/get_finding_context. ``view``
+    routes to that tool's payload; default "fix" == the prior explain_finding
+    (why + evidence + fix + bounded snippet). "summary" is the full finding
+    detail, "score" the deterministic ranking inputs, "context" the bounded
+    refactor context.
+    """
+    view = _validate_explain_view(view)
+    if view == "summary":
+        return detail_payload(ReportService(repo).get_finding(finding_id))
+    if view == "score":
+        return score_explanation_payload(ReportService(repo).explain_score(finding_id))
+    if view == "context":
+        return get_finding_context(finding_id, repo)
     return _explain_payload(ExplainService(repo).explain_finding(finding_id))
 
 
@@ -387,7 +419,7 @@ def get_next_improvement(
         "rule_id": finding.rule_id,
         "file_path": finding.file_path,
         "suggested_action": finding.suggested_action,
-        "next_tools": ("get_finding_context", "plan_refactor"),
+        "next_tools": ("explain_finding", "plan_refactor"),
     }
 
 

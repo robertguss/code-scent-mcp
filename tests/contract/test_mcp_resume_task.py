@@ -99,7 +99,7 @@ async def test_resume_task_returns_bounded_brief_with_expected_fields(
     assert payload.next_tools[0] == "mark_finding:fix-me"
     assert payload.verified_findings[0]["finding_id"] == "fix-me"
     assert "src/a.py" in payload.recently_touched_files
-    assert payload.recent_tools == ("get_finding_context",)
+    assert payload.recent_tools == ("explain_finding",)
     # No source content leaks into the bounded brief.
     assert SENTINEL_TEXT not in payload_json
     assert "source_content" not in payload_json
@@ -175,7 +175,7 @@ def _seed_repo_with_progress(repo: Path) -> None:
             project_id="project-a",
             session_id="session-a",
             event_type="tool_called",
-            tool_name="get_finding_context",
+            tool_name="explain_finding",
             payload={"query": SENTINEL_TEXT},
             created_at="2026-06-13T00:00:00+00:00",
         ),

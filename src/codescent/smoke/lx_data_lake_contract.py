@@ -32,7 +32,7 @@ SMOKE_TOOL_CALLS: Final = (
     "get_symbol_context",
     "scan_code_health",
     "list_findings",
-    "get_finding_context",
+    "explain_finding",
     "plan_refactor",
     "suggest_tests",
     "rescan",

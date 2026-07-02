@@ -15,11 +15,11 @@ from codescent.mcp.server import mcp
 if TYPE_CHECKING:
     from pathlib import Path
 
-_EXPECTED_TOOL_COUNT = 45  # P2.1: four finding tools merged into list_findings.
-# Conforming tools on the current 45-tool surface (the R4 baseline). Phase-two
+_EXPECTED_TOOL_COUNT = 42  # P2.1+P2.2: finding tools merged away.
+# Conforming tools on the current 42-tool surface (the R4 baseline). Phase-two
 # consolidation updates this alongside the committed baseline; pinning it means a
 # scorer collapse (e.g. R4 -> 0) fails loudly rather than passing `0 <= v <= 1`.
-_EXPECTED_CONFORMING = 30
+_EXPECTED_CONFORMING = 29
 
 
 @pytest.mark.anyio

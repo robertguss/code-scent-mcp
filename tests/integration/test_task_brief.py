@@ -34,7 +34,7 @@ def test_task_brief_aggregates_focus_path_context_and_findings(
     assert brief.warnings == ()
     assert brief.confidence == "high"
     assert "get_symbol_context:app.x.do_thing" in brief.next_tools
-    assert any(tool.startswith("get_finding_context:") for tool in brief.next_tools)
+    assert any(tool.startswith("explain_finding:") for tool in brief.next_tools)
     assert "select_tests" in brief.next_tools
     assert "TODO" not in str(brief)
     assert len(brief.relevant_files) <= 8

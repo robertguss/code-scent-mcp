@@ -109,7 +109,7 @@ class RefactorPlanningService:
                 source_ranges=(),
                 risk_notes=(no_context_note,),
                 suggested_action=finding.suggested_action,
-                next_tools=("get_finding", "suggest_tests"),
+                next_tools=("explain_finding", "suggest_tests"),
             )
         return FindingContext(
             finding_id=finding.id,

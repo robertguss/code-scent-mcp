@@ -79,7 +79,7 @@ WORKFLOW: Final[tuple[GuideWorkflowStep, ...]] = (
     {
         "step": 5,
         "action": "Gather bounded context for the chosen finding.",
-        "tools": ("get_finding_context", "get_finding", "get_symbol_context"),
+        "tools": ("explain_finding", "get_symbol_context"),
     },
     {
         "step": 6,

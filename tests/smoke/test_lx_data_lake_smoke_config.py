@@ -35,7 +35,7 @@ def test_lx_smoke_uses_required_exclusions(tmp_path: Path) -> None:
         "get_symbol_context",
         "scan_code_health",
         "list_findings",
-        "get_finding_context",
+        "explain_finding",
         "plan_refactor",
         "suggest_tests",
         "rescan",

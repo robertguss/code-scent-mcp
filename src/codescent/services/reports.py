@@ -77,7 +77,7 @@ class ReportService:
             reasons=_score_reasons(finding) + _calibration_reasons(calibration),
             next_steps=(
                 finding.suggested_action,
-                "Use get_finding for evidence before editing source.",
+                "Use explain_finding for evidence before editing source.",
             ),
             subjective=False,
             calibration=_calibration_block(calibration),

@@ -46,7 +46,7 @@ def safe_refactor_finding(repo: str, finding_id: str) -> str:
         (
             f"Repository: {repo}",
             f"Finding id: {finding_id}",
-            "Call get_finding_context, plan_refactor, get_impact, and suggest_tests.",
+            "Call explain_finding, plan_refactor, get_impact, and suggest_tests.",
             "Make the smallest behavior-preserving change and keep fallback simple.",
         ),
     )

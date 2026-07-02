@@ -94,7 +94,7 @@ CONFIG = load_config()
 
     # --- Step 5: record a sanitized tool trail. -----------------------------
     events = SessionEventRepository(RepositoryStorage(initialize_storage(repo)))
-    for index, tool in enumerate(("get_finding_context", "plan_refactor")):
+    for index, tool in enumerate(("explain_finding", "plan_refactor")):
         _ = events.record_event(
             SessionEventWrite(
                 project_id=PROJECT_ID,
@@ -139,8 +139,8 @@ CONFIG = load_config()
     )
     assert worked.file_path in brief.recently_touched_files
 
-    _log("recent tools", expected="get_finding_context first", found=brief.recent_tools)
-    assert brief.recent_tools == ("plan_refactor", "get_finding_context")
+    _log("recent tools", expected="explain_finding first", found=brief.recent_tools)
+    assert brief.recent_tools == ("plan_refactor", "explain_finding")
 
     _log("ratchet accepted", expected=True, found=brief.ratchet["baseline_accepted"])
     assert brief.ratchet["baseline_accepted"] is True

@@ -117,3 +117,55 @@ async def test_explain_finding_e2e_returns_bounded_why_fix_snippet(
     assert any(
         "explain_finding ok=" in record.getMessage() for record in caplog.records
     )
+
+
+# U11: explain_finding(view=) subsumes get_finding / explain_score /
+# get_finding_context. Each view must return that tool's distinguishing shape,
+# and an unknown view must recover rather than crash.
+_VIEW_DISTINGUISHING_KEYS: dict[str, set[str]] = {
+    "fix": {"why", "fix", "snippet"},
+    "summary": {"evidence", "status_history"},
+    "score": {"score_inputs", "reasons"},
+    "context": {"affected_files", "relevant_symbols", "risk_notes"},
+}
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("view", list(_VIEW_DISTINGUISHING_KEYS))
+async def test_explain_finding_view_returns_that_tools_payload(
+    tmp_path: Path,
+    view: str,
+) -> None:
+    repo = _repo_with_dead_code(tmp_path)
+    async with Client(mcp) as client:
+        scan_raw = await client.call_tool("scan_code_health", {"repo": str(repo)})
+        finding_id = _dead_code_finding_id(scan_raw.content)
+        raw = await client.call_tool(
+            "explain_finding",
+            {"repo": str(repo), "finding_id": finding_id, "view": view},
+        )
+
+    payload = cast("dict[str, object]", json.loads(_text_content(raw.content)))
+    assert payload["ok"] is True
+    assert payload["finding_id"] == finding_id
+    assert _VIEW_DISTINGUISHING_KEYS[view] <= set(payload)
+
+
+@pytest.mark.anyio
+async def test_explain_finding_invalid_view_recovers(tmp_path: Path) -> None:
+    repo = _repo_with_dead_code(tmp_path)
+    async with Client(mcp) as client:
+        scan_raw = await client.call_tool("scan_code_health", {"repo": str(repo)})
+        finding_id = _dead_code_finding_id(scan_raw.content)
+        raw = await client.call_tool(
+            "explain_finding",
+            {"repo": str(repo), "finding_id": finding_id, "view": "bogus"},
+            raise_on_error=False,
+        )
+
+    payload = cast("dict[str, object]", json.loads(_text_content(raw.content)))
+    assert payload["ok"] is False
+    assert payload["code"] == "invalid_value"
+    assert payload["recoverable"] is True
+    data = cast("dict[str, object]", payload["data"])
+    assert "fix" in data["valid_values"]  # the default view is offered as valid

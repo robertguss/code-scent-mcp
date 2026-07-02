@@ -91,7 +91,7 @@ class ExplainService:
             fix=finding.suggested_action,
             snippet=snippet,
             snippet_truncated=truncated,
-            next_tools=("get_finding_context", "plan_refactor", "suggest_tests"),
+            next_tools=("plan_refactor", "suggest_tests"),
         )
 
 

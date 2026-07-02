@@ -18,7 +18,7 @@ from codescent.mcp.server import mcp
 if TYPE_CHECKING:
     from pathlib import Path
 
-_EXPECTED_TOOL_COUNT = 45  # P2.1: four finding tools merged into list_findings.
+_EXPECTED_TOOL_COUNT = 42  # P2.1+P2.2: finding tools merged away.
 
 
 @pytest.mark.anyio

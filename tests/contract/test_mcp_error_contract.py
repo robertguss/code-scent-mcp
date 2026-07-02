@@ -125,7 +125,7 @@ async def test_unknown_finding_returns_bounded_available_ids(tmp_path: Path) -> 
     async with Client(mcp) as client:
         _ = await client.call_tool("scan_code_health", {"repo": str(repo)})
         result = await client.call_tool(
-            "get_finding",
+            "explain_finding",
             {"repo": str(repo), "finding_id": "does-not-exist"},
             raise_on_error=False,
         )
@@ -145,7 +145,7 @@ async def test_finding_id_sample_is_bounded(tmp_path: Path) -> None:
     async with Client(mcp) as client:
         _ = await client.call_tool("scan_code_health", {"repo": str(repo)})
         result = await client.call_tool(
-            "get_finding",
+            "explain_finding",
             {"repo": str(repo), "finding_id": "nope"},
             raise_on_error=False,
         )

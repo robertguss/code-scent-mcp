@@ -107,8 +107,8 @@ async def test_planning_tools_are_bounded_and_do_not_execute(tmp_path: Path) -> 
     async with Client(mcp) as client:
         tools = await client.list_tools()
         context_result = await client.call_tool(
-            "get_finding_context",
-            {"repo": str(repo), "finding_id": finding_id},
+            "explain_finding",
+            {"repo": str(repo), "finding_id": finding_id, "view": "context"},
         )
         plan_result = await client.call_tool(
             "plan_refactor",
@@ -125,7 +125,7 @@ async def test_planning_tools_are_bounded_and_do_not_execute(tmp_path: Path) -> 
 
     tool_names = {tool.name for tool in tools}
     assert {
-        "get_finding_context",
+        "explain_finding",
         "plan_refactor",
         "suggest_tests",
         "select_tests",

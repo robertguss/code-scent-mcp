@@ -149,7 +149,7 @@ def _recovery_cases(
     """The four malformed-input calls and the recovery each must carry (AE4)."""
     return (
         (
-            "get_finding",
+            "explain_finding",
             {"repo": str(repo), "finding_id": "does-not-exist"},
             ErrorCode.NOT_FOUND,
             "available_options",

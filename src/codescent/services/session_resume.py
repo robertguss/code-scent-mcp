@@ -219,7 +219,7 @@ def _recommend(
                 "verification but is not resolved; mark it resolved."
             ),
             _dedupe_cap(
-                (f"mark_finding:{finding_id}", f"get_finding_context:{finding_id}"),
+                (f"mark_finding:{finding_id}", f"explain_finding:{finding_id}"),
                 NEXT_TOOL_LIMIT,
             ),
         )
@@ -232,7 +232,7 @@ def _recommend(
         ),
         _dedupe_cap(
             (
-                f"get_finding_context:{finding_id}",
+                f"explain_finding:{finding_id}",
                 f"plan_refactor:{finding_id}",
                 "record_verification",
             ),

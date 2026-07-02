@@ -244,7 +244,7 @@ def _next_tools(
     if relevant_symbols:
         candidates.append(f"get_symbol_context:{relevant_symbols[0]}")
     if open_findings:
-        candidates.append(f"get_finding_context:{open_findings[0]['id']}")
+        candidates.append(f"explain_finding:{open_findings[0]['id']}")
     candidates.append("select_tests")
     if not has_results:
         candidates.extend(("search_files", "search_content", "get_repo_map"))

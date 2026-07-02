@@ -13,7 +13,7 @@ from codescent.mcp.server import mcp
 # value is the set of acceptable source phrases (any one suffices). Asserted on
 # this subset only, per the plan, to avoid brittle whole-surface matching.
 ID_SOURCE_REQUIREMENTS: dict[str, tuple[str, ...]] = {
-    "get_finding": ("get_next_improvement", "list_findings"),
+    "explain_finding": ("get_next_improvement", "list_findings"),
     "get_symbol_context": ("find_symbol",),
     "plan_refactor": ("get_next_improvement", "list_findings"),
     "get_impact": ("find_symbol", "get_next_improvement", "list_findings"),
@@ -48,9 +48,6 @@ MVP_TOOL_NAMES = {
     "get_symbol_context",
     "scan_code_health",
     "list_findings",
-    "get_finding_context",
-    "get_finding",
-    "explain_score",
     "explain_finding",
     "get_improvement_plan",
     "get_calibration",

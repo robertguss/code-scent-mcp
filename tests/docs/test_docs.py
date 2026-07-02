@@ -63,7 +63,6 @@ MVP_TOOLS = {
     "get_symbol_context",
     "scan_code_health",
     "list_findings",
-    "get_finding_context",
     "get_next_improvement",
     "plan_refactor",
     "suggest_tests",

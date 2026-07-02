@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 # The exact next_tools tuple each spine tool must emit (the audit's F6 spec).
 EXPECTED_EDGES: dict[str, tuple[str, ...]] = {
-    "get_next_improvement": ("get_finding_context", "plan_refactor"),
+    "get_next_improvement": ("explain_finding", "plan_refactor"),
     "plan_refactor": ("suggest_tests", "get_impact"),
     "suggest_tests": ("verify_change",),
     "verify_change": ("record_verification", "mark_finding"),
@@ -36,7 +36,11 @@ def _loop_calls(repo: Path, finding_id: str) -> dict[str, dict[str, object]]:
         "scan_code_health": {"repo": str(repo)},
         "list_findings": {"repo": str(repo)},
         "get_next_improvement": {"repo": str(repo)},
-        "get_finding_context": {"repo": str(repo), "finding_id": finding_id},
+        "explain_finding": {
+            "repo": str(repo),
+            "finding_id": finding_id,
+            "view": "context",
+        },
         "plan_refactor": {"repo": str(repo), "finding_id": finding_id},
         "suggest_tests": {"repo": str(repo), "finding_id": finding_id},
         "verify_change": {"repo": str(repo), "finding_id": finding_id},

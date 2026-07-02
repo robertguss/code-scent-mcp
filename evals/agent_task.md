@@ -12,7 +12,7 @@ The transcript must show these CodeScent MCP tool calls in order:
 
 1. `scan_code_health` on `tests/fixtures/python-basic`.
 2. `get_next_improvement` to select one fixture finding.
-3. `get_finding_context` for the selected finding.
+3. `explain_finding` (view `context`) for the selected finding.
 4. `plan_refactor` for a behavior-preserving change plan.
 5. `suggest_tests` for verification commands.
 6. `rescan` after the agent has described the planned change outcome.
@@ -44,7 +44,7 @@ Pass criteria:
 
 - all required CodeScent tool calls are present in the transcript;
 - the selected finding comes from `scan_code_health` or `get_next_improvement`;
-- `get_finding_context` is used before `plan_refactor`;
+- `explain_finding` is used before `plan_refactor`;
 - `suggest_tests` is called before the final status decision;
 - `rescan` evidence is present before `mark_finding`;
 - the transcript is artifact-backed and stored at

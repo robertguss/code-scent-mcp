@@ -7,7 +7,7 @@ RUNBOOK = ROOT / "scripts" / "run_agent_eval.md"
 REQUIRED_TOOL_CALLS = {
     "scan_code_health",
     "get_next_improvement",
-    "get_finding_context",
+    "explain_finding",
     "plan_refactor",
     "suggest_tests",
     "rescan",

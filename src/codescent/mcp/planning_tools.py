@@ -168,13 +168,9 @@ class VerifyRefactorToolPayload(TypedDict):
 
 
 def register_planning_tools(mcp: FastMCP) -> None:
-    _ = mcp.tool(
-        description=(
-            "Bounded finding context before reading whole files; read-only for "
-            "source. Pass a finding_id from get_next_improvement or list_findings. "
-            "e.g. get_finding_context(finding_id='python.large_file:cf58...')."
-        ),
-    )(get_finding_context)
+    # U11: get_finding_context is no longer a standalone tool -- it is the
+    # explain_finding(view="context") code path. The function stays as the
+    # shared implementation that explain_finding calls.
     _ = mcp.tool(
         description=(
             "Safe refactor plan for a finding: goal, non-goals, risks, "
@@ -498,5 +494,5 @@ def _verify_refactor_payload(result: VerifyResult) -> VerifyRefactorToolPayload:
         "removed_symbols": result.removed_symbols,
         "changed_symbols": result.changed_symbols,
         "confidence": result.confidence,
-        "next_tools": ("get_finding_context", "suggest_tests", "rescan"),
+        "next_tools": ("explain_finding", "suggest_tests", "rescan"),
     }

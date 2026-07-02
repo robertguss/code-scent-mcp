@@ -53,19 +53,19 @@
   },
   {
     "task": "get the details of a specific finding by its id",
-    "intended_tool": "get_finding",
+    "intended_tool": "explain_finding",
     "cluster": "findings",
     "confusable_with": [
-      "get_finding_context",
-      "list_findings"
+      "list_findings",
+      "get_symbol_context"
     ]
   },
   {
     "task": "get the full context around a finding so I can fix it",
-    "intended_tool": "get_finding_context",
+    "intended_tool": "explain_finding",
     "cluster": "findings",
     "confusable_with": [
-      "get_finding",
+      "list_findings",
       "get_file_context"
     ]
   },

@@ -426,7 +426,7 @@ def improvement_plan_payload(
         "retrieval_available": result_id is not None,
         "retrieval_hints": retrieval_hints,
         "warnings": warnings,
-        "next_tools": ("get_finding_context", "plan_refactor", "get_next_improvement"),
+        "next_tools": ("explain_finding", "plan_refactor", "get_next_improvement"),
     }
 
 
