@@ -194,6 +194,12 @@
       "file": "src/codescent/services/cbm_backend.py",
       "symbol": null
     },
+    "python.large_file:119c280ffe29": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/services/search_support.py",
+      "symbol": null
+    },
     "python.large_file:89758191154e": {
       "rule_id": "python.large_file",
       "severity": "warning",

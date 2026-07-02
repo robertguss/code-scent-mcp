@@ -54,6 +54,58 @@ class GitState:
 
 
 @dataclass(frozen=True, slots=True)
+class GitWorkingState:
+    """Git availability + working-tree changed paths from ONE ``git status`` pass.
+
+    The ranking hot path needs both signals per query; running a separate
+    ``git status`` for availability (:func:`detect_git_state`) and another for
+    the changed set (:func:`git_changed_paths`) — plus a duplicate of the latter
+    — is three subprocesses for data one porcelain pass already carries.
+    ``available`` mirrors :func:`detect_git_state`'s ``.available`` (the command
+    ran); ``changed_paths`` mirrors :func:`git_changed_paths`.
+    """
+
+    available: bool
+    changed_paths: frozenset[str]
+
+
+def git_working_state(repo_root: Path) -> GitWorkingState:
+    """Collapse availability + changed-path detection into one ``git status``."""
+    if not (repo_root / ".git").exists():
+        return GitWorkingState(available=False, changed_paths=frozenset())
+
+    git_path = which("git")
+    if git_path is None:
+        return GitWorkingState(available=False, changed_paths=frozenset())
+
+    try:
+        result = subprocess.run(
+            [
+                git_path,
+                "-C",
+                str(repo_root),
+                "status",
+                "--porcelain",
+                "--untracked-files=all",
+                "--",
+                ".",
+                ":(exclude).codescent",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=GIT_STATUS_TIMEOUT_SECONDS,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return GitWorkingState(available=False, changed_paths=frozenset())
+
+    return GitWorkingState(
+        available=True,
+        changed_paths=frozenset(_parse_git_status_paths(result.stdout)),
+    )
+
+
+@dataclass(frozen=True, slots=True)
 class FileAuthorChurn:
     """Per-file authorship concentration from one ``git log`` pass.
 
@@ -103,35 +155,7 @@ def detect_git_state(repo_root: Path) -> GitState:
 
 
 def git_changed_paths(repo_root: Path) -> frozenset[str]:
-    if not (repo_root / ".git").exists():
-        return frozenset()
-
-    git_path = which("git")
-    if git_path is None:
-        return frozenset()
-
-    try:
-        result = subprocess.run(
-            [
-                git_path,
-                "-C",
-                str(repo_root),
-                "status",
-                "--porcelain",
-                "--untracked-files=all",
-                "--",
-                ".",
-                ":(exclude).codescent",
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=GIT_STATUS_TIMEOUT_SECONDS,
-        )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        return frozenset()
-
-    return frozenset(_parse_git_status_paths(result.stdout))
+    return git_working_state(repo_root).changed_paths
 
 
 def git_untracked_paths(repo_root: Path) -> frozenset[str]:

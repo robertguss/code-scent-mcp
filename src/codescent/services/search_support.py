@@ -16,7 +16,11 @@ from codescent.engine.search.ranking import (
 )
 from codescent.engine.source_read import read_source_lines
 from codescent.services.config import ConfigService
-from codescent.services.git import detect_git_state, git_changed_paths
+from codescent.services.git import (
+    detect_git_state,
+    git_changed_paths,
+    git_working_state,
+)
 from codescent.services.quality_signals import QualityAnnotation, quality_signals_for
 from codescent.storage import RepositoryStorage, initialize_storage
 
@@ -130,11 +134,26 @@ def ranking_signals_for(repo_root: Path) -> RankingSignals:
 
     Shared by search, ``get_related_files`` and the task brief so every surface
     floats the same recently/frequently-touched and git-modified files.
+
+    Collapses the per-query git + storage work: one ``git status`` pass feeds
+    both the ``changed`` and ``git_modified`` signals (instead of three
+    subprocesses), and one sqlite connection reads both the frecency and the
+    stored-hash rows (instead of two opens).
     """
-    frecency, recent_queries = _frecency_pass(repo_root, datetime.now(UTC))
+    git_state = git_working_state(repo_root)
+    frecency_rows, stored_hashes = _index_signals(repo_root)
+    frecency, recent_queries = _fold_frecency(frecency_rows, datetime.now(UTC))
+    changed = frozenset(
+        changed_file_reasons(
+            repo_root,
+            git_paths=git_state.changed_paths,
+            git_available=git_state.available,
+            stored_hashes=stored_hashes,
+        ),
+    )
     return RankingSignals(
-        changed=changed_files(repo_root),
-        git_modified=git_changed_paths(repo_root),
+        changed=changed,
+        git_modified=git_state.changed_paths,
         frecency=frecency,
         recent_queries=recent_queries,
         quality=quality_signals_for(repo_root),
@@ -191,10 +210,17 @@ def _frecency_pass(
     repo_root: Path,
     reference: datetime,
 ) -> tuple[dict[str, float], frozenset[str]]:
+    return _fold_frecency(_frecency_rows(repo_root), reference)
+
+
+def _fold_frecency(
+    rows: list[tuple[str, float, str]],
+    reference: datetime,
+) -> tuple[dict[str, float], frozenset[str]]:
     # One aged-rows pass feeding both the frecency map and the recent-query set.
     scores: dict[str, float] = {}
     recent: set[str] = set()
-    for path, weight, updated_at in _frecency_rows(repo_root):
+    for path, weight, updated_at in rows:
         recorded = _parse_timestamp(updated_at)
         if recorded is None:
             continue
@@ -205,18 +231,32 @@ def _frecency_pass(
     return scores, frozenset(recent)
 
 
-def _frecency_rows(repo_root: Path) -> list[tuple[str, float, str]]:
+def _index_signals(
+    repo_root: Path,
+) -> tuple[list[tuple[str, float, str]], dict[str, str]]:
+    """Read frecency rows + stored file hashes in ONE sqlite connection.
+
+    The ranking hot path needs both; opening the index twice per query is pure
+    overhead. A missing or corrupt store yields neutral empties, never a crash.
+    """
     database_path = repo_root / ".codescent" / "index.sqlite"
     if not database_path.exists():
-        return []
+        return [], {}
     try:
         with closing(sqlite3.connect(database_path)) as connection:
-            rows: list[tuple[str, float, str]] = connection.execute(
+            frecency_rows: list[tuple[str, float, str]] = connection.execute(
                 "select path, weight, updated_at from frecency_signals",
             ).fetchall()
+            stored_hashes: dict[str, str] = dict(
+                connection.execute("select path, hash from files").fetchall(),
+            )
     except sqlite3.DatabaseError:
-        return []
-    return rows
+        return [], {}
+    return frecency_rows, stored_hashes
+
+
+def _frecency_rows(repo_root: Path) -> list[tuple[str, float, str]]:
+    return _index_signals(repo_root)[0]
 
 
 def _decayed_weight(weight: float, age_seconds: float) -> float:
@@ -240,21 +280,35 @@ def query_signal(query: str) -> str:
     return f"search:{digest}"
 
 
-def changed_files(repo_root: Path) -> frozenset[str]:
-    return frozenset(changed_file_reasons(repo_root))
+def changed_file_reasons(
+    repo_root: Path,
+    *,
+    git_paths: frozenset[str] | None = None,
+    git_available: bool | None = None,
+    stored_hashes: dict[str, str] | None = None,
+) -> dict[str, tuple[str, ...]]:
+    """Per-path change reasons; precomputed git/storage state is reused if given.
 
-
-def changed_file_reasons(repo_root: Path) -> dict[str, tuple[str, ...]]:
+    ``git_paths``/``git_available``/``stored_hashes`` let the ranking hot path
+    supply the results of its single ``git status`` pass and single index read
+    so this does not re-shell git or re-open the index. Standalone callers omit
+    them and this computes each itself (unchanged behavior).
+    """
     config = ConfigService(repo_root).load()
     inventory_hashes = {
         item.path: item.hash for item in build_file_inventory(repo_root, config=config)
     }
     inventory_paths = frozenset(inventory_hashes)
-    git_paths = git_changed_paths(repo_root) & inventory_paths
+    if git_paths is None:
+        git_paths = git_changed_paths(repo_root)
+    git_paths = git_paths & inventory_paths
+    if git_available is None:
+        git_available = detect_git_state(repo_root).available
     index_paths = index_changed_files(
         repo_root,
         inventory_hashes,
-        include_unindexed=not detect_git_state(repo_root).available,
+        include_unindexed=not git_available,
+        stored_hashes=stored_hashes,
     )
     reasons: dict[str, tuple[str, ...]] = {}
     for path in sorted(git_paths | index_paths):
@@ -272,11 +326,13 @@ def index_changed_files(
     inventory_hashes: dict[str, str],
     *,
     include_unindexed: bool,
+    stored_hashes: dict[str, str] | None = None,
 ) -> frozenset[str]:
-    database_path = repo_root / ".codescent" / "index.sqlite"
-    if not database_path.exists():
-        return frozenset(inventory_hashes) if include_unindexed else frozenset()
-    stored_hashes = stored_hashes_for(database_path)
+    if stored_hashes is None:
+        database_path = repo_root / ".codescent" / "index.sqlite"
+        if not database_path.exists():
+            return frozenset(inventory_hashes) if include_unindexed else frozenset()
+        stored_hashes = stored_hashes_for(database_path)
     if not stored_hashes:
         return frozenset(inventory_hashes) if include_unindexed else frozenset()
     changed = {
