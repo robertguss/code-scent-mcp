@@ -53,6 +53,35 @@ def test_answer_pack_enforces_token_budget(tmp_path: Path) -> None:
     assert _item_count(bounded) < _item_count(full)
 
 
+def test_answer_pack_query_over_budget_reports_honestly(tmp_path: Path) -> None:
+    # f5gn: when the query alone exceeds the budget, trimming every contributor
+    # still cannot fit it. The pack must report that honestly (bypass the false
+    # "fit" claim) and still fetch the full set BEFORE trimming (retrievable).
+    repo = _wide_repo(tmp_path)
+    long_query = "mod " * 40  # its token floor alone exceeds the tiny budget below
+    budget = 3
+
+    pack = AnswerPackService(repo).answer_pack(long_query, budget=budget)
+
+    assert pack.truncated is True
+    # Honest reporting: the pack does not pretend to fit a budget it cannot.
+    assert pack.estimated_tokens > budget
+    assert any("query alone exceeds the token budget" in note for note in pack.warnings)
+    # The misleading "no context found" note must NOT fire on a budget-trimmed pack.
+    assert not any("no answer pack context" in note for note in pack.warnings)
+
+    # fetch-before-trim: the handle resolves to the full untrimmed set.
+    assert pack.result_id is not None
+    retrieved = ResultStoreService(repo).retrieve_result(
+        pack.result_id,
+        mode="exact",
+        limit=100,
+    )
+    stored = retrieved["items"][0]
+    assert isinstance(stored, dict)
+    assert stored["top_files"]  # the full set was stored despite the trim to empty
+
+
 def test_answer_pack_handle_expands_to_full_set_without_rerunning(
     tmp_path: Path,
 ) -> None:

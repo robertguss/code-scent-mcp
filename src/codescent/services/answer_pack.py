@@ -52,9 +52,22 @@ class AnswerPackService:
         parts = self._compose(repo_root, context, query, focus_path)
         full_tokens = estimate_tokens(serialize_contributors(query, parts))
         if budget is not None and full_tokens > budget:
+            # Fetch (store) the full set BEFORE trimming so the handle always
+            # resolves to the untrimmed pack, even when trimming can't fit budget.
             result_id = store_full(repo_root, query, parts, full_tokens)
             fit_budget(query, parts, budget, full_tokens=full_tokens)
-            return to_pack(query, parts, result_id=result_id, truncated=True)
+            # Query-over-budget bypass: when the query alone exceeds the budget,
+            # trimming every contributor still can't fit it. Report that honestly
+            # (precomputed_tokens reflects reality) instead of a false "fit" claim.
+            fitted_tokens = estimate_tokens(serialize_contributors(query, parts))
+            return to_pack(
+                query,
+                parts,
+                result_id=result_id,
+                truncated=True,
+                precomputed_tokens=fitted_tokens,
+                budget_exceeded=fitted_tokens > budget,
+            )
         return to_pack(
             query,
             parts,

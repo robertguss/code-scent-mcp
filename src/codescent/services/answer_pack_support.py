@@ -148,13 +148,14 @@ def _drop_last(parts: Contributors) -> bool:
     return False
 
 
-def to_pack(
+def to_pack(  # noqa: PLR0913 - keyword-only budget/truncation presentation flags.
     query: str,
     parts: Contributors,
     *,
     result_id: str | None,
     truncated: bool,
     precomputed_tokens: int | None = None,
+    budget_exceeded: bool = False,
 ) -> AnswerPack:
     estimated = (
         precomputed_tokens
@@ -171,7 +172,12 @@ def to_pack(
         result_id=result_id,
         truncated=truncated,
         estimated_tokens=estimated,
-        warnings=_warnings(parts, truncated=truncated, result_id=result_id),
+        warnings=_warnings(
+            parts,
+            truncated=truncated,
+            result_id=result_id,
+            budget_exceeded=budget_exceeded,
+        ),
     )
 
 
@@ -180,14 +186,22 @@ def _warnings(
     *,
     truncated: bool,
     result_id: str | None,
+    budget_exceeded: bool,
 ) -> tuple[str, ...]:
     notes: list[str] = []
-    if not _has_content(parts):
+    # Only flag "no context" when the pack is genuinely empty (no results) --
+    # not when the budget trimmed every contributor away (context existed).
+    if not _has_content(parts) and not truncated:
         notes.append("no answer pack context found; broaden the query or run a scan")
     if truncated and result_id is not None:
-        notes.append(
-            f"answer pack truncated to fit budget; expand the full set via {result_id}",
+        # Query-over-budget: even a fully-trimmed pack cannot fit the budget, so
+        # say so plainly rather than claiming a fit; otherwise it did fit.
+        reason = (
+            "query alone exceeds the token budget"
+            if budget_exceeded
+            else "truncated to fit budget"
         )
+        notes.append(f"answer pack {reason}; expand the full set via {result_id}")
     return tuple(notes)
 
 
