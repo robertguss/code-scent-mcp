@@ -36,6 +36,13 @@ _DEADLINE_SECONDS: Final = 1.5
 # Marker that a repo is onboarded; its presence gates all hook work (R16/AE4).
 _INDEX_DB: Final = Path(".codescent") / "index.sqlite"
 
+# Debounce window for the async reindex hook: a burst of rapid edits fires many
+# PostToolUse hooks, each an independent hash-diff scan. Coalesce them by
+# skipping a reindex when one started within this window (jtuz). The stamp is an
+# mtime on a file in .codescent/, so it works across the separate hook processes.
+_REINDEX_STAMP: Final = Path(".codescent") / ".reindex-stamp"
+_REINDEX_DEBOUNCE_SECONDS: Final = 2.0
+
 
 @contextlib.contextmanager
 def _deadline(seconds: float) -> Generator[None]:
@@ -162,6 +169,12 @@ def _run_hook_reindex() -> None:
     if not (repo_root / _INDEX_DB).exists():
         return
 
+    # Debounce a burst of rapid edits: if a reindex started within the window,
+    # skip this one (jtuz). Hash-diff is idempotent, so a later trigger still
+    # picks up every touched file; we only drop the redundant intermediate scans.
+    if not _claim_reindex_slot(repo_root / _REINDEX_STAMP):
+        return
+
     from codescent.services.repo_index import (  # noqa: PLC0415 - lazy (R20)
         RepoIndexService,
     )
@@ -169,6 +182,24 @@ def _run_hook_reindex() -> None:
     # Incremental by hash diff — covers both the session-start pass and the
     # per-edit touched-file pass; the specific edited path needs no special case.
     _ = RepoIndexService(repo_root).index_repo(full=False)
+
+
+def _claim_reindex_slot(stamp: Path) -> bool:
+    """Return True when this process should reindex, stamping the debounce window.
+
+    Skips (returns False) when a reindex started within ``_REINDEX_DEBOUNCE_SECONDS``.
+    Any stat/write failure falls through to ``True`` so a debounce hiccup never
+    suppresses indexing.
+    """
+    import time  # noqa: PLC0415 - lazy so a cold hook import stays cheap (R20)
+
+    with contextlib.suppress(OSError):
+        age = time.time() - stamp.stat().st_mtime
+        if 0 <= age < _REINDEX_DEBOUNCE_SECONDS:
+            return False
+    with contextlib.suppress(OSError):
+        stamp.touch()
+    return True
 
 
 def _settings_path(*, is_global: bool) -> Path:

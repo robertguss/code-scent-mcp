@@ -5,12 +5,17 @@ when one does not (R16), and never surface an error to the agent.
 """
 
 import json
+import os
 import shutil
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
+from codescent.cli.hooks import (
+    _REINDEX_DEBOUNCE_SECONDS,  # pyright: ignore[reportPrivateUsage]
+    _claim_reindex_slot,  # pyright: ignore[reportPrivateUsage]
+)
 from codescent.cli.main import app
 from codescent.services.repo_index import RepoIndexService
 from codescent.services.search_support import stored_hashes_for
@@ -86,3 +91,21 @@ def test_reindex_swallows_errors(
     result = _invoke(str(repo))
 
     assert result.exit_code == 0
+
+
+def test_reindex_debounces_rapid_bursts(tmp_path: Path) -> None:
+    # jtuz: a reindex within the debounce window is skipped; one outside it runs.
+    stamp = tmp_path / ".codescent" / ".reindex-stamp"
+    stamp.parent.mkdir(parents=True)
+
+    # No stamp yet -> claim the slot and record the window.
+    assert _claim_reindex_slot(stamp) is True
+    assert stamp.exists()
+
+    # A second hook fires immediately (still inside the window) -> skip.
+    assert _claim_reindex_slot(stamp) is False
+
+    # Age the stamp past the window -> the next reindex is allowed again.
+    old = stamp.stat().st_mtime - (_REINDEX_DEBOUNCE_SECONDS + 1.0)
+    os.utime(stamp, (old, old))
+    assert _claim_reindex_slot(stamp) is True
