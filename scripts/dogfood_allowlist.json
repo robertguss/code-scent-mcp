@@ -20,6 +20,12 @@
       "file": "src/codescent/core/models.py",
       "symbol": null
     },
+    "python.large_file:6b526b96294f": {
+      "rule_id": "python.large_file",
+      "severity": "warning",
+      "file": "src/codescent/core/public_surface.py",
+      "symbol": null
+    },
     "python.large_function:188a614b06ff": {
       "rule_id": "python.large_function",
       "severity": "warning",

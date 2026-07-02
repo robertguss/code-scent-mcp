@@ -175,6 +175,21 @@ LOCKED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = (
     POST_MVP_MCP_TOOL_NAMES - REGISTERED_POST_MVP_MCP_TOOL_NAMES
 )
 
+# Tool names deliberately ABSENT from the runtime surface: proposed-then-cut or
+# merged-away tools. The dangling-reference guard (R14) treats any of these
+# appearing in next_tools targets, prompt bodies, tool-description prose, or the
+# eval seed docs as a hard build failure. A surface merge that removes a tool
+# moves its name here; that single frozenset edit is the source of truth the
+# guard keys on, so no shim is needed for the hard break.
+ABSENT_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
+    {
+        "project_guidance",
+        "project_learnings",
+        "compress_generic_output",
+        "retrieve_original_output",
+    },
+)
+
 MVP_CLI_COMMAND_NAMES: Final[frozenset[str]] = frozenset(
     {"init", "serve", "index", "scan", "status", "doctor"},
 )
@@ -278,3 +293,13 @@ def locked_mcp_tool_names() -> frozenset[str]:
     return frozenset(
         entry.name for entry in PUBLIC_SURFACE.mcp_tools if not entry.registered
     )
+
+
+def known_mcp_tool_names() -> frozenset[str]:
+    """Every tool name the codebase might mention: live, locked, or removed.
+
+    The dangling-reference guard scans prose for tokens in this vocabulary and
+    asserts each resolves to a *registered* tool -- so a name that has moved to
+    the locked or absent split is flagged wherever it still appears.
+    """
+    return registered_mcp_tool_names() | locked_mcp_tool_names() | ABSENT_MCP_TOOL_NAMES

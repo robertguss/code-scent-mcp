@@ -1,4 +1,5 @@
 from codescent.core.public_surface import (
+    ABSENT_MCP_TOOL_NAMES,
     LOCKED_POST_MVP_MCP_TOOL_NAMES,
     MVP_MCP_TOOL_NAMES,
     POST_MVP_CLI_COMMAND_NAMES,
@@ -6,14 +7,13 @@ from codescent.core.public_surface import (
     PUBLIC_SURFACE,
     REGISTERED_POST_MVP_MCP_TOOL_NAMES,
     SurfaceStage,
+    known_mcp_tool_names,
+    registered_mcp_tool_names,
 )
 
-ABSENT_POST_MVP_MCP_TOOL_NAMES = {
-    "project_guidance",
-    "project_learnings",
-    "compress_generic_output",
-    "retrieve_original_output",
-}
+# The registry's own frozensets are the single source of truth for the split a
+# surface merge flips; the guard and this test read them, nothing redefines it.
+ABSENT_POST_MVP_MCP_TOOL_NAMES = ABSENT_MCP_TOOL_NAMES
 
 
 def test_post_mvp_surface_tracks_registered_and_locked_tools() -> None:
@@ -58,6 +58,19 @@ def test_post_mvp_surface_tracks_registered_and_locked_tools() -> None:
     assert ABSENT_POST_MVP_MCP_TOOL_NAMES.isdisjoint(
         {entry.name for entry in PUBLIC_SURFACE.mcp_tools}
     )
+
+
+def test_registered_locked_absent_split_is_disjoint_and_complete() -> None:
+    # The three tool-name splits a surface merge flips between must never
+    # overlap, and their union is exactly the guard's known vocabulary.
+    registered = registered_mcp_tool_names()
+    locked = LOCKED_POST_MVP_MCP_TOOL_NAMES
+    absent = ABSENT_MCP_TOOL_NAMES
+
+    assert registered.isdisjoint(locked)
+    assert registered.isdisjoint(absent)
+    assert locked.isdisjoint(absent)
+    assert known_mcp_tool_names() == registered | locked | absent
 
 
 def test_post_mvp_cli_commands_are_declared_but_locked() -> None:
