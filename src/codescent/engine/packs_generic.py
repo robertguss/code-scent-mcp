@@ -8,9 +8,8 @@ from typing import TYPE_CHECKING, Final
 from codescent.core.models import ProjectConfig
 from codescent.core.paths import resolve_repo_root
 from codescent.engine.inventory import (
-    DEFAULT_EXCLUDED_FILENAMES,
-    DEFAULT_EXCLUDED_NAMES,
-    MINIFIED_SUFFIXES,
+    excluded_by_names_or_patterns,
+    read_codescentignore,
 )
 from codescent.engine.packs_ts import TS_EXTENSIONS
 from codescent.engine.parsers.go import GO_EXTENSIONS
@@ -77,37 +76,18 @@ def scan_generic_health(
 
 
 def generic_pack_files(repo_root: Path, config: ProjectConfig) -> tuple[str, ...]:
-    config_patterns = tuple(
-        cleaned
-        for pattern in (
-            *config.exclude,
-            *config.generated,
-            *config.vendor,
-            *config.build,
-        )
-        for cleaned in (pattern.strip().strip("/"),)
-        if cleaned
-    )
+    ignore_patterns = read_codescentignore(repo_root)
     paths: list[str] = []
     for path in sorted(repo_root.rglob("*")):
         if not path.is_file():
             continue
         relative = path.relative_to(repo_root)
-        if any(part in DEFAULT_EXCLUDED_NAMES for part in relative.parts):
-            continue
-        if path.name in DEFAULT_EXCLUDED_FILENAMES:
-            continue
-        if path.name.endswith(MINIFIED_SUFFIXES):
+        if excluded_by_names_or_patterns(relative, config, ignore_patterns):
             continue
         if path.suffix.lower() in _RESERVED_SUFFIXES:
             # A specific pack owns this suffix -- it always wins.
             continue
-        rel_posix = relative.as_posix()
-        if any(
-            rel_posix == p or rel_posix.startswith(f"{p}/") for p in config_patterns
-        ):
-            continue
-        paths.append(rel_posix)
+        paths.append(relative.as_posix())
     return tuple(paths)
 
 

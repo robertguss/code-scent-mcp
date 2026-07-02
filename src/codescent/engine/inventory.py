@@ -1,4 +1,5 @@
 import hashlib
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Final
 
@@ -19,6 +20,7 @@ DEFAULT_EXCLUDED_NAMES: Final = frozenset(
         ".hg",
         ".mypy_cache",
         ".next",
+        ".omo",
         ".pytest_cache",
         ".ruff_cache",
         ".tox",
@@ -56,6 +58,28 @@ LANGUAGE_BY_SUFFIX: Final = {
 }
 
 
+CODESCENTIGNORE_FILENAME: Final = ".codescentignore"
+
+
+def read_codescentignore(repo_root: Path) -> tuple[str, ...]:
+    """Read repo-root ``.codescentignore`` patterns (blanks/``#`` comments skipped).
+
+    Absent or unreadable file yields ``()`` -- backward compatible. Full
+    ``.gitignore`` semantics (negation, nested files, pathspec) are deferred;
+    each line is treated as one exclude pattern for the shared matcher.
+    """
+    try:
+        text = (repo_root / CODESCENTIGNORE_FILENAME).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ()
+    return tuple(
+        stripped
+        for line in text.splitlines()
+        for stripped in (line.strip(),)
+        if stripped and not stripped.startswith("#")
+    )
+
+
 def build_file_inventory(
     root: Path | str,
     *,
@@ -63,10 +87,16 @@ def build_file_inventory(
 ) -> tuple[IndexedFile, ...]:
     repo_root = resolve_repo_root(root)
     project_config = config or ProjectConfig()
+    ignore_patterns = read_codescentignore(repo_root)
     files: list[IndexedFile] = []
 
     for path in sorted(repo_root.rglob("*")):
-        if not path.is_file() or _is_excluded(repo_root, path, project_config):
+        if not path.is_file() or _is_excluded(
+            repo_root,
+            path,
+            project_config,
+            ignore_patterns,
+        ):
             continue
         if path.is_symlink() and not _stays_inside_root(repo_root, path):
             continue
@@ -98,21 +128,51 @@ def build_file_inventory(
     return tuple(files)
 
 
-def _is_excluded(repo_root: Path, path: Path, config: ProjectConfig) -> bool:
-    relative = path.relative_to(repo_root)
-    parts = relative.parts
+def _is_excluded(
+    repo_root: Path,
+    path: Path,
+    config: ProjectConfig,
+    ignore_patterns: tuple[str, ...] = (),
+) -> bool:
+    return excluded_by_names_or_patterns(
+        path.relative_to(repo_root),
+        config,
+        ignore_patterns,
+    )
 
-    if path.name in DEFAULT_EXCLUDED_FILENAMES:
+
+def excluded_by_names_or_patterns(
+    relative: Path,
+    config: ProjectConfig,
+    ignore_patterns: tuple[str, ...] = (),
+) -> bool:
+    """Single-sourced name/pattern exclusion shared by inventory + generic pack.
+
+    Covers the default excluded dir names/filenames, minified suffixes, and the
+    config exclude/generated/vendor/build patterns plus any ``.codescentignore``
+    patterns -- so both the index and the generic literal pack stay in sync.
+    """
+    if relative.name in DEFAULT_EXCLUDED_FILENAMES:
         return True
-    if any(part in DEFAULT_EXCLUDED_NAMES for part in parts):
+    if any(part in DEFAULT_EXCLUDED_NAMES for part in relative.parts):
         return True
-    if _matches_config_exclude(relative.as_posix(), config):
+    if _matches_config_exclude(relative.as_posix(), config, ignore_patterns):
         return True
-    return path.name.endswith(MINIFIED_SUFFIXES)
+    return relative.name.endswith(MINIFIED_SUFFIXES)
 
 
-def _matches_config_exclude(relative_path: str, config: ProjectConfig) -> bool:
-    patterns = (*config.exclude, *config.generated, *config.vendor, *config.build)
+def _matches_config_exclude(
+    relative_path: str,
+    config: ProjectConfig,
+    ignore_patterns: tuple[str, ...] = (),
+) -> bool:
+    patterns = (
+        *config.exclude,
+        *config.generated,
+        *config.vendor,
+        *config.build,
+        *ignore_patterns,
+    )
     return any(_matches_path_pattern(relative_path, pattern) for pattern in patterns)
 
 
@@ -120,7 +180,11 @@ def _matches_path_pattern(relative_path: str, pattern: str) -> bool:
     normalized = pattern.strip().strip("/")
     if not normalized:
         return False
-    return relative_path == normalized or relative_path.startswith(f"{normalized}/")
+    if relative_path == normalized or relative_path.startswith(f"{normalized}/"):
+        return True
+    # Glob patterns (e.g. ``docs/generated/**``) go through fnmatch; plain path
+    # prefixes are handled above, so this only widens wildcard patterns.
+    return fnmatch(relative_path, normalized)
 
 
 def _stays_inside_root(repo_root: Path, path: Path) -> bool:
