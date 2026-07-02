@@ -7,14 +7,21 @@ from codescent.core.public_surface import normalize_output_mode
 from codescent.engine.search.constraints import constraint_warnings
 from codescent.services.freshness import confidence_for_results, warnings_for_results
 from codescent.services.search import SearchService
-from codescent.services.search_support import SearchPagePayload, SearchResultPayload
+from codescent.services.search_support import (
+    MAX_LIMIT,
+    SearchPagePayload,
+    SearchResultPayload,
+)
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
     from codescent.core.public_surface import OutputMode
 
-SAMPLE_FILE_LIMIT: Final = 20
+# Single source of truth for the search cap: the transport echoes the service's
+# authoritative hard cap (F11-minor) rather than carrying its own constant that
+# could drift from what the service actually applies.
+SAMPLE_FILE_LIMIT: Final = MAX_LIMIT
 
 # A well-formed empty page for the graceful 0-result fallback: a malformed search
 # input degrades to this bounded result instead of raising.

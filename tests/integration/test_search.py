@@ -8,8 +8,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from codescent.core.models import IndexedFile, ProjectConfig
 from codescent.engine.inventory import build_file_inventory
+from codescent.mcp.search_tools import SAMPLE_FILE_LIMIT, search_files
 from codescent.services.repo_index import RepoIndexService
 from codescent.services.search import SearchService
+from codescent.services.search_support import MAX_LIMIT
 from codescent.storage import RepositoryStorage, initialize_storage
 
 
@@ -391,3 +393,26 @@ def _run_git(repo: Path, *args: str) -> None:
         capture_output=True,
         text=True,
     )
+
+
+def test_transport_echoes_service_applied_cap(tmp_path: Path) -> None:
+    # F11-minor: the transport must not clamp with its own constant. It echoes
+    # the service's authoritative hard cap, so the echoed `limit` never disagrees
+    # with the result-count cap the service actually applies.
+    # Single source of truth: the transport default IS the service cap.
+    assert SAMPLE_FILE_LIMIT == MAX_LIMIT
+
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    for index in range(MAX_LIMIT + 5):
+        _ = (repo / "src" / f"target_{index:02d}.py").write_text(
+            "def run() -> int:\n    return 1\n",
+        )
+
+    over = search_files(query="target", repo=str(repo), limit=10_000)
+    assert over["limit"] == MAX_LIMIT
+    assert len(over["results"]) <= MAX_LIMIT
+
+    within = search_files(query="target", repo=str(repo), limit=3)
+    assert within["limit"] == 3
+    assert len(within["results"]) <= 3
