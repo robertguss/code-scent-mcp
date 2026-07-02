@@ -1,14 +1,35 @@
 from codescent.core.public_surface import (
     ABSENT_MCP_TOOL_NAMES,
-    LOCKED_POST_MVP_MCP_TOOL_NAMES,
     MVP_MCP_TOOL_NAMES,
     POST_MVP_CLI_COMMAND_NAMES,
     POST_MVP_MCP_TOOL_NAMES,
     PUBLIC_SURFACE,
+    REGISTERED_MCP_TOOL_NAMES,
     REGISTERED_POST_MVP_MCP_TOOL_NAMES,
     SurfaceStage,
     known_mcp_tool_names,
     registered_mcp_tool_names,
+)
+
+# Snapshot of the MVP set the derived-from-PUBLIC_SURFACE frozensets must still
+# equal after the F8 collapse (guards against the derivation drifting).
+_EXPECTED_MVP = frozenset(
+    {
+        "get_repo_map",
+        "get_repo_status",
+        "search_files",
+        "search_content",
+        "find_symbol",
+        "get_file_context",
+        "get_symbol_context",
+        "scan_code_health",
+        "list_findings",
+        "get_next_improvement",
+        "plan_refactor",
+        "suggest_tests",
+        "mark_finding",
+        "rescan",
+    },
 )
 
 # The registry's own frozensets are the single source of truth for the split a
@@ -49,28 +70,37 @@ def test_post_mvp_surface_tracks_registered_and_locked_tools() -> None:
     )
     assert "retrieve_result" in REGISTERED_POST_MVP_MCP_TOOL_NAMES
     assert "context_stats" in REGISTERED_POST_MVP_MCP_TOOL_NAMES
+    # Every PUBLIC_SURFACE entry is registered, so there is no locked split.
     assert {
         entry.name
         for entry in PUBLIC_SURFACE.mcp_tools
         if entry.stage is SurfaceStage.POST_MVP and not entry.registered
-    } == LOCKED_POST_MVP_MCP_TOOL_NAMES
+    } == set()
     assert registered_mvp.isdisjoint(declared_post_mvp)
     assert ABSENT_POST_MVP_MCP_TOOL_NAMES.isdisjoint(
         {entry.name for entry in PUBLIC_SURFACE.mcp_tools}
     )
 
 
-def test_registered_locked_absent_split_is_disjoint_and_complete() -> None:
-    # The three tool-name splits a surface merge flips between must never
-    # overlap, and their union is exactly the guard's known vocabulary.
+def test_derived_frozensets_match_the_public_surface_and_snapshot() -> None:
+    # F8 collapse: the frozensets are derived from PUBLIC_SURFACE, not hand-kept.
+    assert MVP_MCP_TOOL_NAMES == _EXPECTED_MVP
+    # POST_MVP == REGISTERED_POST_MVP (all entries registered -> LOCKED empty).
+    assert POST_MVP_MCP_TOOL_NAMES == REGISTERED_POST_MVP_MCP_TOOL_NAMES
+    assert REGISTERED_MCP_TOOL_NAMES == (
+        MVP_MCP_TOOL_NAMES | REGISTERED_POST_MVP_MCP_TOOL_NAMES
+    )
+    assert registered_mcp_tool_names() == REGISTERED_MCP_TOOL_NAMES
+
+
+def test_registered_absent_split_is_disjoint_and_complete() -> None:
+    # The two tool-name splits a surface merge flips between must never overlap,
+    # and their union is exactly the guard's known vocabulary.
     registered = registered_mcp_tool_names()
-    locked = LOCKED_POST_MVP_MCP_TOOL_NAMES
     absent = ABSENT_MCP_TOOL_NAMES
 
-    assert registered.isdisjoint(locked)
     assert registered.isdisjoint(absent)
-    assert locked.isdisjoint(absent)
-    assert known_mcp_tool_names() == registered | locked | absent
+    assert known_mcp_tool_names() == registered | absent
 
 
 def test_post_mvp_cli_commands_are_declared_but_locked() -> None:

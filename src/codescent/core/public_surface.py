@@ -71,98 +71,10 @@ def _registered_post_mvp_cli_entry(name: str, group: str) -> SurfaceEntry:
     )
 
 
-MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
-    {
-        "get_repo_map",
-        "get_repo_status",
-        "search_files",
-        "search_content",
-        "find_symbol",
-        "get_file_context",
-        "get_symbol_context",
-        "scan_code_health",
-        "list_findings",
-        "get_next_improvement",
-        "plan_refactor",
-        "suggest_tests",
-        "mark_finding",
-        "rescan",
-    },
-)
-
-POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
-    {
-        "multi_search_content",
-        "search_changed_files",
-        "search_todos",
-        "search_tests",
-        "find_references",
-        "find_callers",
-        "find_callees",
-        "get_related_files",
-        "get_impact",
-        "verify_change",
-        "verify_refactor",
-        "get_improvement_plan",
-        "get_calibration",
-        "review_diff_risk",
-        "get_changed_file_health",
-        "retrieve_result",
-        "context_stats",
-        "select_tests",
-        "start_task",
-        "record_verification",
-        "how_to_use",
-        "resume_task",
-        "refactor_preflight",
-        "explain_finding",
-        "subjective_review",
-        "answer_pack",
-        "get_architecture",
-        "get_schema",
-    },
-)
-
-REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = frozenset(
-    {
-        "find_callees",
-        "find_callers",
-        "find_references",
-        "get_impact",
-        "verify_refactor",
-        "get_improvement_plan",
-        "get_calibration",
-        "get_related_files",
-        "multi_search_content",
-        "search_changed_files",
-        "search_tests",
-        "search_todos",
-        "verify_change",
-        "review_diff_risk",
-        "get_changed_file_health",
-        "retrieve_result",
-        "context_stats",
-        "select_tests",
-        "start_task",
-        "record_verification",
-        "how_to_use",
-        "resume_task",
-        "refactor_preflight",
-        "explain_finding",
-        "subjective_review",
-        "answer_pack",
-        "get_architecture",
-        "get_schema",
-    },
-)
-
-REGISTERED_MCP_TOOL_NAMES: Final[frozenset[str]] = (
-    MVP_MCP_TOOL_NAMES | REGISTERED_POST_MVP_MCP_TOOL_NAMES
-)
-
-LOCKED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = (
-    POST_MVP_MCP_TOOL_NAMES - REGISTERED_POST_MVP_MCP_TOOL_NAMES
-)
+# The MVP / POST_MVP / REGISTERED_POST_MVP / REGISTERED frozensets are derived
+# from PUBLIC_SURFACE below (the single source of truth) -- see the derivations
+# right after the tuple definition. Adding a tool to PUBLIC_SURFACE updates all
+# of them with no second structure to hand-maintain (F8).
 
 # Tool names deliberately ABSENT from the runtime surface: proposed-then-cut or
 # merged-away tools. The dangling-reference guard (R14) treats any of these
@@ -275,23 +187,44 @@ PUBLIC_SURFACE: Final[PublicSurface] = PublicSurface(
 )
 
 
+def _mcp_names(
+    *,
+    stage: SurfaceStage,
+    registered: bool | None = None,
+) -> frozenset[str]:
+    return frozenset(
+        entry.name
+        for entry in PUBLIC_SURFACE.mcp_tools
+        if entry.stage is stage
+        and (registered is None or entry.registered is registered)
+    )
+
+
+# Derived from PUBLIC_SURFACE (single source of truth). Every PUBLIC_SURFACE
+# entry is registered=True today, so POST_MVP == REGISTERED_POST_MVP and there
+# is no separate LOCKED set (it was provably empty -- deleted with F8).
+MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = _mcp_names(stage=SurfaceStage.MVP)
+POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = _mcp_names(stage=SurfaceStage.POST_MVP)
+REGISTERED_POST_MVP_MCP_TOOL_NAMES: Final[frozenset[str]] = _mcp_names(
+    stage=SurfaceStage.POST_MVP,
+    registered=True,
+)
+REGISTERED_MCP_TOOL_NAMES: Final[frozenset[str]] = (
+    MVP_MCP_TOOL_NAMES | REGISTERED_POST_MVP_MCP_TOOL_NAMES
+)
+
+
 def registered_mcp_tool_names() -> frozenset[str]:
     return frozenset(
         entry.name for entry in PUBLIC_SURFACE.mcp_tools if entry.registered
     )
 
 
-def locked_mcp_tool_names() -> frozenset[str]:
-    return frozenset(
-        entry.name for entry in PUBLIC_SURFACE.mcp_tools if not entry.registered
-    )
-
-
 def known_mcp_tool_names() -> frozenset[str]:
-    """Every tool name the codebase might mention: live, locked, or removed.
+    """Every tool name the codebase might mention: live or removed.
 
     The dangling-reference guard scans prose for tokens in this vocabulary and
     asserts each resolves to a *registered* tool -- so a name that has moved to
-    the locked or absent split is flagged wherever it still appears.
+    the absent split is flagged wherever it still appears.
     """
-    return registered_mcp_tool_names() | locked_mcp_tool_names() | ABSENT_MCP_TOOL_NAMES
+    return registered_mcp_tool_names() | ABSENT_MCP_TOOL_NAMES

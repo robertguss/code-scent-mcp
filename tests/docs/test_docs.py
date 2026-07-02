@@ -5,7 +5,6 @@ from typer.testing import CliRunner
 
 from codescent.cli.main import app
 from codescent.core.public_surface import (
-    LOCKED_POST_MVP_MCP_TOOL_NAMES,
     PUBLIC_SURFACE,
     REGISTERED_MCP_TOOL_NAMES,
 )
@@ -135,15 +134,6 @@ def test_tool_docs_keep_mvp_tools_and_stage_post_mvp_surface() -> None:
     assert tools >= MVP_TOOLS
     assert "registered post-mvp mcp tools" in text.lower()
     assert "locked post-mvp mcp tools" in text.lower()
-
-
-def test_tool_docs_include_locked_headroom_placeholders() -> None:
-    text = MCP_TOOLS.read_text().lower()
-
-    for tool_name in LOCKED_POST_MVP_MCP_TOOL_NAMES:
-        assert f"`{tool_name}`" in text
-        assert f"- `{tool_name}` - stage `post_mvp`, registered `false`" in text
-    assert "task 14" in text
 
 
 def test_eval_docs_include_deterministic_agent_and_real_smoke() -> None:
