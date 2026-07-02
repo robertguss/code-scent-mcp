@@ -60,6 +60,9 @@ class MatchCountPayload(TypedDict):
     # output_mode="count": a tally instead of content.
     total_matches: int
     file_count: int
+    # True when the tally covers only the bounded top-N window, not the whole
+    # repo -- more matches exist beyond it, so the count is a floor, not a total.
+    partial: bool
 
 
 # One result field across every output mode; each mode emits a homogeneous tuple.
@@ -198,7 +201,11 @@ def search_files(  # noqa: PLR0913 - additive defensive alias for sloppy inputs.
         _EMPTY_PAGE,
     )
     matches = page["results"]
-    results, count = _shape_results(matches, mode)
+    results, count = _shape_results(
+        matches,
+        mode,
+        more_available=page["next_cursor"] is not None,
+    )
     return {
         "ok": True,
         "query": query,
@@ -213,6 +220,7 @@ def search_files(  # noqa: PLR0913 - additive defensive alias for sloppy inputs.
             next_tools=("search_content", "get_repo_map"),
             current_tool="search_files",
             constraints=constraints,
+            extra_warnings=_degrade_warnings(output_mode, mode),
         ),
     }
 
@@ -242,7 +250,11 @@ def search_content(  # noqa: PLR0913 - MCP tool exposes orthogonal shape toggles
         _EMPTY_PAGE,
     )
     matches = page["results"]
-    results, count = _shape_results(matches, mode)
+    results, count = _shape_results(
+        matches,
+        mode,
+        more_available=page["next_cursor"] is not None,
+    )
     return {
         "ok": True,
         "query": query,
@@ -257,6 +269,7 @@ def search_content(  # noqa: PLR0913 - MCP tool exposes orthogonal shape toggles
             next_tools=("search_files", "get_repo_map"),
             current_tool="search_content",
             constraints=constraints,
+            extra_warnings=_degrade_warnings(output_mode, mode),
         ),
     }
 
@@ -270,6 +283,7 @@ def multi_search_content(  # noqa: PLR0913 - additive constraints prefilter knob
     constraints: str = "",
 ) -> MultiSearchToolPayload:
     limit = coerce_int(limit, default=SAMPLE_FILE_LIMIT)
+    effective_limit = min(max(limit, 1), SAMPLE_FILE_LIMIT)
     mode = normalize_output_mode(output_mode)
     matches = or_empty(
         lambda: SearchService(repo).multi_search_content(
@@ -281,11 +295,16 @@ def multi_search_content(  # noqa: PLR0913 - additive constraints prefilter knob
         ),
         (),
     )
-    results, count = _shape_results(matches, mode)
+    # No cursor here: matches saturating the cap means more likely exist.
+    results, count = _shape_results(
+        matches,
+        mode,
+        more_available=len(matches) >= effective_limit,
+    )
     return {
         "ok": True,
         "queries": queries,
-        "limit": min(max(limit, 1), SAMPLE_FILE_LIMIT),
+        "limit": effective_limit,
         "output_mode": mode,
         "results": results,
         "count": count,
@@ -295,6 +314,7 @@ def multi_search_content(  # noqa: PLR0913 - additive constraints prefilter knob
             next_tools=("search_files", "search_content", "get_repo_map"),
             current_tool="multi_search_content",
             constraints=constraints,
+            extra_warnings=_degrade_warnings(output_mode, mode),
         ),
     }
 
@@ -377,12 +397,16 @@ def search_tests(  # noqa: PLR0913 - MCP tool exposes distinct target inputs.
 def _shape_results(
     matches: tuple[SearchResultPayload, ...],
     mode: OutputMode,
+    *,
+    more_available: bool,
 ) -> tuple[tuple[SearchResultItem, ...], MatchCountPayload | None]:
     """Reshape collapse-aware content matches into the requested output mode.
 
     Args:
         matches: The bounded, collapse-aware content results from the service.
         mode: The normalized output mode controlling the payload shape.
+        more_available: Whether matches exist beyond the returned window, used
+            to flag a ``count``-mode tally as partial (a floor, not a total).
 
     Returns:
         A ``(results, count)`` pair: ``count`` is populated only for the
@@ -391,7 +415,7 @@ def _shape_results(
     if mode == "files":
         return _distinct_files(matches), None
     if mode == "count":
-        return (), _match_count(matches)
+        return (), _match_count(matches, partial=more_available)
     if mode == "usage":
         return _usage_sites(matches), None
     return matches, None
@@ -423,33 +447,60 @@ def _usage_sites(
     return tuple(sites)
 
 
-def _match_count(matches: tuple[SearchResultPayload, ...]) -> MatchCountPayload:
+def _match_count(
+    matches: tuple[SearchResultPayload, ...],
+    *,
+    partial: bool,
+) -> MatchCountPayload:
     # ponytail: bounded to the top-N page (MAX_LIMIT=20); the tally reflects the
-    # returned window, not the whole repo. Raise the service cap if true totals
-    # are needed. Collapsed hits carry match_count; module-level hits count as 1.
+    # returned window, not the whole repo. ``partial`` flags that truncation so
+    # an agent never mistakes the floor for a total. Collapsed hits carry
+    # match_count; module-level hits count as 1.
     total = 0
     files: set[str] = set()
     for match in matches:
         files.add(match["path"])
         symbol = match["symbol"]
         total += symbol["match_count"] if symbol is not None else 1
-    return {"total_matches": total, "file_count": len(files)}
+    return {"total_matches": total, "file_count": len(files), "partial": partial}
 
 
-def _advisory_fields(
+def _degrade_warnings(requested: str, effective: OutputMode) -> tuple[str, ...]:
+    """Flag a silent output_mode degrade so it is never invisible to the agent.
+
+    ``search_files`` degrades ``usage`` to ``content`` (file hits carry no
+    symbol/line), and any unrecognized mode normalizes to ``content``. Either
+    way the requested and effective modes diverge; surface it rather than
+    swapping the shape out from under the caller.
+    """
+    if requested == effective:
+        return ()
+    return (
+        (
+            f"output_mode {requested!r} is unavailable here; degraded to "
+            f"{effective!r}. Pass a supported mode to silence this."
+        ),
+    )
+
+
+def _advisory_fields(  # noqa: PLR0913 - keyword-only, orthogonal advisory inputs.
     *,
     has_results: bool,
     result_kind: str,
     next_tools: tuple[str, ...],
     current_tool: str,
     constraints: str = "",
+    extra_warnings: tuple[str, ...] = (),
 ) -> AdvisoryToolFields:
     dropped = constraint_warnings(constraints)
     return {
-        "warnings": warnings_for_results(
-            has_results=has_results,
-            result_kind=result_kind,
-            current_tool=current_tool,
+        "warnings": (
+            *extra_warnings,
+            *warnings_for_results(
+                has_results=has_results,
+                result_kind=result_kind,
+                current_tool=current_tool,
+            ),
         ),
         "confidence": confidence_for_results(
             has_results=has_results,

@@ -211,6 +211,63 @@ def test_multi_search_content_supports_modes(tmp_path: Path) -> None:
     assert count_tally["file_count"] == 2
 
 
+def test_count_mode_flags_partial_when_window_truncates(tmp_path: Path) -> None:
+    # Agent-native (bead 5b6j): the count tally reflects only the bounded window.
+    # A complete window must report partial=False; a truncated one, partial=True,
+    # so an agent never mistakes the floor for a repo-wide total.
+    repo = _many_marker_repo(tmp_path, files=8)
+
+    complete = search_content(
+        "needle_marker", repo=str(repo), limit=20, output_mode="count"
+    )
+    truncated = search_content(
+        "needle_marker", repo=str(repo), limit=3, output_mode="count"
+    )
+
+    complete_tally = complete["count"]
+    truncated_tally = truncated["count"]
+    assert complete_tally is not None
+    assert truncated_tally is not None
+    assert complete_tally["partial"] is False
+    assert truncated_tally["partial"] is True
+
+
+def test_search_files_usage_degrade_is_flagged(tmp_path: Path) -> None:
+    # Agent-native (bead 5b6j): search_files silently degraded usage->content;
+    # the degrade must now be surfaced as a warning, not invisible.
+    repo = tmp_path / "repo"
+    _write(repo, "src/config.py", "value = 1\n")
+
+    usage = search_files("config", repo=str(repo), limit=20, output_mode="usage")
+
+    assert usage["output_mode"] == "content"
+    warnings = usage["warnings"]
+    assert any("usage" in warning and "content" in warning for warning in warnings)
+
+
+def test_unknown_output_mode_degrade_is_flagged(tmp_path: Path) -> None:
+    repo = _single_marker_repo(tmp_path)
+
+    payload = search_content(
+        "needle_marker", repo=str(repo), limit=20, output_mode="banana"
+    )
+
+    warnings = payload["warnings"]
+    assert any("banana" in warning for warning in warnings)
+
+
+def test_supported_mode_emits_no_degrade_warning(tmp_path: Path) -> None:
+    # usage is supported in search_content, so it must not warn about degrading.
+    repo = _single_marker_repo(tmp_path)
+
+    payload = search_content(
+        "needle_marker", repo=str(repo), limit=20, output_mode="usage"
+    )
+
+    warnings = payload["warnings"]
+    assert not any("degraded" in warning for warning in warnings)
+
+
 def test_search_files_supports_files_and_count_modes(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     _write(repo, "src/config.py", "value = 1\n")
