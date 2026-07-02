@@ -11,13 +11,14 @@ so the base install (no pyahocorasick) still works.
 from __future__ import annotations
 
 import importlib.util
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import codescent.engine.search.multi_grep as multi_grep_module
-from codescent.engine.search.multi_grep import multi_grep
+from codescent.engine.search.multi_grep import MultiMatcher, multi_grep
 from codescent.services.search import SearchService
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     import pytest
@@ -101,6 +102,36 @@ def test_pyahocorasick_tier_is_used_and_correct() -> None:
     assert importlib.util.find_spec("ahocorasick") is not None
 
     assert multi_grep(_PATTERNS, _LINES) == _EXPECTED
+
+
+def test_matcher_compiles_automaton_once_across_files(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # dzte: the automaton is built once per query (at MultiMatcher construction),
+    # not once per scanned file. Count constructions to prove scans reuse it.
+    import ahocorasick  # noqa: PLC0415
+
+    built = 0
+    real_constructor = cast("Callable[[], object]", ahocorasick.Automaton)
+
+    def counting_factory() -> Callable[[], object]:
+        def make() -> object:
+            nonlocal built
+            built += 1
+            return real_constructor()
+
+        return make
+
+    monkeypatch.setattr(multi_grep_module, "_automaton_factory", counting_factory)
+
+    matcher = MultiMatcher(_PATTERNS)  # compiles sensitive + insensitive automatons
+    built_after_compile = built
+    assert built_after_compile == 2
+
+    for _ in range(3):
+        assert matcher.scan(_LINES) == _EXPECTED
+    # Three scans built no further automatons: construction is per query, not file.
+    assert built == built_after_compile
 
 
 def test_native_fallback_matches_automaton_tier(
