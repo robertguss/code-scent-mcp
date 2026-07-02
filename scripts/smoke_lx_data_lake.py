@@ -20,7 +20,7 @@ from codescent.mcp.context_tools import (
     get_symbol_context,
 )
 from codescent.mcp.finding_tools import (
-    get_smell_report,
+    list_findings,
     rescan,
     scan_code_health,
 )
@@ -113,7 +113,7 @@ def _execute_tool_loop(repo: Path) -> list[dict[str, JsonValue]]:
             get_symbol_context(qualified_name, repo=repo_text),
         )
     _record(calls, "scan_code_health", scan_code_health(repo_text))
-    report = _record(calls, "get_smell_report", get_smell_report(repo_text))
+    report = _record(calls, "list_findings", list_findings(repo_text))
     context_paths = frozenset(file.path for file in SymbolService(repo).extract().files)
     finding_id = _finding_id_from_report(report, context_paths)
     if finding_id is not None:
@@ -173,7 +173,7 @@ def _git_status_without_codescent(repo: Path) -> tuple[str, ...]:
 
 def _finding_summary(calls: list[dict[str, JsonValue]]) -> dict[str, JsonValue]:
     scan = _call_data(calls, "scan_code_health")
-    report = _call_data(calls, "get_smell_report")
+    report = _call_data(calls, "list_findings")
     return {
         "created": scan.get("findings_created", 0),
         "rule_ids": scan.get("rule_ids", []),

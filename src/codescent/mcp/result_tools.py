@@ -29,7 +29,7 @@ def register_result_tools(mcp: FastMCP) -> None:
             "Retrieve a stored CodeScent result by its opaque ctx_ result id "
             "without rerunning searches: mode selects exact, summary, filtered, "
             "or sample, and output is bounded by limit. The result_id is minted "
-            "by tools like answer_pack, get_backlog, and get_smell_report when "
+            "by tools like answer_pack and list_findings when "
             "they omit items. e.g. retrieve_result(result_id='ctx_ab12...', "
             "mode='summary')."
         ),

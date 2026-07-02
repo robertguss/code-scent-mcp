@@ -171,7 +171,7 @@ def register_planning_tools(mcp: FastMCP) -> None:
     _ = mcp.tool(
         description=(
             "Bounded finding context before reading whole files; read-only for "
-            "source. Pass a finding_id from get_next_improvement or get_backlog. "
+            "source. Pass a finding_id from get_next_improvement or list_findings. "
             "e.g. get_finding_context(finding_id='python.large_file:cf58...')."
         ),
     )(get_finding_context)
@@ -179,7 +179,7 @@ def register_planning_tools(mcp: FastMCP) -> None:
         description=(
             "Safe refactor plan for a finding: goal, non-goals, risks, "
             "fallback, and verification recommendations. Pass a finding_id from "
-            "get_next_improvement or get_backlog. e.g. "
+            "get_next_improvement or list_findings. e.g. "
             "plan_refactor(finding_id='python.long_function:ab12...')."
         ),
     )(plan_refactor)
@@ -190,7 +190,7 @@ def register_planning_tools(mcp: FastMCP) -> None:
             "characterization-test skeleton that imports the target and leaves "
             "TODO placeholders (never a fake-green assertion) to pin current "
             "behavior. Pass a finding_id from get_next_improvement or "
-            "get_backlog. e.g. suggest_tests(finding_id='...', scaffold=True)."
+            "list_findings. e.g. suggest_tests(finding_id='...', scaffold=True)."
         ),
     )(suggest_tests)
     _ = mcp.tool(
@@ -206,7 +206,7 @@ def register_planning_tools(mcp: FastMCP) -> None:
             "Estimate the local blast radius of a change with bounded, "
             "confidence-labeled evidence. Set target_type to file, symbol, or "
             "finding: a symbol target comes from find_symbol, a finding_id from "
-            "get_backlog or get_next_improvement. e.g. "
+            "list_findings or get_next_improvement. e.g. "
             "get_impact(target_type='symbol', target='pkg.mod.fn')."
         ),
     )(get_impact)
@@ -214,7 +214,7 @@ def register_planning_tools(mcp: FastMCP) -> None:
         description=(
             "Record recommend-only verification commands for a finding; does "
             "not execute target commands. Pass a finding_id from "
-            "get_next_improvement or get_backlog. e.g. "
+            "get_next_improvement or list_findings. e.g. "
             "verify_change(finding_id='python.large_file:cf58...')."
         ),
     )(verify_change)

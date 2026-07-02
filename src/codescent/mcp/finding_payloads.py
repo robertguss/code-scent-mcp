@@ -72,6 +72,14 @@ class SmellReportToolPayload(BoundedListBase):
     status_counts: dict[str, int]
 
 
+class ListFindingsToolPayload(BoundedListBase):
+    # Merged finding-list surface (U10): a status filter over one gated report,
+    # carrying repo-wide lifecycle counts (the former progress view).
+    status: str
+    open_count: int
+    status_counts: dict[str, int]
+
+
 class BacklogToolPayload(BoundedListBase):
     open_count: int
     status_counts: dict[str, int]

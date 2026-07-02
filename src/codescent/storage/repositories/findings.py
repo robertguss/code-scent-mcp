@@ -262,7 +262,7 @@ def _finding_not_found(
             "available_options": sample,
             "total_findings": len(findings),
             "fix_hint": (
-                "Get valid finding ids from get_next_improvement or get_backlog."
+                "Get valid finding ids from get_next_improvement or list_findings."
             ),
         },
     )

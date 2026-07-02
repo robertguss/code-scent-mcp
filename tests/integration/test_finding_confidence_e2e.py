@@ -122,7 +122,7 @@ async def test_mixed_scan_tiers_provenance_ranking_and_bounded_payload(
     # MCP payloads expose the fields and stay bounded.
     async with Client(mcp) as client:
         scan_raw = await client.call_tool("scan_code_health", {"repo": str(repo)})
-        report_raw = await client.call_tool("get_smell_report", {"repo": str(repo)})
+        report_raw = await client.call_tool("list_findings", {"repo": str(repo)})
 
     scan = _items(_text(scan_raw.content))
     report = _items(_text(report_raw.content))

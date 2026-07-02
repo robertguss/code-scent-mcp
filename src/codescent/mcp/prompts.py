@@ -104,7 +104,7 @@ def improve_code_health(repo: str) -> str:
         "Improve code health",
         (
             f"Repository: {repo}",
-            "Call scan_code_health, get_next_improvement, and get_backlog.",
+            "Call scan_code_health, get_next_improvement, and list_findings.",
             "Prefer one small improvement over broad rewrites.",
         ),
     )

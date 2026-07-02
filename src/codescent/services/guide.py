@@ -74,7 +74,7 @@ WORKFLOW: Final[tuple[GuideWorkflowStep, ...]] = (
     {
         "step": 4,
         "action": "Pick the next finding to work on.",
-        "tools": ("get_next_improvement", "get_backlog", "get_smell_report"),
+        "tools": ("get_next_improvement", "list_findings"),
     },
     {
         "step": 5,

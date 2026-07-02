@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from codescent.engine.inventory import build_file_inventory
 from codescent.mcp.finding_tools import (
-    get_smell_report,
+    list_findings,
     rescan,
     scan_code_health,
 )
@@ -82,7 +82,7 @@ def _tool_calls(repo: Path) -> list[dict[str, JsonValue]]:
     _record(calls, "search_files", search_files("workflow", repo=repo_text))
     _record(calls, "search_content", search_content("pending-review", repo=repo_text))
     scan = _record(calls, "scan_code_health", scan_code_health(repo_text))
-    _record(calls, "get_smell_report", get_smell_report(repo_text))
+    _record(calls, "list_findings", list_findings(repo_text))
     finding_id = _first_finding_id(scan)
     if finding_id is not None:
         _record(

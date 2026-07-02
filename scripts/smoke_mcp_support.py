@@ -39,11 +39,10 @@ EXPANDED_TOOL_SETS: Final[dict[tuple[str, ...], tuple[str, ...]]] = {
     ("explain_score",): ("scan_code_health", "explain_score"),
     ("backlog_progress",): (
         "scan_code_health",
-        "get_backlog",
+        "list_findings",
         "mark_finding_resolved",
         "rescan",
-        "get_progress",
-        "get_regressions",
+        "list_findings",
     ),
     ("verify_change",): ("scan_code_health", "verify_change"),
     ("diff_risk",): ("review_diff_risk",),

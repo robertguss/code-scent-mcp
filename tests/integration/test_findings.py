@@ -13,7 +13,7 @@ from codescent.core.models import (
     MaintainabilityThresholds,
     ProjectConfig,
 )
-from codescent.mcp.finding_tools import get_backlog
+from codescent.mcp.finding_tools import list_findings
 from codescent.services.code_health import CodeHealthService
 from codescent.services.config import ConfigService
 from codescent.services.findings import (
@@ -511,10 +511,10 @@ def test_backlog_status_counts_describe_only_the_returned_rows(tmp_path: Path) -
         FindingStatus.WONTFIX,
     )
 
-    payload = get_backlog(str(repo))
+    payload = list_findings(str(repo), status="backlog")
 
     # wontfix is filtered out of the backlog, so it must not be counted in the
-    # payload's status_counts (which previously described every finding).
+    # payload's status_counts (which describe only the matched rows).
     assert "wontfix" not in payload["status_counts"]
     assert sum(payload["status_counts"].values()) == payload["total_count"]
 

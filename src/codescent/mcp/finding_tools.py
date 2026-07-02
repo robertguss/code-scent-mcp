@@ -2,21 +2,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict, cast
 
+from codescent.core.errors import CodeScentError, ErrorCode, ErrorSeverity
 from codescent.core.models import FindingStatus
 from codescent.mcp.finding_payloads import (
-    BacklogToolPayload,
     CalibrationToolPayload,
     FindingDetailToolPayload,
     ImprovementPlanToolPayload,
+    ListFindingsToolPayload,
     MarkFindingToolPayload,
     NextImprovementToolPayload,
-    ProgressToolPayload,
     RecordVerificationToolPayload,
-    RegressionsToolPayload,
     RescanToolPayload,
     ScanHealthToolPayload,
     ScoreExplanationToolPayload,
-    SmellReportToolPayload,
     aggregate_counts,
     bounded_finding_list,
     build_scan_envelope,
@@ -47,6 +45,35 @@ _BACKLOG_STATUSES = frozenset(
         FindingStatus.REGRESSED,
     },
 )
+
+# list_findings status routing (U10): None == no lifecycle filter (all findings).
+_LIST_STATUS_FILTERS: dict[str, frozenset[FindingStatus] | None] = {
+    "all": None,
+    "open": frozenset({FindingStatus.OPEN}),
+    "backlog": _BACKLOG_STATUSES,
+    "regressed": frozenset({FindingStatus.REGRESSED}),
+}
+VALID_LIST_STATUSES: tuple[str, ...] = tuple(_LIST_STATUS_FILTERS)
+
+
+def _validate_list_status(value: str) -> str:
+    """Return ``value`` if it is a valid list_findings status, else recover.
+
+    Mirrors validate_min_severity: an unknown status yields a recoverable
+    invalid_value error carrying valid_values (keeps the R2 contract green).
+    """
+    if value not in _LIST_STATUS_FILTERS:
+        raise CodeScentError(
+            code=ErrorCode.INVALID_VALUE,
+            message=f"Invalid finding status filter {value!r}.",
+            severity=ErrorSeverity.ERROR,
+            details={"status": value},
+            recovery={
+                "valid_values": list(VALID_LIST_STATUSES),
+                "fix_hint": "Pass one of all, open, backlog, or regressed.",
+            },
+        )
+    return value
 
 
 class ExplainFindingToolPayload(TypedDict):
@@ -129,19 +156,22 @@ def register_finding_tools(mcp: FastMCP) -> None:
     )(scan_code_health)
     _ = mcp.tool(
         description=(
-            "Structured smell report read from local .codescent state. Leads with "
-            "the actionable set (warning+ severity or verified-tier findings); the "
-            "info/heuristic mass is a counted, opt-in tail -- pass include_all=True "
-            "or min_severity='info' for the full set. Bounded inline items with a "
-            "ctx_ result id when omitted; total finding_count is unchanged. e.g. "
-            "get_smell_report(repo='.'). Read-only for source."
+            "The finding list from local .codescent state, filtered by status: "
+            "'all' (default; every finding + lifecycle counts), 'open', "
+            "'backlog' (open/in-progress/needs-review/regressed), or 'regressed'. "
+            "Leads with the actionable set (warning+ severity or verified tier); "
+            "the info/heuristic mass is a counted, opt-in tail -- pass "
+            "include_all=True or min_severity='info' for the full set. Bounded "
+            "inline items with a ctx_ result id when omitted; lifecycle counts "
+            "ride every response. e.g. list_findings(repo='.', status='backlog'). "
+            "Read-only for source."
         ),
-    )(get_smell_report)
+    )(list_findings)
     _ = mcp.tool(
         description=(
             "One finding in full: structured evidence, lifecycle history, and "
             "deterministic score inputs. Pass a finding_id from "
-            "get_next_improvement or get_backlog. e.g. "
+            "get_next_improvement or list_findings. e.g. "
             "get_finding(finding_id='python.large_file:cf58...'). Read-only for "
             "source."
         ),
@@ -150,7 +180,7 @@ def register_finding_tools(mcp: FastMCP) -> None:
         description=(
             "Deterministic score inputs and ranking reasons for a finding, no "
             "subjective LLM judgment. Pass a finding_id from get_next_improvement "
-            "or get_backlog. e.g. "
+            "or list_findings. e.g. "
             "explain_score(finding_id='python.long_function:ab12...')."
         ),
     )(explain_score)
@@ -159,7 +189,7 @@ def register_finding_tools(mcp: FastMCP) -> None:
             "One fix-ready explanation of a finding: why it matters (message + "
             "evidence), the suggested fix, and a bounded source snippet (never "
             "an unbounded dump). Pass a finding_id from get_next_improvement or "
-            "get_backlog. e.g. "
+            "list_findings. e.g. "
             "explain_finding(finding_id='python.dead_code_candidate:9f0a...')."
         ),
     )(explain_finding)
@@ -171,16 +201,6 @@ def register_finding_tools(mcp: FastMCP) -> None:
             "get_next_improvement(repo='.')."
         ),
     )(get_next_improvement)
-    _ = mcp.tool(
-        description=(
-            "Deterministic finding backlog (open, in-progress, needs-review, "
-            "regressed) ranked by severity. Leads with the actionable set by "
-            "default; pass include_all=True or min_severity='info' for the full "
-            "backlog. Bounded inline items with a ctx_ result id when items are "
-            "omitted. Source of finding_ids for get_finding, plan_refactor, and "
-            "mark_finding. e.g. get_backlog(repo='.')."
-        ),
-    )(get_backlog)
     _ = mcp.tool(
         description=(
             "Turn the finding backlog into a deterministic, ROI-ordered plan: "
@@ -197,20 +217,8 @@ def register_finding_tools(mcp: FastMCP) -> None:
     )(get_calibration)
     _ = mcp.tool(
         description=(
-            "Deterministic finding progress counts by lifecycle status. e.g. "
-            "get_progress(repo='.')."
-        ),
-    )(get_progress)
-    _ = mcp.tool(
-        description=(
-            "Regressed finding ids surfaced after a rescan, ranked by severity, "
-            "bounded. e.g. get_regressions(repo='.')."
-        ),
-    )(get_regressions)
-    _ = mcp.tool(
-        description=(
             "Update a finding's lifecycle status in .codescent; never edits "
-            "source. Pass a finding_id from get_next_improvement or get_backlog "
+            "source. Pass a finding_id from get_next_improvement or list_findings "
             "and a status of open, in_progress, resolved, deferred, wontfix, "
             "ignored, regressed, needs_review, or suppressed. e.g. "
             "mark_finding(finding_id='python.large_file:cf58...', "
@@ -222,7 +230,7 @@ def register_finding_tools(mcp: FastMCP) -> None:
             "Record a caller-supplied verification result for a finding: stores "
             "the command, exit code, and a bounded output summary; never "
             "executes commands. Pass a finding_id from get_next_improvement or "
-            "get_backlog. e.g. record_verification(finding_id='...', "
+            "list_findings. e.g. record_verification(finding_id='...', "
             "command='pytest', exit_code=0, output_summary='42 passed')."
         ),
     )(record_verification)
@@ -241,47 +249,84 @@ def scan_code_health(repo: str = ".") -> ScanHealthToolPayload:
     envelope = build_scan_envelope(
         scan,
         repo=repo,
-        next_tools=("get_next_improvement", "get_smell_report"),
+        next_tools=("get_next_improvement", "list_findings"),
     )
     return cast("ScanHealthToolPayload", cast("object", envelope))
 
 
-def get_smell_report(
+def list_findings(
     repo: str = ".",
+    status: str = "all",
     min_severity: str = DEFAULT_MIN_SEVERITY,
     include_all: bool = False,
-) -> SmellReportToolPayload:
+) -> ListFindingsToolPayload:
+    """Merged finding list (U10): one status filter over one gated report.
+
+    Subsumes the former get_smell_report/get_backlog/get_regressions/
+    get_progress: ``status`` routes the finding set, and repo-wide lifecycle
+    counts (the progress view) ride every response. Leads with the gated
+    actionable headline, then the info/heuristic tail; counts and the full set
+    stay reachable (presentation-only gate).
+    """
+    status = _validate_list_status(status)
     min_severity = validate_min_severity(min_severity)
     report = FindingsService(repo).get_smell_report(
         min_severity=min_severity,
         include_all=include_all,
     )
-    # Lead with the gated actionable headline, then the info/heuristic tail;
-    # counts stay over the FULL set so finding totals are unchanged, and the
-    # tail is still inline-or-offloaded via bounded_finding_list (never dropped).
-    records = _headline_then_tail(report.headline) + _headline_then_tail(
-        report.deferred,
+    statuses = _LIST_STATUS_FILTERS[status]
+
+    def _keep(finding: FindingRow) -> bool:
+        return statuses is None or finding.status in statuses
+
+    headline = [finding for finding in report.headline if _keep(finding)]
+    deferred = [finding for finding in report.deferred if _keep(finding)]
+    matched = [finding for finding in report.findings if _keep(finding)]
+    envelope = _finding_list_envelope(
+        repo,
+        status=status,
+        report=report,
+        headline=headline,
+        deferred=deferred,
+        matched=matched,
     )
+    return cast("ListFindingsToolPayload", cast("object", envelope))
+
+
+def _finding_list_envelope(  # noqa: PLR0913 - keyword-only presentation inputs.
+    repo: str,
+    *,
+    status: str,
+    report: SmellReport,
+    headline: list[FindingRow],
+    deferred: list[FindingRow],
+    matched: list[FindingRow],
+) -> dict[str, object]:
+    records = _headline_then_tail(headline) + _headline_then_tail(deferred)
     severity_counts, rule_counts = aggregate_counts(
-        (finding.severity, finding.rule_id) for finding in report.findings
+        (finding.severity, finding.rule_id) for finding in matched
     )
+    # Lifecycle counts describe the matched set, so sum == total_count. For
+    # status="all" this is the repo-wide progress view (subsuming get_progress);
+    # a filtered status describes only its rows.
+    status_counts = _status_counts(matched)
     aggregates: dict[str, object] = {
-        "open_count": report.open_count,
-        "total_count": len(report.findings),
-        "status_counts": report.status_counts,
+        "status": status,
+        "open_count": status_counts.get(FindingStatus.OPEN.value, 0),
+        "total_count": len(matched),
+        "status_counts": status_counts,
         "severity_counts": severity_counts,
         "rule_counts": rule_counts,
     }
-    envelope = bounded_finding_list(
-        kind="smell_report",
+    return bounded_finding_list(
+        kind="finding_list",
         repo=repo,
-        tool_name="get_smell_report",
+        tool_name="list_findings",
         records=records,
         aggregates=aggregates,
         next_tools=("get_next_improvement", "plan_refactor", "retrieve_result"),
         extra=_gate_extra(report),
     )
-    return cast("SmellReportToolPayload", cast("object", envelope))
 
 
 def get_finding(finding_id: str, repo: str = ".") -> FindingDetailToolPayload:
@@ -346,49 +391,6 @@ def get_next_improvement(
     }
 
 
-def get_backlog(
-    repo: str = ".",
-    min_severity: str = DEFAULT_MIN_SEVERITY,
-    include_all: bool = False,
-) -> BacklogToolPayload:
-    min_severity = validate_min_severity(min_severity)
-    report = FindingsService(repo).get_smell_report(
-        min_severity=min_severity,
-        include_all=include_all,
-    )
-    # Inherit the default gate at the shared choke: lead with the actionable
-    # headline, then the info/heuristic tail; every backlog item is still
-    # inline-or-offloaded (the gate reorders, it does not drop).
-    headline_rows = [
-        finding for finding in report.headline if finding.status in _BACKLOG_STATUSES
-    ]
-    deferred_rows = [
-        finding for finding in report.deferred if finding.status in _BACKLOG_STATUSES
-    ]
-    rows = headline_rows + deferred_rows
-    records = _headline_then_tail(headline_rows) + _headline_then_tail(deferred_rows)
-    severity_counts, rule_counts = aggregate_counts(
-        (finding.severity, finding.rule_id) for finding in rows
-    )
-    aggregates: dict[str, object] = {
-        "open_count": len(rows),
-        "total_count": len(rows),
-        "status_counts": _status_counts(rows),
-        "severity_counts": severity_counts,
-        "rule_counts": rule_counts,
-    }
-    envelope = bounded_finding_list(
-        kind="backlog",
-        repo=repo,
-        tool_name="get_backlog",
-        records=records,
-        aggregates=aggregates,
-        next_tools=("get_next_improvement", "retrieve_result"),
-        extra=_gate_extra(report),
-    )
-    return cast("BacklogToolPayload", cast("object", envelope))
-
-
 def get_improvement_plan(
     repo: str = ".",
     min_severity: str = DEFAULT_MIN_SEVERITY,
@@ -405,50 +407,6 @@ def get_improvement_plan(
 
 def get_calibration(repo: str = ".") -> CalibrationToolPayload:
     return calibration_payload(CalibrationService(repo).get_calibration())
-
-
-def get_progress(repo: str = ".") -> ProgressToolPayload:
-    progress = FindingsService(repo).get_progress()
-    return {
-        "ok": True,
-        "total_findings": progress.total_findings,
-        "open_count": progress.open_count,
-        "resolved_count": progress.resolved_count,
-        "regressed_count": progress.regressed_count,
-        "status_counts": progress.status_counts,
-    }
-
-
-def get_regressions(repo: str = ".") -> RegressionsToolPayload:
-    report = FindingsService(repo).get_smell_report()
-    rows = sorted(
-        (
-            finding
-            for finding in report.findings
-            if finding.status is FindingStatus.REGRESSED
-        ),
-        key=lambda finding: (severity_rank(finding.severity), finding.id),
-    )
-    records = tuple(finding_payload(finding) for finding in rows)
-    severity_counts, rule_counts = aggregate_counts(
-        (finding.severity, finding.rule_id) for finding in rows
-    )
-    aggregates: dict[str, object] = {
-        "count": len(rows),
-        "total_count": len(rows),
-        "status_counts": _status_counts(rows),
-        "severity_counts": severity_counts,
-        "rule_counts": rule_counts,
-    }
-    envelope = bounded_finding_list(
-        kind="regressions",
-        repo=repo,
-        tool_name="get_regressions",
-        records=records,
-        aggregates=aggregates,
-        next_tools=("get_next_improvement", "retrieve_result"),
-    )
-    return cast("RegressionsToolPayload", cast("object", envelope))
 
 
 def mark_finding(
@@ -503,7 +461,7 @@ def rescan(repo: str = ".") -> RescanToolPayload:
     envelope = build_scan_envelope(
         result.scan,
         repo=repo,
-        next_tools=("get_next_improvement", "get_smell_report"),
+        next_tools=("get_next_improvement", "list_findings"),
         regressed_finding_ids=result.regressed_finding_ids,
     )
     return cast("RescanToolPayload", cast("object", envelope))

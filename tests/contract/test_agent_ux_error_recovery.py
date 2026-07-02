@@ -34,7 +34,7 @@ def test_recoverable_with_hint_accepts_domain_error_with_data() -> None:
         "ok": False,
         "recoverable": True,
         "code": "not_found",
-        "data": {"available_options": ["a"], "fix_hint": "call get_backlog"},
+        "data": {"available_options": ["a"], "fix_hint": "call list_findings"},
     }
     assert recoverable_with_hint(payload, "not_found", "available_options")
 

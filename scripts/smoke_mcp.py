@@ -190,7 +190,7 @@ def _next_finding_id(
     data: JsonValue,
     fallback: str | None,
 ) -> str | None:
-    if tool_name in {"get_backlog", "get_regressions", "rescan"}:
+    if tool_name in {"list_findings", "rescan"}:
         return fallback
     if not isinstance(data, dict):
         return fallback

@@ -17,7 +17,7 @@ from codescent.core.models import MaintainabilityThresholds, ProjectConfig
 from codescent.engine.inventory import build_file_inventory
 from codescent.mcp.context_tools import find_symbol
 from codescent.mcp.finding_tools import (
-    get_smell_report,
+    list_findings,
     mark_finding,
     record_verification,
     scan_code_health,
@@ -142,7 +142,7 @@ def test_verification_commands_are_recommended_not_executed(
         ProjectConfig(thresholds=MaintainabilityThresholds.strict()),
     )
     _ = scan_code_health(repo)
-    report = get_smell_report(repo)
+    report = list_findings(repo)
     selected = next(
         finding["finding_id"]
         for finding in report["items"]

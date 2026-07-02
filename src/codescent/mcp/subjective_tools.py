@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from codescent.services.subjective_review import SamplingReply
 
-_NEXT_TOOLS = ("get_backlog", "explain_finding")
+_NEXT_TOOLS = ("list_findings", "explain_finding")
 _UNAVAILABLE_MESSAGE = (
     "The MCP client does not support sampling, so no subjective review was "
     "performed. CodeScent never calls a model itself."

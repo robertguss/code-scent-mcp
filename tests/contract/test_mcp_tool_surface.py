@@ -13,12 +13,12 @@ from codescent.mcp.server import mcp
 # value is the set of acceptable source phrases (any one suffices). Asserted on
 # this subset only, per the plan, to avoid brittle whole-surface matching.
 ID_SOURCE_REQUIREMENTS: dict[str, tuple[str, ...]] = {
-    "get_finding": ("get_next_improvement", "get_backlog"),
+    "get_finding": ("get_next_improvement", "list_findings"),
     "get_symbol_context": ("find_symbol",),
-    "plan_refactor": ("get_next_improvement", "get_backlog"),
-    "get_impact": ("find_symbol", "get_next_improvement", "get_backlog"),
-    "mark_finding": ("get_next_improvement", "get_backlog"),
-    "retrieve_result": ("answer_pack", "get_backlog", "get_smell_report"),
+    "plan_refactor": ("get_next_improvement", "list_findings"),
+    "get_impact": ("find_symbol", "get_next_improvement", "list_findings"),
+    "mark_finding": ("get_next_improvement", "list_findings"),
+    "retrieve_result": ("answer_pack", "list_findings"),
 }
 
 ABSENT_POST_MVP_TOOL_NAMES = {
@@ -47,16 +47,13 @@ MVP_TOOL_NAMES = {
     "get_file_context",
     "get_symbol_context",
     "scan_code_health",
-    "get_smell_report",
+    "list_findings",
     "get_finding_context",
     "get_finding",
     "explain_score",
     "explain_finding",
-    "get_backlog",
     "get_improvement_plan",
     "get_calibration",
-    "get_progress",
-    "get_regressions",
     "get_impact",
     "get_next_improvement",
     "plan_refactor",
@@ -132,13 +129,11 @@ async def test_no_post_mvp_tools_exposed() -> None:
     assert "get_impact" in tool_names
     assert "verify_change" in tool_names
     assert "verify_refactor" in tool_names
-    assert "get_backlog" in tool_names
-    assert "get_progress" in tool_names
-    assert "get_regressions" in tool_names
     assert "review_diff_risk" in tool_names
     assert "get_changed_file_health" in tool_names
     assert "retrieve_result" in tool_names
     assert "context_stats" in tool_names
+    assert "list_findings" in tool_names
     assert "record_verification" in tool_names
     assert "report" not in tool_names
     assert "reset" not in tool_names
@@ -153,7 +148,7 @@ async def test_tool_outputs_match_bounded_schema_snapshots() -> None:
             {"repo": "tests/fixtures/python-basic"},
         )
         report_result = await client.call_tool(
-            "get_smell_report",
+            "list_findings",
             {"repo": "tests/fixtures/python-basic"},
         )
 

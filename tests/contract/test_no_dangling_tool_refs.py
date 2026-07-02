@@ -162,8 +162,8 @@ async def test_tool_descriptions_name_no_unregistered_sibling() -> None:
 # --------------------------------------------------------------------------- #
 def test_synthetic_dangling_next_tools_target_fails() -> None:
     registered = registered_mcp_tool_names()
-    refs = {"get_finding", "list_findings:status", "removed_tool"}
-    assert unresolved_explicit(refs, registered) == {"list_findings", "removed_tool"}
+    refs = {"get_finding", "merged_away_tool:status", "removed_tool"}
+    assert unresolved_explicit(refs, registered) == {"merged_away_tool", "removed_tool"}
 
 
 def test_synthetic_prompt_naming_removed_tool_fails() -> None:

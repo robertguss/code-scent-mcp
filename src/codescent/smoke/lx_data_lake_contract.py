@@ -31,7 +31,7 @@ SMOKE_TOOL_CALLS: Final = (
     "get_file_context",
     "get_symbol_context",
     "scan_code_health",
-    "get_smell_report",
+    "list_findings",
     "get_finding_context",
     "plan_refactor",
     "suggest_tests",

@@ -196,7 +196,7 @@ async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
             {"repo": str(repo)},
         )
         report_result = await client.call_tool(
-            "get_smell_report",
+            "list_findings",
             {"repo": str(repo)},
         )
         next_result = await client.call_tool(
@@ -207,11 +207,8 @@ async def test_finding_tools_are_source_read_only(tmp_path: Path) -> None:
     tool_names = {tool.name for tool in tools}
     assert {
         "scan_code_health",
-        "get_smell_report",
+        "list_findings",
         "get_next_improvement",
-        "get_backlog",
-        "get_progress",
-        "get_regressions",
         "mark_finding",
         "rescan",
     } <= tool_names
@@ -408,7 +405,7 @@ async def test_list_tools_bound_output_and_offer_retrieval(tmp_path: Path) -> No
 
     async with Client(mcp) as client:
         scan_raw = await client.call_tool("scan_code_health", {"repo": str(repo)})
-        report_raw = await client.call_tool("get_smell_report", {"repo": str(repo)})
+        report_raw = await client.call_tool("list_findings", {"repo": str(repo)})
 
     scan_text = _text_content(scan_raw.content)
     report_text = _text_content(report_raw.content)
@@ -570,7 +567,7 @@ async def test_finding_payloads_expose_confidence_tier_and_provenance(
 
     async with Client(mcp) as client:
         scan_raw = await client.call_tool("scan_code_health", {"repo": str(repo)})
-        report_raw = await client.call_tool("get_smell_report", {"repo": str(repo)})
+        report_raw = await client.call_tool("list_findings", {"repo": str(repo)})
         scan = ScanToolPayload.model_validate_json(_text_content(scan_raw.content))
         detail_raw = await client.call_tool(
             "get_finding",

@@ -34,7 +34,7 @@ def _loop_calls(repo: Path, finding_id: str) -> dict[str, dict[str, object]]:
     """The live call for every spine tool, keyed by tool name."""
     return {
         "scan_code_health": {"repo": str(repo)},
-        "get_smell_report": {"repo": str(repo)},
+        "list_findings": {"repo": str(repo)},
         "get_next_improvement": {"repo": str(repo)},
         "get_finding_context": {"repo": str(repo), "finding_id": finding_id},
         "plan_refactor": {"repo": str(repo), "finding_id": finding_id},
